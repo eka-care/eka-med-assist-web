@@ -1,3 +1,4 @@
-// Atoms - Smallest components from the design system submodule
-export { ShadCnButton } from "../../packages/ui/base/src/index";
-export { cn } from "../../packages/ui/base/src/shadcn-ui/lib/utils";
+// Utilities
+export { cn } from "@ui-lib/utils";
+export { ThemeProvider, useTheme } from "@ui-eka/components/theme-provider";
+

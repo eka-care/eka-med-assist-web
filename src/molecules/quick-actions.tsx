@@ -1,0 +1,29 @@
+import { Button } from "@ui/index";
+
+interface QuickAction {
+  id: string;
+  label: string;
+  variant?: "default" | "outline" | "secondary" | "destructive";
+}
+
+interface QuickActionsProps {
+  actions: QuickAction[];
+  onActionClick: (actionId: string) => void;
+}
+
+export function QuickActions({ actions, onActionClick }: QuickActionsProps) {
+  return (
+    <div className="flex flex-col gap-2 px-4">
+      {actions.map((action) => (
+        <Button
+          key={action.id}
+          variant="outline"
+          size="sm"
+          className="justify-start text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-8 rounded-lg w-fit"
+          onClick={() => onActionClick(action.id)}>
+          {action.label}
+        </Button>
+      ))}
+    </div>
+  );
+}

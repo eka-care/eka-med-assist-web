@@ -21,7 +21,19 @@
     "noUnusedParameters": true,
     "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
-    "noUncheckedSideEffectImports": true
+    "noUncheckedSideEffectImports": true,
+
+    /* Path Mapping */
+    "baseUrl": ".",
+    "paths": {
+      "@/lib/utils": ["packages/ui/base/src/shadcn-ui/lib/utils"],
+      "@/*": ["src/*"],
+      "@atoms": ["src/atoms/index.ts"],
+      "@ui/*": ["packages/ui/base/src/*"],
+      "@ui-components/*": ["packages/ui/base/src/shadcn-ui/components/ui/*"],
+      "@ui-lib/*": ["packages/ui/base/src/shadcn-ui/lib/*"],
+      "@ui-eka/*": ["packages/ui/base/src/eka-ui/*"]
+    }
   },
-  "include": ["src"]
+  "include": ["src", "packages/ui/base/src"]
 }
