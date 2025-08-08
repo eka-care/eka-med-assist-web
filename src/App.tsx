@@ -1,3 +1,23 @@
+// import { ChatWidgetSocket } from "./molecules/chat-widget-socket";
+// import { createUserTypeSocketConfig } from "./config/socket";
+
+// function App() {
+//   const socketConfig = createUserTypeSocketConfig(
+//     "user-123",
+//     "John Doe",
+//     "patient"
+//   );
+
+//   return (
+//     <ChatWidgetSocket
+//       socketConfig={socketConfig}
+//       title="Apollo Assist"
+//       showConnectionStatus={true}
+//     />
+//   );
+// }
+// export default App;
+
 import { Button } from "@ui/index";
 import { useState, useEffect } from "react";
 import { ChatWidget } from "./molecules/chat-widget";
