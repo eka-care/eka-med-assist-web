@@ -27,6 +27,7 @@ export function MessageInput({
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isRecording, setIsRecording] = useState(false);
+  const [isChunksReady, setIsChunksReady] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
@@ -44,6 +45,7 @@ export function MessageInput({
 
       setMessage("");
       setUploadedFiles([]);
+      setIsChunksReady(false);
     }
   };
 
@@ -56,12 +58,13 @@ export function MessageInput({
 
   // Check if there's any content to send
   const hasContent = useMemo(() => {
-    return message.trim() || uploadedFiles.length > 0;
+    return message.trim() || uploadedFiles.length > 0 || isChunksReady;
   }, [message, uploadedFiles]);
 
   const handleVoiceRecording = (audioBlob: Blob) => {
     onVoiceMessage(audioBlob);
     setIsRecording(false);
+    setIsChunksReady(true);
   };
 
   const handleCancelRecording = () => {
