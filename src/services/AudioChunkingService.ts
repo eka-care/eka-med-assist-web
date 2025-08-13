@@ -271,15 +271,15 @@ export class AudioChunkingService {
    * This method is bound to the worklet's onmessage event
    */
   private handleWorkletMessage(event: MessageEvent): void {
-    const { type, data } = event.data;
+    const { type, ...chunkData } = event.data;
 
     switch (type) {
       case "chunk":
-        this.handleAudioChunk(data);
+        this.handleAudioChunk(chunkData);
         break;
 
       case "error":
-        this.errorCallback?.(new Error(data.message));
+        this.errorCallback?.(new Error(chunkData.message));
         break;
     }
   }
@@ -289,12 +289,38 @@ export class AudioChunkingService {
    */
   private handleAudioChunk(chunkData: any): void {
     try {
+      // Debug logging
+      console.log("Received chunk data:", chunkData);
+      console.log("chunkData.audioData:", chunkData.audioData);
+      console.log("chunkData type:", typeof chunkData.audioData);
+
+      if (!chunkData.audioData) {
+        throw new Error("audioData is undefined or null");
+      }
+
+      // Handle different audioData types
+      let audioData: Float32Array;
+      if (chunkData.audioData instanceof Float32Array) {
+        audioData = chunkData.audioData;
+      } else if (Array.isArray(chunkData.audioData)) {
+        audioData = new Float32Array(chunkData.audioData);
+      } else if (
+        chunkData.audioData.buffer &&
+        chunkData.audioData.buffer instanceof ArrayBuffer
+      ) {
+        audioData = new Float32Array(chunkData.audioData.buffer);
+      } else {
+        throw new Error(
+          `Unsupported audioData type: ${typeof chunkData.audioData}`
+        );
+      }
+
       const chunk: AudioChunk = {
-        audioData: new Float32Array(chunkData.audioData),
-        rms: chunkData.rms,
-        isSilent: chunkData.isSilent,
-        timestamp: chunkData.timestamp,
-        sampleRate: chunkData.sampleRate,
+        audioData: audioData,
+        rms: chunkData.rms || 0,
+        isSilent: chunkData.isSilent || false,
+        timestamp: chunkData.timestamp || Date.now() / 1000,
+        sampleRate: chunkData.sampleRate || this.config.sampleRate,
       };
 
       // Add to buffer for upload
@@ -309,6 +335,7 @@ export class AudioChunkingService {
       this.chunkCallback?.(chunk);
     } catch (error) {
       console.error("Error processing audio chunk:", error);
+      console.error("Chunk data received:", chunkData);
       this.errorCallback?.(
         new Error(
           `Chunk processing failed: ${

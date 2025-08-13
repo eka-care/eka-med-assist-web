@@ -1,32 +1,18 @@
-// import { ChatWidgetSocket } from "./molecules/chat-widget-socket";
-// import { createUserTypeSocketConfig } from "./config/socket";
-
-// function App() {
-//   const socketConfig = createUserTypeSocketConfig(
-//     "user-123",
-//     "John Doe",
-//     "patient"
-//   );
-
-//   return (
-//     <ChatWidgetSocket
-//       socketConfig={socketConfig}
-//       title="Apollo Assist"
-//       showConnectionStatus={true}
-//     />
-//   );
-// }
-// export default App;
-
 import { Button } from "@ui/index";
 import { useState, useEffect } from "react";
 import { ChatWidget } from "./molecules/chat-widget";
 import { useTheme } from "@ui/index";
+// import WebSocketChatExample from "./examples/WebSocketChatExample";
+import startSession from "./api/post-start-session";
+import useSessionStore from "./stores/medAssistStore";
 
 function App() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [showWebSocketExample, setShowWebSocketExample] = useState(false);
+  const setSessionId = useSessionStore((state) => state.setSessionId);
+  const setSessionToken = useSessionStore((state) => state.setSessionToken);
   const { theme, setTheme } = useTheme();
 
   useEffect(() => {
@@ -39,8 +25,27 @@ function App() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const handleOpenWidget = () => {
-    setIsWidgetOpen(true);
+  const handleOpenWidget = async () => {
+    try {
+      //add loading state
+      const data = await startSession();
+      console.log("data", data);
+      const {session_id, session_token} =data
+
+      if (!session_id || !session_token) {
+        throw new Error("Failed to start a new session");
+      }
+      setSessionId(session_id);
+      setSessionToken(session_token);
+
+      setIsWidgetOpen(true);
+    } catch (error) {
+      console.log("Falied to start a new session");
+      //TODO: Show error to the user
+    } finally {
+      setIsWidgetOpen(true);
+      //setLoading(false)
+    }
   };
 
   const handleCloseWidget = () => {
@@ -93,15 +98,28 @@ function App() {
             it will take full screen.
           </p>
 
-          <div className="text-center">
+          <div className="text-center space-x-4">
             <Button
               onClick={handleOpenWidget}
               className="px-6 py-3 rounded-full">
               Open Apollo Assist
             </Button>
+            <Button
+              onClick={() => setShowWebSocketExample(!showWebSocketExample)}
+              variant="outline"
+              className="px-6 py-3 rounded-full">
+              {showWebSocketExample ? "Hide" : "Show"} WebSocket Example
+            </Button>
           </div>
         </div>
       </div>
+
+      {/* WebSocket Example */}
+      {/* {showWebSocketExample && (
+        <div className="max-w-4xl mx-auto mt-8">
+          <WebSocketChatExample />
+        </div>
+      )} */}
 
       {/* Chat Widget */}
       {isWidgetOpen && (
@@ -138,3 +156,23 @@ function App() {
 }
 
 export default App;
+
+// import { ChatWidgetSocket } from "./molecules/chat-widget-socket";
+// import { createUserTypeSocketConfig } from "./config/socket";
+
+// function App() {
+//   const socketConfig = createUserTypeSocketConfig(
+//     "user-123",
+//     "John Doe",
+//     "patient"
+//   );
+
+//   return (
+//     <ChatWidgetSocket
+//       socketConfig={socketConfig}
+//       title="Apollo Assist"
+//       showConnectionStatus={true}
+//     />
+//   );
+// }
+// export default App;

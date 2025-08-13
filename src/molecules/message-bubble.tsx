@@ -1,13 +1,17 @@
-import { Button } from "@ui/index";
+import { Button, DocAssistIcon } from "@ui/index";
 import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
+import { QuickActions } from "./quick-actions";
 
 interface MessageBubbleProps {
   message: string;
   isBot?: boolean;
-  showActions?: boolean;
+  showActions: boolean;
+  quickActions: {id: string, label: string}[];
+  isQuickActionsDisabled: boolean;
   onLike?: () => void;
   onDislike?: () => void;
   onRegenerate?: () => void;
+  handleQuickAction: (action: string) => void;
 }
 
 export function MessageBubble({
@@ -16,13 +20,20 @@ export function MessageBubble({
   onLike,
   onDislike,
   onRegenerate,
+  quickActions,
+  showActions,
+  isQuickActionsDisabled,
+  handleQuickAction,
 }: MessageBubbleProps) {
   return (
     <div className="px-4 py-3">
-      <div className={`flex gap-2 items-start ${!isBot ? "justify-end" : ""}`}>
+      <div
+        className={`flex gap-2 items-start justify-center ${
+          !isBot ? "justify-end" : ""
+        }`}>
         {isBot && (
           <div className="flex-shrink-0 mt-1">
-            <div className="w-2 h-2 bg-[var(--color-primary)] rounded-full"></div>
+            <DocAssistIcon size={24} />
           </div>
         )}
 
@@ -35,6 +46,14 @@ export function MessageBubble({
             }`}>
             {message}
           </div>
+
+          {showActions && (
+            <QuickActions
+              actions={quickActions}
+              onActionClick={handleQuickAction}
+              disabled={isQuickActionsDisabled}
+            />
+          )}
 
           {isBot && (
             <div className="flex items-center gap-1 mt-3">

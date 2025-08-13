@@ -46,11 +46,15 @@ class AudioChunkProcessor extends AudioWorkletProcessor {
         // Calculate RMS for this chunk
         const rms = this.calculateRMS(this.buffer);
 
+        // Determine if chunk is silent
+        const isSilent = rms < this.silenceThreshold;
+
         // Send audio chunk to main thread
         this.port.postMessage({
           type: "chunk",
-          audioData: this.buffer.slice(), // Copy the buffer
+          audioData: Array.from(this.buffer), // Convert to regular array to avoid transfer issues
           rms: rms,
+          isSilent: isSilent,
           timestamp: (this.frameCount * this.chunkSize) / this.sampleRate,
           sampleRate: this.sampleRate,
         });
