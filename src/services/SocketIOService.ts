@@ -38,7 +38,7 @@ export class SocketIOService {
     return new Promise((resolve, reject) => {
       try {
         this.socket = io(
-          `http://1ac0c5115fc1.ngrok-free.app?token=${encodeURIComponent(
+          `ws://66e1e3613936.ngrok-free.app?token=${encodeURIComponent(
             this.config.auth.token
           )}`,
           {
@@ -59,6 +59,14 @@ export class SocketIOService {
 
         this.socket.on("connect_error", (error) => {
           console.error("Socket.IO connection error:", error);
+          console.log(
+            "error message",
+            error.message,
+            "error cause", error.cause,
+            "error name",error.name,
+            "error stack",error.stack
+          );
+
           // Don't reject immediately - wait for conn event or timeout
           console.log(
             "Connection error occurred, but waiting for conn event..."
@@ -105,7 +113,7 @@ export class SocketIOService {
       if (this.socket?.connected) {
         this.emit("ping", { ts: Math.floor(Date.now()) });
       }
-    }, this.config.options?.pingInterval || 30000);
+    }, this.config.options?.pingInterval || 30000) as unknown as number;
   }
 
   private stopPingInterval(): void {

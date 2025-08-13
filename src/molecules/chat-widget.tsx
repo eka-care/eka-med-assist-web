@@ -5,8 +5,8 @@ import { MessageBubble } from "./message-bubble";
 import { Card, ScrollArea } from "@ui/index";
 import { MessageInput } from "./message-input";
 import useSessionStore from "@/stores/medAssistStore";
-import { useSocketIO } from "@/hooks/useSocketIO";
-import type { SocketIOConfig } from "@/services/SocketIOService";
+import { useWebSocket } from "@/custom-hooks/useWebSocket";
+import type { WebSocketConfig } from "@/types/socket";
 
 interface Message {
   id: string;
@@ -50,7 +50,7 @@ export function ChatWidget({
   );
 
   // Create socket configuration when session data is available
-  const socketConfig: SocketIOConfig | null =
+  const socketConfig: WebSocketConfig | null =
     sessionId && sessionToken
       ? {
           sessionId,
@@ -58,15 +58,80 @@ export function ChatWidget({
         }
       : null;
 
-  // Use Socket.IO hook
+  // Use WebSocket hook
   const {
-    socketService,
+    wsService,
     sendPing,
     sendChatMessage,
     sendFileUploadRequest,
     sendFileUploadComplete,
+    setFilesForUpload,
     isStreaming,
-  } = useSocketIO(socketConfig);
+  } = useWebSocket(socketConfig, (botMessage: string) => {
+    // Handle bot response messages
+    console.log(
+      "onTextMessage called with:",
+      botMessage,
+      "isStreaming:",
+      isStreaming
+    );
+    setMessages((prev) => {
+      // Check if there's already a bot message at the end
+      const lastMessage = prev[prev.length - 1];
+      console.log("lastMessage", lastMessage);
+      console.log("isStreaming", isStreaming);
+
+      // If we have a bot message and it's shorter than the incoming text, update it
+      if (
+        lastMessage &&
+        lastMessage.isBot &&
+        botMessage.length > lastMessage.content.length
+      ) {
+        console.log(
+          "Updating existing bot message:",
+          lastMessage.id,
+          "from",
+          lastMessage.content,
+          "to",
+          botMessage
+        );
+        // Update the existing bot message with progressive text
+        const updatedMessages = [...prev];
+        updatedMessages[updatedMessages.length - 1] = {
+          ...lastMessage,
+          content: botMessage,
+        };
+        return updatedMessages;
+      } else if (
+        lastMessage &&
+        lastMessage.isBot &&
+        botMessage.length <= lastMessage.content.length
+      ) {
+        // If the incoming text is shorter or equal, it might be a duplicate, skip
+        console.log(
+          "Skipping duplicate or shorter text:",
+          botMessage,
+          "vs",
+          lastMessage.content
+        );
+        return prev;
+      } else {
+        console.log("Creating new bot message because:", {
+          hasLastMessage: !!lastMessage,
+          isLastMessageBot: lastMessage?.isBot,
+          botMessageLength: botMessage.length,
+          lastMessageLength: lastMessage?.content?.length || 0,
+        });
+        // Create a new bot message
+        const newMessage: Message = {
+          id: Date.now().toString(),
+          content: botMessage,
+          isBot: true,
+        };
+        return [...prev, newMessage];
+      }
+    });
+  });
 
   const [quickActions] = useState([
     { id: "doctor", label: "Help me find a doctor" },
@@ -75,10 +140,10 @@ export function ChatWidget({
   ]);
 
   useEffect(() => {
-    if (socketService && isConnectionEstablished) {
-      console.log("Socket.IO connection ready for chat");
+    if (wsService && isConnectionEstablished) {
+      console.log("WebSocket connection ready for chat");
     }
-  }, [socketService, isConnectionEstablished]);
+  }, [wsService, isConnectionEstablished]);
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -130,11 +195,11 @@ export function ChatWidget({
     //     };
     //     setMessages((prev) => [...prev, botResponse]);
     //   }, 1000);
-    // Send message via Socket.IO
+    // Send message via WebSocket
     if (isConnectionEstablished) {
       sendChatMessage(content);
     } else {
-      console.log("Socket not connected, cannot send message");
+      console.log("WebSocket not connected, cannot send message");
     }
   };
 
@@ -169,12 +234,13 @@ export function ChatWidget({
 
     setMessages((prev) => [...prev, newMessage]);
 
-    // Send file upload request via Socket.IO
+    // Send file upload request via WebSocket
     if (isConnectionEstablished) {
+      // Set files for upload when presigned URL is received
+      setFilesForUpload(fileArray);
       sendFileUploadRequest();
-      // TODO: Handle S3 upload and completion
     } else {
-      console.log("Socket not connected, cannot upload file");
+      console.log("WebSocket not connected, cannot upload file");
     }
   };
 
@@ -229,8 +295,7 @@ export function ChatWidget({
       <div className={`${chatHeight} flex flex-col overflow-hidden`}>
         <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
           <div className="space-y-1">
-            
-            {messages.map((message) => (
+            {messages.map((message, index) => (
               <MessageBubble
                 key={message.id}
                 message={message.content}
@@ -239,12 +304,13 @@ export function ChatWidget({
                 handleQuickAction={handleQuickAction}
                 quickActions={quickActions}
                 isQuickActionsDisabled={!isConnectionEstablished || isStreaming}
+                isStreaming={
+                  message.isBot && isStreaming && index === messages.length - 1
+                }
               />
             ))}
           </div>
         </ScrollArea>
-
-        
 
         {/* Connection Status */}
         {!isConnectionEstablished && (
@@ -252,20 +318,20 @@ export function ChatWidget({
             {!sessionId || !sessionToken
               ? "Waiting for session..."
               : !isSocketIOConnected
-              ? "Connecting to server..."
-              : "Establishing connection..."}
+              ? "Connecting to WebSocket server..."
+              : "Establishing WebSocket connection..."}
           </div>
         )}
 
         {/* Streaming Status */}
-        {isStreaming && (
+        {/* {isStreaming && (
           <div className="px-4 py-2 text-center text-sm text-blue-600 bg-blue-50 border-t">
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
               <span>Bot is responding...</span>
             </div>
           </div>
-        )}
+        )} */}
 
         {/* Test PING when connected */}
         {isConnectionEstablished && !isStreaming && (
@@ -283,7 +349,7 @@ export function ChatWidget({
           onSendMessage={handleSendMessage}
           onVoiceMessage={handleVoiceMessage}
           onFileUpload={handleFileUpload}
-            // disabled={!isConnectionEstablished}
+          disabled={!isConnectionEstablished}
           isStreaming={isStreaming}
         />
       </div>

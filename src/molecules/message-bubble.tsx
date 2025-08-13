@@ -6,8 +6,9 @@ interface MessageBubbleProps {
   message: string;
   isBot?: boolean;
   showActions: boolean;
-  quickActions: {id: string, label: string}[];
+  quickActions: { id: string; label: string }[];
   isQuickActionsDisabled: boolean;
+  isStreaming?: boolean;
   onLike?: () => void;
   onDislike?: () => void;
   onRegenerate?: () => void;
@@ -23,6 +24,7 @@ export function MessageBubble({
   quickActions,
   showActions,
   isQuickActionsDisabled,
+  isStreaming = false,
   handleQuickAction,
 }: MessageBubbleProps) {
   return (
@@ -45,6 +47,7 @@ export function MessageBubble({
                 : "text-[var(--color-primary-foreground)] bg-[var(--color-primary)]"
             }`}>
             {message}
+            {isBot && isStreaming && <span className="animate-pulse">...</span>}
           </div>
 
           {showActions && (

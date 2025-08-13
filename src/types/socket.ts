@@ -73,7 +73,7 @@ export interface ConnectionEstablishedMessage extends BaseMessage {
 export interface ChatResponseMessage extends BaseMessage {
   ev: typeof SocketEvent.CHAT;
   ct: typeof ContentType.FILE;
-  data: string; // S3 presigned URL
+  data: {url: string,exp?:number}; // S3 presigned URL
 }
 
 // Server to Client: Stream response

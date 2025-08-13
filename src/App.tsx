@@ -43,7 +43,7 @@ function App() {
       console.log("Falied to start a new session");
       //TODO: Show error to the user
     } finally {
-      setIsWidgetOpen(true);
+     // setIsWidgetOpen(true);
       //setLoading(false)
     }
   };

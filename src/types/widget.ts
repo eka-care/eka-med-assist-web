@@ -1,4 +1,5 @@
-import type { ThemeType } from "@ui/eka-ui/components/theme-provider";
+import type { ThemeType } from "@ui/eka-ui/organisms/theme-provider";
+
 
 export interface PillConfig {
   id: string;

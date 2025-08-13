@@ -18,6 +18,7 @@ export function useSocketIO(config: SocketIOConfig | null) {
   const socketRef = useRef<SocketIOService | null>(null);
   const [error, setError] = useState<ErrorMessage["msg"] | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const {
     setSocketIOConnected,
     setConnectionEstablished,
@@ -62,8 +63,14 @@ export function useSocketIO(config: SocketIOConfig | null) {
     service.on(WEBSOCKET_SERVER_EVENTS.CHAT, (message: ChatResponseMessage) => {
       console.log("CHAT received:", message);
       // Handle file upload response (S3 URL)
-      if (message.ct === ContentType.FILE) {
+      if (
+        message.ct === ContentType.FILE &&
+        message.data &&
+        pendingFiles.length > 0
+      ) {
         console.log("File upload URL received:", message.data);
+        // Automatically upload pending files to the presigned URL
+        uploadFilesToPresignedUrl(message.data, pendingFiles);
       }
     });
 
@@ -141,6 +148,52 @@ export function useSocketIO(config: SocketIOConfig | null) {
     }
   };
 
+  // Upload files to presigned URL
+  const uploadFilesToPresignedUrl = async (
+    presignedUrl: string,
+    files: File[]
+  ) => {
+    try {
+      console.log(`Uploading ${files.length} files to presigned URL`);
+
+      for (const file of files) {
+        console.log(
+          `Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+        );
+
+        const response = await fetch(presignedUrl, {
+          method: "PUT",
+          body: file,
+          headers: {
+            "Content-Type": file.type,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to upload ${file.name}: ${response.status} ${response.statusText}`
+          );
+        }
+
+        console.log(`Successfully uploaded ${file.name}`);
+      }
+
+      // Clear pending files after successful upload
+      setPendingFiles([]);
+
+      // Call sendFileUploadComplete with the presigned URL
+      sendFileUploadComplete(presignedUrl);
+
+      console.log(
+        "All files uploaded successfully, calling sendFileUploadComplete"
+      );
+    } catch (error) {
+      console.error("Error uploading files to presigned URL:", error);
+      // Keep files in pending state for retry if needed
+      // You could implement retry logic here if needed
+    }
+  };
+
   // Send file upload completion
   const sendFileUploadComplete = (s3Url: string) => {
     if (socketRef.current && isSocketIOConnected) {
@@ -186,6 +239,18 @@ export function useSocketIO(config: SocketIOConfig | null) {
     }
   };
 
+  // Set pending files for upload when presigned URL is received
+  const setFilesForUpload = (files: File[]) => {
+    setPendingFiles(files);
+    console.log(`Set ${files.length} files for upload`);
+  };
+
+  // Clear pending files (useful for cleanup or cancellation)
+  const clearPendingFiles = () => {
+    setPendingFiles([]);
+    console.log("Cleared pending files");
+  };
+
   // Send PING function (kept for manual ping if needed)
   const sendPing = () => {
     if (socketRef.current && isSocketIOConnected) {
@@ -202,6 +267,8 @@ export function useSocketIO(config: SocketIOConfig | null) {
     sendFileUploadComplete,
     sendAudioStream,
     sendAudioEndOfStream,
+    setFilesForUpload,
+    clearPendingFiles,
     error,
     isStreaming,
     isConnected: isSocketIOConnected,

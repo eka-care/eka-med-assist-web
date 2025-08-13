@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo, useEffect } from "react";
 import { Mic, Send, Plus, Trash2, Check } from "lucide-react";
 import { Button, Input, voiceListeningGif } from "@ui/index";
-import { useAudioChunking } from "@/hooks/useAudioChunking";
+import { useAudioChunking } from "@/custom-hooks/useAudioChunking";
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;

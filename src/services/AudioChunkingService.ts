@@ -289,11 +289,6 @@ export class AudioChunkingService {
    */
   private handleAudioChunk(chunkData: any): void {
     try {
-      // Debug logging
-      console.log("Received chunk data:", chunkData);
-      console.log("chunkData.audioData:", chunkData.audioData);
-      console.log("chunkData type:", typeof chunkData.audioData);
-
       if (!chunkData.audioData) {
         throw new Error("audioData is undefined or null");
       }
