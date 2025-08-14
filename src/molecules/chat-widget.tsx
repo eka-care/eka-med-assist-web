@@ -3,10 +3,10 @@ import { useState, useRef, useEffect } from "react";
 import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
 import { Card, ScrollArea } from "@ui/index";
-import { MessageInput } from "./message-input";
 import useSessionStore from "@/stores/medAssistStore";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { WebSocketConfig } from "@/types/socket";
+import { MessageInputCopy } from "./message-input-copy";
 
 interface Message {
   id: string;
@@ -64,8 +64,9 @@ export function ChatWidget({
     sendPing,
     sendChatMessage,
     sendFileUploadRequest,
-    sendFileUploadComplete,
+    sendAudioEndOfStream,
     setFilesForUpload,
+    sendAudioStream,
     isStreaming,
   } = useWebSocket(socketConfig, (botMessage: string) => {
     // Handle bot response messages
@@ -75,6 +76,7 @@ export function ChatWidget({
       "isStreaming:",
       isStreaming
     );
+
     setMessages((prev) => {
       // Check if there's already a bot message at the end
       const lastMessage = prev[prev.length - 1];
@@ -144,6 +146,7 @@ export function ChatWidget({
       console.log("WebSocket connection ready for chat");
     }
   }, [wsService, isConnectionEstablished]);
+
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -160,6 +163,43 @@ export function ChatWidget({
   useEffect(() => {
     scrollToBottom();
   }, [messages]);
+
+  //   const handleStartStreaming = async () => {
+  //     try {
+  //       await startStreaming();
+  //       console.log("Audio streaming started");
+  //     } catch (error) {
+  //       console.error("Failed to start streaming:", error);
+  //     }
+  //   };
+
+  //   const handleStopStreaming = () => {
+  //     stopStreaming();
+  //     console.log("Audio streaming stopped");
+  //   };
+
+  const handleAudioStream = (audioBlob: Blob) => {
+    console.log("called on Audio stream in chat widget");
+    if (isStreaming) {
+      console.log("Cannot send voice while streaming");
+      return;
+    }
+
+    console.log("Audio stream received:", audioBlob);
+
+    // Convert Blob to Uint8Array and stream to WebSocket
+    audioBlob.arrayBuffer().then((buffer) => {
+      const uint8Array = new Uint8Array(buffer);
+
+      if (isConnectionEstablished) {
+        // Stream audio data to WebSocket
+        console.log("called on sendAudioStream of socket in chat widget");
+        sendAudioStream(uint8Array);
+      } else {
+        console.log("WebSocket not connected, cannot stream audio");
+      }
+    });
+  };
 
   const getCurrentTimestamp = () => {
     const now = new Date();
@@ -203,17 +243,37 @@ export function ChatWidget({
     }
   };
 
-  const handleVoiceMessage = (audioBlob: Blob) => {
-    // Block voice if currently streaming
-    if (isStreaming) {
-      console.log("Cannot send voice while streaming");
-      return;
-    }
+  const handleAudioEndOfStream = (audioData: Blob) => {
+    console.log("Audio end of stream received:", audioData);
+    // Convert Blob to Uint8Array and stream to WebSocket
+    audioData.arrayBuffer().then((buffer) => {
+      const uint8Array = new Uint8Array(buffer);
 
-    console.log("Voice message received:", audioBlob);
-    // TODO: Implement audio streaming via Socket.IO
-    handleSendMessage("Voice message received");
+      if (isConnectionEstablished) {
+        // Stream audio data to WebSocket
+        sendAudioEndOfStream(uint8Array);
+      } else {
+        console.log("WebSocket not connected, cannot stream audio");
+      }
+    });
   };
+
+  //   const handleVoiceMessage = (audioBlob: Blob) => {
+  //     // Block voice if currently streaming
+
+  //     if (isStreaming) {
+  //       console.log("Cannot send voice while streaming");
+  //       return;
+  //     }
+
+  //     console.log("Voice message received:", audioBlob);
+  //     // Convert Blob to ArrayBuffer, then to Uint8Array for streaming
+  //     audioBlob.arrayBuffer().then((buffer) => {
+  //       const uint8Audio = new Uint8Array(buffer);
+  //       handleAudioEndOfStream(uint8Audio);
+  //     });
+  //     // handleSendMessage("Voice message received");
+  //   };
 
   const handleFileUpload = (files: FileList) => {
     // Block file upload if currently streaming
@@ -314,24 +374,51 @@ export function ChatWidget({
 
         {/* Connection Status */}
         {!isConnectionEstablished && (
-          <div className="px-4 py-2 text-center text-sm text-orange-600 bg-orange-50 border-t">
-            {!sessionId || !sessionToken
-              ? "Waiting for session..."
-              : !isSocketIOConnected
-              ? "Connecting to WebSocket server..."
-              : "Establishing WebSocket connection..."}
+          <div className="px-4 py-2 text-center text-sm border-t">
+            {!sessionId || !sessionToken ? (
+              <div className="text-orange-600 bg-orange-50">
+                Waiting for session...
+              </div>
+            ) : !isSocketIOConnected ? (
+              <div className="text-orange-600 bg-orange-50">
+                Connecting to WebSocket server...
+              </div>
+            ) : (
+              <div className="text-orange-600 bg-orange-50">
+                Establishing WebSocket connection...
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* Connection Error Status */}
+        {isSocketIOConnected && !isConnectionEstablished && (
+          <div className="px-4 py-2 text-center text-sm text-red-600 bg-red-50 border-t">
+            <div className="flex items-center justify-center gap-2">
+              <div className="w-2 h-2 bg-red-600 rounded-full"></div>
+              <span>Connection failed. </span>
+              <button
+                onClick={() => {
+                  if (wsService) {
+                    wsService.reconnect();
+                  }
+                }}
+                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                Retry
+              </button>
+            </div>
           </div>
         )}
 
         {/* Streaming Status */}
-        {/* {isStreaming && (
+        {isStreaming && (
           <div className="px-4 py-2 text-center text-sm text-blue-600 bg-blue-50 border-t">
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
               <span>Bot is responding...</span>
             </div>
           </div>
-        )} */}
+        )}
 
         {/* Test PING when connected */}
         {isConnectionEstablished && !isStreaming && (
@@ -342,12 +429,22 @@ export function ChatWidget({
               className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
               Test PING
             </button>
+            {/* Debug Info */}
+            {process.env.NODE_ENV === "development" && wsService && (
+              <div className="mt-2 text-xs text-gray-600">
+                <div>Session: {sessionId?.substring(0, 8)}...</div>
+                <div>
+                  Health: {JSON.stringify(wsService.getConnectionHealth())}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
-        <MessageInput
+        <MessageInputCopy
           onSendMessage={handleSendMessage}
-          onVoiceMessage={handleVoiceMessage}
+          onFinalAudioStream={handleAudioEndOfStream}
+          onAudioStream={handleAudioStream}
           onFileUpload={handleFileUpload}
           disabled={!isConnectionEstablished}
           isStreaming={isStreaming}

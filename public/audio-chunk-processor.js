@@ -1,17 +1,12 @@
-/**
- * Simple Audio Chunk Processor
- *
- * Creates audio chunks from microphone input
- * No echo, no playback - just chunking
- */
+
 
 class AudioChunkProcessor extends AudioWorkletProcessor {
   constructor(options) {
     super();
 
-    // Configuration
-    this.chunkSize = options.processorOptions?.chunkSize || 1024;
-    this.sampleRate = options.processorOptions?.sampleRate || 44100;
+    // Configuration optimized for real-time streaming
+    this.chunkSize = options.processorOptions?.chunkSize || 512;
+    this.sampleRate = options.processorOptions?.sampleRate || 16000;
     this.silenceThreshold = options.processorOptions?.silenceThreshold || 0.01;
     this.silenceDuration = options.processorOptions?.silenceDuration || 0.5;
 
@@ -19,6 +14,7 @@ class AudioChunkProcessor extends AudioWorkletProcessor {
     this.buffer = new Float32Array(this.chunkSize);
     this.bufferIndex = 0;
     this.frameCount = 0;
+    this.lastSilenceTime = 0;
   }
 
   // Calculate RMS (Root Mean Square) for volume detection
@@ -49,14 +45,20 @@ class AudioChunkProcessor extends AudioWorkletProcessor {
         // Determine if chunk is silent
         const isSilent = rms < this.silenceThreshold;
 
-        // Send audio chunk to main thread
+        // Update silence tracking
+        if (isSilent) {
+          this.lastSilenceTime = currentFrame / this.sampleRate;
+        }
+
+        // Send audio chunk to main thread for real-time streaming
         this.port.postMessage({
           type: "chunk",
-          audioData: Array.from(this.buffer), // Convert to regular array to avoid transfer issues
+          audioData: Array.from(this.buffer), // Convert to regular array
           rms: rms,
           isSilent: isSilent,
           timestamp: (this.frameCount * this.chunkSize) / this.sampleRate,
           sampleRate: this.sampleRate,
+          chunkIndex: this.frameCount,
         });
 
         // Reset buffer

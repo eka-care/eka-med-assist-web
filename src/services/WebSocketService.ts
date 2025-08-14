@@ -24,10 +24,10 @@ import {
 } from "../types/socket";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
-const BASE_URL = "ws://66e1e3613936.ngrok-free.app/ws/med-assist/session";
+const BASE_URL = "ws://95746b0dc193.ngrok-free.app/ws/med-assist/session";
 export class WebSocketService {
   private ws: WebSocket | null = null;
-  private config: WebSocketConfig;
+  public config: WebSocketConfig;
   private connectionState: ConnectionStateType = ConnectionState.DISCONNECTED;
   private reconnectAttempts: number = 0;
   private maxReconnectAttempts: number = 5;
@@ -61,11 +61,21 @@ export class WebSocketService {
    */
   public async connect(): Promise<void> {
     try {
+      // Prevent multiple simultaneous connection attempts
+      if (
+        this.isReconnecting ||
+        this.connectionState === ConnectionState.CONNECTING
+      ) {
+        console.log("Connection already in progress, skipping");
+        return;
+      }
+
       if (this.isConnected()) {
         console.log("WebSocket is already connected");
         return;
       }
-      if (this.reconnectAttempts > 5) {
+
+      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
         console.log("Reconnect attempts exceeded");
         this.updateConnectionState(ConnectionState.ERROR);
         this.triggerEvent(
@@ -74,12 +84,17 @@ export class WebSocketService {
         );
         return;
       }
+
       this.updateConnectionState(ConnectionState.CONNECTING);
+      this.isReconnecting = true;
       this.reconnectAttempts++;
+
       // Connect to WebSocket with session ID in URL and token as query param
       const wsUrl = `${BASE_URL}/${
         this.config.sessionId
       }/?token=${encodeURIComponent(this.config.auth.token)}`;
+
+      console.log("Connecting to WebSocket:", wsUrl,'reconnectAttempts',this.reconnectAttempts);
       this.ws = new WebSocket(wsUrl);
 
       this.setupEventListeners();
@@ -93,7 +108,6 @@ export class WebSocketService {
 
         this.ws.onopen = () => {
           console.log("WebSocket connection opened");
-
           this.updateConnectionState(ConnectionState.CONNECTED);
           this.reconnectAttempts = 0;
           this.isReconnecting = false;
@@ -108,12 +122,14 @@ export class WebSocketService {
         this.ws.onerror = (error) => {
           console.log("WebSocket connection error", error);
           this.updateConnectionState(ConnectionState.ERROR);
+          this.isReconnecting = false;
           reject(error);
         };
       });
     } catch (error) {
-      console.log("WebSocket connection  from catch block", error);
+      console.log("WebSocket connection error from catch block", error);
       this.updateConnectionState(ConnectionState.ERROR);
+      this.isReconnecting = false;
       throw error;
     }
   }
@@ -182,7 +198,7 @@ export class WebSocketService {
       ev: SocketEvent.CHAT,
       ct: ContentType.FILE,
       ts: Date.now(),
-      data: s3Url,
+      data: { url: s3Url },
     };
 
     this.sendMessage(message);
@@ -220,9 +236,11 @@ export class WebSocketService {
     files: File[]
   ): Promise<void> {
     console.log("hi from uploadFilesToPresignedUrl");
-    
+
     try {
-      console.log(`Uploading ${files.length} files to presigned URL ${presignedUrl}`,);
+      console.log(
+        `Uploading ${files.length} files to presigned URL ${presignedUrl}`
+      );
 
       for (const file of files) {
         console.log(
@@ -261,34 +279,36 @@ export class WebSocketService {
   /**
    * Send audio stream chunk
    */
-  public sendAudioStream(audioData: Float32Array): void {
+  public sendAudioStream(audioData: Uint8Array): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
+    const base64Audio = btoa(String.fromCharCode(...audioData));
 
     const message: AudioStreamRequest = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: audioData,
+      data: base64Audio,
     };
-
+    console.log("Sending audio stream message:", message);
     this.sendMessage(message);
   }
 
   /**
    * Send audio end of stream
    */
-  public sendAudioEndOfStream(audioData: Float32Array): void {
+  public sendAudioEndOfStream(audioData: Uint8Array): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
+    const base64Audio = btoa(String.fromCharCode(...audioData));
 
     const message: AudioEndOfStreamRequest = {
       ev: SocketEvent.END_OF_STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: audioData,
+      data: base64Audio,
     };
 
     this.sendMessage(message);
@@ -368,7 +388,14 @@ export class WebSocketService {
   private setupEventListeners(): void {
     if (!this.ws) return;
 
+    // Remove any existing listeners to prevent duplicates
+    this.ws.onopen = null;
+    this.ws.onclose = null;
+    this.ws.onerror = null;
+    this.ws.onmessage = null;
+
     this.ws.onopen = () => {
+      console.log("WebSocket connection opened");
       this.updateConnectionState(ConnectionState.CONNECTED);
       this.reconnectAttempts = 0;
       this.isReconnecting = false;
@@ -377,6 +404,7 @@ export class WebSocketService {
     };
 
     this.ws.onclose = (event) => {
+      console.log("WebSocket connection closed:", event.code, event.reason);
       this.updateConnectionState(ConnectionState.DISCONNECTED);
       this.stopPingInterval();
       this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, false);
@@ -386,10 +414,14 @@ export class WebSocketService {
         this.handleDisconnectCode(event.code);
       }
 
-      this.attemptReconnection();
+      // Only attempt reconnection if we're not manually disconnecting
+      if (this.connectionState !== ConnectionState.DISCONNECTED) {
+        this.attemptReconnection();
+      }
     };
 
     this.ws.onerror = (error) => {
+      console.log("WebSocket error:", error);
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
       this.handleReconnectionError(new Error("WebSocket error"));
@@ -452,7 +484,7 @@ export class WebSocketService {
     if (message.ct === ContentType.FILE && message.data) {
       // This is an S3 URL for file upload
       this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message.data);
-      console.log("File upload URL received",message, message.data);
+      console.log("File upload URL received", message, message.data);
 
       // If we have pending files, upload them automatically
       if (this.pendingFiles && this.pendingFiles.length > 0) {
@@ -592,18 +624,42 @@ export class WebSocketService {
   private startPingInterval(): void {
     this.stopPingInterval();
     const interval = this.config.options?.pingInterval || 30000;
+    console.log(`Starting ping interval: ${interval}ms`);
+
     this.pingInterval = setInterval(() => {
       if (this.isConnected()) {
+        console.log("Sending ping...");
         this.sendPing();
+      } else {
+        console.log("WebSocket not connected, stopping ping interval");
+        this.stopPingInterval();
       }
     }, interval);
   }
 
   private stopPingInterval(): void {
     if (this.pingInterval) {
+      console.log("Stopping ping interval");
       clearInterval(this.pingInterval);
       this.pingInterval = null;
     }
+  }
+
+  /**
+   * Get connection health information
+   */
+  public getConnectionHealth(): {
+    state: ConnectionStateType;
+    reconnectAttempts: number;
+    isReconnecting: boolean;
+    lastPing?: number;
+    lastPong?: number;
+  } {
+    return {
+      state: this.connectionState,
+      reconnectAttempts: this.reconnectAttempts,
+      isReconnecting: this.isReconnecting,
+    };
   }
 
   private attemptReconnection(): void {
@@ -616,15 +672,34 @@ export class WebSocketService {
       return;
     }
 
+    // Prevent multiple simultaneous reconnection attempts
+    if (this.isReconnecting) {
+      console.log("Reconnection already in progress, skipping");
+      return;
+    }
+
+    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+    console.log(
+      `Scheduling reconnection attempt ${
+        this.reconnectAttempts + 1
+      } in ${delay}ms`
+    );
+
     setTimeout(() => {
       if (!this.isConnected() && !this.isReconnecting) {
+        console.log(
+          `Attempting reconnection ${this.reconnectAttempts + 1}/${
+            this.maxReconnectAttempts
+          }`
+        );
         this.reconnect();
       }
-    }, this.reconnectDelay * Math.pow(2, this.reconnectAttempts));
+    }, delay);
   }
 
   private handleReconnectionError(error: Error): void {
     this.reconnectAttempts++;
+    this.isReconnecting = false;
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
@@ -633,6 +708,9 @@ export class WebSocketService {
         WEBSOCKET_SERVER_EVENTS.ERROR,
         new Error("Reconnect failed")
       );
+    } else {
+      // Schedule next reconnection attempt
+      this.attemptReconnection();
     }
   }
 
@@ -675,9 +753,22 @@ let webSocketServiceInstance: WebSocketService | null = null;
 export const createWebSocketService = (
   config: WebSocketConfig
 ): WebSocketService => {
-  if (!webSocketServiceInstance) {
-    webSocketServiceInstance = new WebSocketService(config);
+  // If we already have an instance with the same config, return it
+  if (
+    webSocketServiceInstance &&
+    webSocketServiceInstance.config.sessionId === config.sessionId &&
+    webSocketServiceInstance.config.auth.token === config.auth.token
+  ) {
+    return webSocketServiceInstance;
   }
+
+  // If we have an existing instance with different config, disconnect it first
+  if (webSocketServiceInstance) {
+    webSocketServiceInstance.disconnect();
+  }
+
+  // Create new instance
+  webSocketServiceInstance = new WebSocketService(config);
   return webSocketServiceInstance;
 };
 
@@ -690,4 +781,15 @@ export const destroyWebSocketService = (): void => {
     webSocketServiceInstance.disconnect();
     webSocketServiceInstance = null;
   }
+};
+
+// Add method to check if instance exists with current config
+export const hasWebSocketServiceWithConfig = (
+  config: WebSocketConfig
+): boolean => {
+  return (
+    webSocketServiceInstance !== null &&
+    webSocketServiceInstance.config.sessionId === config.sessionId &&
+    webSocketServiceInstance.config.auth.token === config.auth.token
+  );
 };

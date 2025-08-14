@@ -88,8 +88,8 @@ export function useWebSocket(
     wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: Error) => {
       console.error("WebSocket error:", error);
       setError(error.message);
-      setSocketIOConnected(false);
-      setConnectionEstablished(false);
+      // setSocketIOConnected(false);
+      // setConnectionEstablished(false);
     });
 
     wsRef.current?.on(
@@ -181,7 +181,8 @@ export function useWebSocket(
   };
 
   // Send audio stream chunk
-  const sendAudioStream = (audioData: Float32Array) => {
+  const sendAudioStream = (audioData: Uint8Array) => {
+    console.log("Audio stream chunk received in useWebSocket:", audioData);
     if (wsRef.current && isSocketIOConnected) {
       wsRef.current.sendAudioStream(audioData);
       console.log("Audio stream chunk sent");
@@ -189,7 +190,7 @@ export function useWebSocket(
   };
 
   // Send audio end of stream
-  const sendAudioEndOfStream = (audioData: Float32Array) => {
+  const sendAudioEndOfStream = (audioData: Uint8Array) => {
     if (wsRef.current && isSocketIOConnected) {
       wsRef.current.sendAudioEndOfStream(audioData);
       console.log("Audio end of stream sent");

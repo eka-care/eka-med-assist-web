@@ -45,21 +45,21 @@ export interface BaseMessage {
 export interface ChatRequest extends BaseMessage {
   ev: typeof SocketEvent.CHAT;
   ct: typeof ContentType.TEXT | typeof ContentType.FILE;
-  data?: string; // message content or S3 URL
+  data?: string | { url: string }; // message content or S3 URL
 }
 
 // Client to Server: Audio stream
 export interface AudioStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
   ct: typeof ContentType.AUDIO;
-  data: Float32Array; // audio data
+  data: string; // audio data as Uint8Array for real-time streaming
 }
 
 // Client to Server: Audio end of stream
 export interface AudioEndOfStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.END_OF_STREAM;
   ct: typeof ContentType.AUDIO;
-  data: Float32Array; // final audio chunk
+  data: string; // final audio chunk as Uint8Array
 }
 
 // Server to Client: Connection established
@@ -73,7 +73,7 @@ export interface ConnectionEstablishedMessage extends BaseMessage {
 export interface ChatResponseMessage extends BaseMessage {
   ev: typeof SocketEvent.CHAT;
   ct: typeof ContentType.FILE;
-  data: {url: string,exp?:number}; // S3 presigned URL
+  data: { url: string; exp?: number }; // S3 presigned URL
 }
 
 // Server to Client: Stream response

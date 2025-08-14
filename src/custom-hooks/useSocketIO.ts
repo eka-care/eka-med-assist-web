@@ -70,7 +70,7 @@ export function useSocketIO(config: SocketIOConfig | null) {
       ) {
         console.log("File upload URL received:", message.data);
         // Automatically upload pending files to the presigned URL
-        uploadFilesToPresignedUrl(message.data, pendingFiles);
+        uploadFilesToPresignedUrl(message.data.url, pendingFiles);
       }
     });
 
@@ -211,31 +211,37 @@ export function useSocketIO(config: SocketIOConfig | null) {
   // Send audio stream chunk
   const sendAudioStream = (audioData: Float32Array) => {
     if (socketRef.current && isSocketIOConnected) {
+      // Convert Float32Array to Uint8Array
+      const uint8Array = new Uint8Array(audioData.buffer);
+
       const audioRequest = {
         ev: WEBSOCKET_SERVER_EVENTS.STREAM,
         ct: ContentType.AUDIO,
         ts: Math.floor(Date.now()),
-        data: audioData,
+        data: uint8Array,
       };
       socketRef.current.emit(WEBSOCKET_SERVER_EVENTS.STREAM, audioRequest);
-      console.log("Audio stream chunk sent");
+      console.log("Audio stream chunk sent as Uint8Array");
     }
   };
 
   // Send audio end of stream
   const sendAudioEndOfStream = (audioData: Float32Array) => {
     if (socketRef.current && isSocketIOConnected) {
+      // Convert Float32Array to Uint8Array
+      const uint8Array = new Uint8Array(audioData.buffer);
+
       const audioEndRequest = {
         ev: WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
         ct: ContentType.AUDIO,
         ts: Math.floor(Date.now()),
-        data: audioData,
+        data: uint8Array,
       };
       socketRef.current.emit(
         WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
         audioEndRequest
       );
-      console.log("Audio end of stream sent");
+      console.log("Audio end of stream sent as Uint8Array");
     }
   };
 
