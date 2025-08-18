@@ -18,6 +18,7 @@ export function useWebSocket(
   const wsRef = useRef<WebSocketService | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isStreaming, setIsStreaming] = useState(false);
+  const isAudioStreaming = useRef(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const {
     setSocketIOConnected,
@@ -95,14 +96,14 @@ export function useWebSocket(
     wsRef.current?.on(
       WEBSOCKET_SERVER_EVENTS.STREAM,
       (message: StreamResponseMessage) => {
+        if (!isStreaming) {
+          setIsStreaming(true);
+        }
         console.log("STREAM received:", message);
         if (message.ct === ContentType.TEXT && message.data && onTextMessage) {
           console.log("Text message received:", message.data);
           // Call the callback to display the bot response
           onTextMessage(message.data);
-        }
-        if (!isStreaming) {
-          setIsStreaming(true);
         }
       }
     );
@@ -182,6 +183,10 @@ export function useWebSocket(
 
   // Send audio stream chunk
   const sendAudioStream = (audioData: Uint8Array) => {
+    if (!isAudioStreaming.current) {
+      wsRef.current?.sendAudioStreamStart();
+      isAudioStreaming.current = true;
+    }
     console.log("Audio stream chunk received in useWebSocket:", audioData);
     if (wsRef.current && isSocketIOConnected) {
       wsRef.current.sendAudioStream(audioData);
@@ -194,6 +199,7 @@ export function useWebSocket(
     if (wsRef.current && isSocketIOConnected) {
       wsRef.current.sendAudioEndOfStream(audioData);
       console.log("Audio end of stream sent");
+      isAudioStreaming.current = false;
     }
   };
 

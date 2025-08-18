@@ -24,7 +24,7 @@ import {
 } from "../types/socket";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
-const BASE_URL = "ws://95746b0dc193.ngrok-free.app/ws/med-assist/session";
+const BASE_URL = "ws://df3f50437c34.ngrok-free.app/ws/med-assist/session";
 export class WebSocketService {
   private ws: WebSocket | null = null;
   public config: WebSocketConfig;
@@ -47,7 +47,7 @@ export class WebSocketService {
         reconnectAttempts: 5,
         reconnectDelay: 1000,
         pingInterval: 30000, // 30 seconds
-        connectionTimeout: 20000,
+        connectionTimeout: 60000,
         ...config.options,
       },
     };
@@ -94,7 +94,12 @@ export class WebSocketService {
         this.config.sessionId
       }/?token=${encodeURIComponent(this.config.auth.token)}`;
 
-      console.log("Connecting to WebSocket:", wsUrl,'reconnectAttempts',this.reconnectAttempts);
+      console.log(
+        "Connecting to WebSocket:",
+        wsUrl,
+        "reconnectAttempts",
+        this.reconnectAttempts
+      );
       this.ws = new WebSocket(wsUrl);
 
       this.setupEventListeners();
@@ -279,6 +284,19 @@ export class WebSocketService {
   /**
    * Send audio stream chunk
    */
+  public sendAudioStreamStart(): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+    const message: AudioStreamRequest = {
+      ev: SocketEvent.STREAM,
+      ct: ContentType.AUDIO,
+      ts: Date.now(),
+      data: 'start'
+    };
+    this.sendMessage(message);
+  }
+  
   public sendAudioStream(audioData: Uint8Array): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
@@ -741,7 +759,6 @@ export class WebSocketService {
     this.connectionState = state;
     this.triggerEvent("connection_state_change", state);
   }
-
 }
 
 // Export singleton instance for global usage

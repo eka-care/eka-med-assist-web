@@ -27,7 +27,7 @@ const defaultJWTPayload = {
 const startSession = async () => {
   try {
     const response = await fetch(
-      "https://95746b0dc193.ngrok-free.app/med-assist/session",
+      "https://df3f50437c34.ngrok-free.app/med-assist/session",
       {
         method: "POST",
         headers: {
