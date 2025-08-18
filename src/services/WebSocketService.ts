@@ -742,9 +742,6 @@ export class WebSocketService {
     this.triggerEvent("connection_state_change", state);
   }
 
-  private generateMessageId(): number {
-    return Date.now();
-  }
 }
 
 // Export singleton instance for global usage

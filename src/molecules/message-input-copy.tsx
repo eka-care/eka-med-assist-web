@@ -32,7 +32,6 @@ export function MessageInputCopy({
   const [isListening, setIsListening] = useState(false);
   const [isAudioStreaming, setIsAudioStreaming] = useState(false);
   const [recordingTime, setRecordingTime] = useState(0);
-  const [showSendButton, setShowSendButton] = useState(false);
   const [showEndButton, setShowEndButton] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
 
@@ -54,7 +53,6 @@ export function MessageInputCopy({
   const startRecording = async () => {
     try {
       console.log("called on startRecording in message-input-copy");
-      setShowSendButton(false);
       setShowEndButton(false);
       setRecordingTime(0);
       await start((uint8Array) => {
@@ -73,7 +71,7 @@ export function MessageInputCopy({
         setRecordingTime((prev) => prev + 1);
       }, 100);
     } catch (error) {
-      console.error("Error starting recording:", error);
+      console.error("Error starting recording:", error, audioError);
     }
   };
 
@@ -90,7 +88,6 @@ export function MessageInputCopy({
   // Cancel recording
   const cancelRecording = () => {
     stop();
-    setShowSendButton(false);
     setShowEndButton(false);
     setIsListening(false);
   };
@@ -102,7 +99,6 @@ export function MessageInputCopy({
       const emptyBlob = new Blob([], { type: "audio/raw" });
       onFinalAudioStream(emptyBlob);
       console.log("called on Final audio stream");
-      setShowSendButton(false);
       setShowEndButton(false);
       setIsListening(false);
       setIsAudioStreaming(false);
@@ -146,7 +142,6 @@ export function MessageInputCopy({
 
       setMessage("");
       setUploadedFiles([]);
-      setShowSendButton(false);
       setShowEndButton(false);
       setIsListening(false);
     }
