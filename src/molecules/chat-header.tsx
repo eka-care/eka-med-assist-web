@@ -17,6 +17,7 @@ interface ChatHeaderProps {
   onClearSession?: () => void;
   isExpanded?: boolean;
   isMobile?: boolean;
+  isConnected?: boolean;
 }
 
 export function ChatHeader({
@@ -28,15 +29,24 @@ export function ChatHeader({
   onClearSession,
   isExpanded = false,
   isMobile = false,
+  isConnected = false,
 }: ChatHeaderProps) {
   return (
     <div
       className={`relative flex items-center justify-between px-4 bg-[var(--color-card)] ${
         isExpanded || isMobile ? "sticky top-0 z-10" : ""
       }`}>
-      <h2 className="font-semibold text-[var(--color-foreground)] text-lg">
-        {title}
-      </h2>
+      <div className="flex items-center gap-3">
+        <h2 className="font-semibold text-[var(--color-foreground)] text-lg">
+          {title}
+        </h2>
+        {isConnected && (
+          <div className="flex items-center gap-2 px-2 py-1 bg-green-100 text-green-800 text-xs font-medium rounded-full">
+            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+            <span>Connected</span>
+          </div>
+        )}
+      </div>
       <div className="flex items-center gap-1">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>

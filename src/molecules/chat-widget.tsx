@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 
 import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
-import { Card, ScrollArea } from "@ui/index";
+import { Card } from "@ui/index";
 import useSessionStore from "@/stores/medAssistStore";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { WebSocketConfig } from "@/types/socket";
@@ -40,6 +40,7 @@ export function ChatWidget({
       isBot: true,
     },
   ]);
+  const [error, setError] = useState<string | null>(null);
   const sessionId = useSessionStore((state) => state.sessionId);
   const sessionToken = useSessionStore((state) => state.sessionToken);
   const isSocketIOConnected = useSessionStore(
@@ -61,7 +62,6 @@ export function ChatWidget({
   // Use WebSocket hook
   const {
     wsService,
-    sendPing,
     sendChatMessage,
     sendFileUploadRequest,
     sendAudioEndOfStream,
@@ -89,14 +89,6 @@ export function ChatWidget({
         lastMessage.isBot &&
         botMessage.length > lastMessage.content.length
       ) {
-        console.log(
-          "Updating existing bot message:",
-          lastMessage.id,
-          "from",
-          lastMessage.content,
-          "to",
-          botMessage
-        );
         // Update the existing bot message with progressive text
         const updatedMessages = [...prev];
         updatedMessages[updatedMessages.length - 1] = {
@@ -150,33 +142,22 @@ export function ChatWidget({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
+    console.log("scrollToBottom called");
     if (scrollAreaRef.current) {
-      const scrollContainer = scrollAreaRef.current.querySelector(
-        "[data-radix-scroll-area-viewport]"
-      );
-      if (scrollContainer) {
-        scrollContainer.scrollTop = scrollContainer.scrollHeight;
-      }
+      // Use setTimeout to ensure DOM is fully updated
+      setTimeout(() => {
+        scrollAreaRef.current?.scrollTo({
+          top: scrollAreaRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }, 0);
     }
   };
 
+  // Scroll to bottom whenever messages change
   useEffect(() => {
     scrollToBottom();
-  }, [messages]);
-
-  //   const handleStartStreaming = async () => {
-  //     try {
-  //       await startStreaming();
-  //       console.log("Audio streaming started");
-  //     } catch (error) {
-  //       console.error("Failed to start streaming:", error);
-  //     }
-  //   };
-
-  //   const handleStopStreaming = () => {
-  //     stopStreaming();
-  //     console.log("Audio streaming stopped");
-  //   };
+  }, [messages, isStreaming]);
 
   const handleAudioStream = (audioBlob: Blob) => {
     console.log("called on Audio stream in chat widget");
@@ -184,6 +165,9 @@ export function ChatWidget({
       console.log("Cannot send voice while streaming");
       return;
     }
+
+    // Clear any errors when starting audio streaming
+    clearError();
 
     console.log("Audio stream received:", audioBlob);
 
@@ -218,6 +202,9 @@ export function ChatWidget({
       return;
     }
 
+    // Clear any errors when sending a message
+    clearError();
+
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -225,17 +212,7 @@ export function ChatWidget({
     };
 
     setMessages((prev) => [...prev, newMessage]);
-    // // Simulate bot response
-    // setTimeout(() => {
-    //     const botResponse: Message = {
-    //       id: (Date.now() + 1).toString(),
-    //       content:
-    //         "I understand you need assistance. Let me help you with that. Could you please provide more details about your specific needs?",
-    //       isBot: true,
-    //     };
-    //     setMessages((prev) => [...prev, botResponse]);
-    //   }, 1000);
-    // Send message via WebSocket
+
     if (isConnectionEstablished) {
       sendChatMessage(content);
     } else {
@@ -258,29 +235,15 @@ export function ChatWidget({
     });
   };
 
-  //   const handleVoiceMessage = (audioBlob: Blob) => {
-  //     // Block voice if currently streaming
-
-  //     if (isStreaming) {
-  //       console.log("Cannot send voice while streaming");
-  //       return;
-  //     }
-
-  //     console.log("Voice message received:", audioBlob);
-  //     // Convert Blob to ArrayBuffer, then to Uint8Array for streaming
-  //     audioBlob.arrayBuffer().then((buffer) => {
-  //       const uint8Audio = new Uint8Array(buffer);
-  //       handleAudioEndOfStream(uint8Audio);
-  //     });
-  //     // handleSendMessage("Voice message received");
-  //   };
-
   const handleFileUpload = (files: FileList) => {
     // Block file upload if currently streaming
     if (isStreaming) {
       console.log("Cannot upload file while streaming");
       return;
     }
+
+    // Clear any errors when uploading files
+    clearError();
 
     const fileArray = Array.from(files);
     const fileNames = fileArray.map((f) => f.name).join(", ");
@@ -311,6 +274,9 @@ export function ChatWidget({
       return;
     }
 
+    // Clear any errors when using quick actions
+    clearError();
+
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       handleSendMessage(action.label);
@@ -320,7 +286,12 @@ export function ChatWidget({
   const handleMenuAction = (action: string) => {
     if (action === "clear") {
       setMessages([messages[0]]);
+      clearError(); // Clear any errors when clearing chat
     }
+  };
+
+  const clearError = () => {
+    setError(null);
   };
 
   // Mobile full-screen styles
@@ -345,6 +316,7 @@ export function ChatWidget({
         onMenuAction={handleMenuAction}
         isExpanded={isExpanded}
         isMobile={isMobile}
+        isConnected={isConnectionEstablished}
       />
 
       {/* Single timestamp at top */}
@@ -353,7 +325,14 @@ export function ChatWidget({
       </div>
 
       <div className={`${chatHeight} flex flex-col overflow-hidden`}>
-        <ScrollArea ref={scrollAreaRef} className="flex-1 min-h-0">
+        <div
+          ref={scrollAreaRef}
+          className="flex-1 min-h-0 overflow-y-auto px-4"
+          style={{
+            scrollBehavior: "smooth",
+            scrollbarWidth: "thin",
+            scrollbarColor: "var(--color-border) transparent",
+          }}>
           <div className="space-y-1">
             {messages.map((message, index) => (
               <MessageBubble
@@ -370,7 +349,7 @@ export function ChatWidget({
               />
             ))}
           </div>
-        </ScrollArea>
+        </div>
 
         {/* Connection Status */}
         {!isConnectionEstablished && (
@@ -411,33 +390,38 @@ export function ChatWidget({
         )}
 
         {/* Streaming Status */}
-        {isStreaming && (
+        {/* {isStreaming && (
           <div className="px-4 py-2 text-center text-sm text-blue-600 bg-blue-50 border-t">
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
               <span>Bot is responding...</span>
             </div>
           </div>
-        )}
+        )} */}
 
-        {/* Test PING when connected */}
-        {isConnectionEstablished && !isStreaming && (
-          <div className="px-4 py-2 text-center text-sm text-green-600 bg-green-50 border-t">
-            <span>Connected! </span>
-            <button
-              onClick={sendPing}
-              className="ml-2 px-2 py-1 bg-green-600 text-white text-xs rounded hover:bg-green-700">
-              Test PING
-            </button>
-            {/* Debug Info */}
-            {process.env.NODE_ENV === "development" && wsService && (
-              <div className="mt-2 text-xs text-gray-600">
-                <div>Session: {sessionId?.substring(0, 8)}...</div>
-                <div>
-                  Health: {JSON.stringify(wsService.getConnectionHealth())}
-                </div>
-              </div>
-            )}
+        {/* Simple Error Display */}
+        {error && (
+          <div className="mx-4 mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
+            <div className="flex items-center gap-2 text-red-700">
+              <svg
+                className="w-4 h-4 text-red-600"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24">
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
+                />
+              </svg>
+              <span className="text-sm">{error}</span>
+              <button
+                onClick={clearError}
+                className="ml-auto text-red-500 hover:text-red-700">
+                ×
+              </button>
+            </div>
           </div>
         )}
 
@@ -448,6 +432,7 @@ export function ChatWidget({
           onFileUpload={handleFileUpload}
           disabled={!isConnectionEstablished}
           isStreaming={isStreaming}
+          setError={setError}
         />
       </div>
     </Card>

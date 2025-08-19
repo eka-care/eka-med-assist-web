@@ -24,7 +24,7 @@ import {
 } from "../types/socket";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
-const BASE_URL = "ws://df3f50437c34.ngrok-free.app/ws/med-assist/session";
+const BASE_URL = "wss://matrix-ws.dev.eka.care/ws/med-assist/session";
 export class WebSocketService {
   private ws: WebSocket | null = null;
   public config: WebSocketConfig;
@@ -296,7 +296,6 @@ export class WebSocketService {
     };
     this.sendMessage(message);
   }
-  
   public sendAudioStream(audioData: Uint8Array): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
@@ -447,8 +446,6 @@ export class WebSocketService {
 
     this.ws.onmessage = (event) => {
       try {
-        console.log("Handling events", event);
-
         const data: ServerMessage = JSON.parse(event.data);
         this.handleServerMessage(data);
       } catch (error) {
@@ -525,7 +522,6 @@ export class WebSocketService {
       console.log("Stream response received:", message.data);
       // Create or update streaming message
       if (!this.currentStreamMessage) {
-        console.log("Creating new streaming message");
         this.currentStreamMessage = {
           id: Date.now(),
           content: "",
@@ -537,11 +533,6 @@ export class WebSocketService {
 
       // Add the new word/chunk to the existing content
       this.currentStreamMessage.content += message.data;
-      console.log(
-        "Updated streaming message content:",
-        this.currentStreamMessage.content
-      );
-
       // Send the PROGRESSIVE (accumulated) text, not just the new word
       this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
     }
@@ -549,10 +540,6 @@ export class WebSocketService {
 
   private handleEndOfStream(message: EndOfStreamMessage): void {
     if (message.ct === ContentType.TEXT && this.currentStreamMessage) {
-      console.log(
-        "End of stream received, finalizing message:",
-        this.currentStreamMessage.content
-      );
       // Finalize the streaming message
       this.currentStreamMessage.metadata = {
         ...this.currentStreamMessage.metadata,
@@ -646,7 +633,6 @@ export class WebSocketService {
 
     this.pingInterval = setInterval(() => {
       if (this.isConnected()) {
-        console.log("Sending ping...");
         this.sendPing();
       } else {
         console.log("WebSocket not connected, stopping ping interval");

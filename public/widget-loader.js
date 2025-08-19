@@ -121,7 +121,8 @@
   // Toggle widget visibility
   function toggleWidget(config) {
     var iframe = document.getElementById("eka-widget-iframe");
-    var overlay = document.getElementById("eka-widget-overlay");
+    var button = document.querySelector(".eka-widget-button");
+    // var overlay = document.getElementById("eka-widget-overlay");
 
     if (iframe && iframe.style.display !== "none") {
       hideWidget();
@@ -130,38 +131,132 @@
     }
   }
 
-  // Show widget
+  // Add session management
+  var currentSession = null;
+
+  // Enhanced showWidget function
   function showWidget(config) {
     var iframe = document.getElementById("eka-widget-iframe");
-    var overlay = document.getElementById("eka-widget-overlay");
+    var button = document.querySelector(".eka-widget-button");
+    // var overlay = document.getElementById("eka-widget-overlay");
 
     if (!iframe) {
       iframe = createWidgetIframe(config);
       document.body.appendChild(iframe);
     }
 
-    if (!overlay) {
-      overlay = createOverlay();
-      document.body.appendChild(overlay);
-    }
+    // Start session before showing widget
+    startSessionAndShowWidget(config, iframe);
 
+    // Show widget
     iframe.style.display = "block";
-    overlay.classList.add("active");
+    
+    // Hide the widget button when widget is open
+    if (button) {
+      button.style.display = "none";
+    }
+    
+    //overlay.classList.add("active");
+  }
+
+  // New function to handle session and widget display
+  async function startSessionAndShowWidget(config, iframe) {
+    try {
+      const defaultJWTPayload = {
+        aud: "androiddoc",
+        "b-id": "77088166996724",
+        cc: {
+          "doc-id": "173658822122884",
+          esc: 1,
+          "is-d": true,
+        },
+        dob: "1990-07-03",
+        "doc-id": "173658822122884",
+        exp: 1754298198,
+        fn: "Neha",
+        gen: "F",
+        iat: 1754294598,
+        idp: "mob",
+        "is-d": true,
+        iss: "emr.eka.care",
+        ln: "Jagadeesh",
+        mn: "true",
+        oid: "173658822122884",
+        pri: true,
+        r: "IN",
+        uuid: "fc452885-83e5-466c-b45c-53e743ff2428",
+      };
+
+      // Call your API here
+      const response = await fetch(
+        "https://matrix.dev.eka.care/med-assist/session",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "jwt-payload": JSON.stringify(defaultJWTPayload),
+          },
+        }
+      );
+
+      if (!response.ok)
+        throw new Error(`HTTP error! status: ${response.status}`);
+
+      const sessionData = await response.json();
+      currentSession = sessionData;
+
+      // Send session data to React app via postMessage
+      iframe.contentWindow.postMessage(
+        {
+          type: "SESSION_STARTED",
+          session: sessionData,
+        },
+        "*"
+      );
+
+      // Show widget
+      iframe.style.display = "block";
+    } catch (error) {
+      console.error("Failed to start session:", error);
+      // Handle error - maybe show error message
+    }
   }
 
   // Hide widget
   function hideWidget() {
     var iframe = document.getElementById("eka-widget-iframe");
-    var overlay = document.getElementById("eka-widget-overlay");
+    var button = document.querySelector(".eka-widget-button");
+    // var overlay = document.getElementById("eka-widget-overlay");
 
     if (iframe) {
+      // Notify React app that widget is closing
+      iframe.contentWindow.postMessage(
+        {
+          type: "WIDGET_CLOSING",
+        },
+        "*"
+      );
+
       iframe.style.display = "none";
+      currentSession = null; // Clear session
     }
 
-    if (overlay) {
-      overlay.classList.remove("active");
+    // Show the widget button when widget is closed
+    if (button) {
+      button.style.display = "flex";
     }
+
+    // if (overlay) {
+    //   overlay.classList.remove("active");
+    // }
   }
+
+  // Listen for messages from React app
+  window.addEventListener("message", function (event) {
+    if (event.data.type === "WIDGET_CLOSE_REQUESTED") {
+      hideWidget();
+    }
+  });
 
   // Initialize widget
   function initWidget(config) {
@@ -175,8 +270,8 @@
     document.body.appendChild(button);
 
     // Create overlay
-    var overlay = createOverlay();
-    document.body.appendChild(overlay);
+    // var overlay = createOverlay();
+    // document.body.appendChild(overlay);
 
     console.log("Eka Medical Assistant Widget loader initialized");
   }

@@ -14,6 +14,7 @@ interface MessageInputProps {
   placeholder?: string;
   disabled?: boolean;
   isStreaming?: boolean;
+  setError: (error: string) => void;
 }
 
 export function MessageInputCopy({
@@ -27,6 +28,7 @@ export function MessageInputCopy({
   placeholder = "Message Apollo Assist...",
   disabled = false,
   isStreaming = false,
+  setError,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -34,13 +36,71 @@ export function MessageInputCopy({
   const [recordingTime, setRecordingTime] = useState(0);
   const [showEndButton, setShowEndButton] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-
+  const [audioError, setAudioError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   // Clean audio hook - only what we need
-  const { isRecording, error: audioError, start, stop } = useAudioChunking();
+  const { isRecording, error: audioChunkingError, start, stop } = useAudioChunking();
 
+  useEffect(() => {
+    if (audioChunkingError) {
+      console.log("Audio error detected:", audioChunkingError);
+      setIsListening(false);
+      setShowEndButton(false);
+      setAudioError(audioChunkingError.message);
+      setError(audioChunkingError.message);
+      // setRecordingTime(0);
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+    }
+  }, [audioChunkingError]);
+
+  const checkMicrophonePermission = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      stream.getTracks().forEach((track) => track.stop());
+      setError(null); // Clear any previous errors
+      console.log("Microphone permission granted, error cleared");
+    } catch (error) {
+      if (error instanceof DOMException && error.name === "NotAllowedError") {
+        console.log("Microphone permission denied");
+        // Check if it's blocked or just not granted yet
+        const permissionState = await checkCurrentPermissionState();
+        console.log("Permission state:", permissionState);
+        if (permissionState === "denied") {
+          const errorMsg =
+            "Microphone access is blocked. You'll need to manually enable it in your browser settings.";
+          console.log("Setting error:", errorMsg);
+          setError(errorMsg);
+        } else {
+          const errorMsg =
+            "Microphone access denied. Please allow microphone permissions when prompted.";
+          console.log("Setting error:", errorMsg);
+          setError(errorMsg);
+        }
+      } else {
+        console.error("Error checking microphone permission:", error);
+        const errorMsg =
+          "Unable to access microphone. Please check your device and try again.";
+        console.log("Setting error:", errorMsg);
+        setError(errorMsg);
+      }
+    }
+  };
+
+  const checkCurrentPermissionState = async () => {
+    try {
+      const permission = await navigator.permissions.query({
+        name: "microphone" as PermissionName,
+      });
+      return permission.state;
+    } catch (error) {
+      console.log("Could not check permission state:", error);
+      return "unknown";
+    }
+  };
   // Check if there's any content to send
   const hasContent = useMemo(() => {
     return message.trim() || uploadedFiles.length > 0;
@@ -71,7 +131,7 @@ export function MessageInputCopy({
         setRecordingTime((prev) => prev + 1);
       }, 100);
     } catch (error) {
-      console.error("Error starting recording:", error, audioError);
+      console.error("Error starting recording:", error);
     }
   };
 
@@ -156,8 +216,13 @@ export function MessageInputCopy({
 
   const handleMicClick = () => {
     if (!isListening && !isRecording) {
-      setIsListening(true);
-      startRecording();
+      // Check microphone permissions first
+      checkMicrophonePermission().then(() => {
+        if (!audioError) {
+          setIsListening(true);
+          startRecording();
+        } 
+      });
     } else if (isRecording) {
       stopRecording();
     }
@@ -240,7 +305,7 @@ export function MessageInputCopy({
               </div>
             ) : (
               <span className="text-sm text-[var(--color-primary)]">
-                {showEndButton ? "Recording Paused" : "Listning..."}
+                {showEndButton ? "Recording Paused" : "Listening..."}
               </span>
             )}
           </div>
@@ -328,7 +393,7 @@ export function MessageInputCopy({
             size="sm"
             className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
             onClick={handleMicClick}
-            disabled={isInputDisabled}>
+            disabled={ disabled || isStreaming || !!audioError}>
             <Mic className="h-4 w-4 text-[var(--color-primary)]" />
           </Button>
 

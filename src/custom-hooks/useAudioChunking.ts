@@ -10,6 +10,7 @@ export interface UseAudioChunkingReturn {
   error: Error | null;
   start: (onChunk: (chunk: Uint8Array) => void) => Promise<void>;
   stop: () => void;
+  clearError: () => void;
 }
 
 export function useAudioChunking() {
@@ -42,7 +43,11 @@ export function useAudioChunking() {
     }
   }, []);
 
-  return { isRecording, error, start, stop };
+  const clearError = useCallback(() => {
+    setError(null);
+  }, []);
+
+  return { isRecording, error, start, stop, clearError };
 }
 // /**
 //  * Simple Audio Chunking Hook
