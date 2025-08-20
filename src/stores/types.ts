@@ -5,11 +5,15 @@ export type TMedAssistStore = {
   sessionToken: string;
   setSessionToken: (sessionToken: string) => void;
 
-  isSocketIOConnected: boolean;
-  setSocketIOConnected: (connected: boolean) => void;
-
   isConnectionEstablished: boolean;
   setConnectionEstablished: (established: boolean) => void;
+
+  // Error handling
+  error: string | null;
+  setError: (error: string | null) => void;
+  clearError: () => void;
+  isTimeoutError: boolean;
+  setTimeoutError: (isTimeout: boolean) => void;
 
   clearSession: () => void;
 };

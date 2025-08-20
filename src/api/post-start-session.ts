@@ -27,7 +27,7 @@ const defaultJWTPayload = {
 const startSession = async () => {
   try {
     const response = await fetch(
-      "https://matrix.dev.eka.care/med-assist/session",
+      "https://fea0c1ed4375.ngrok-free.app/med-assist/session",
       {
         method: "POST",
         headers: {

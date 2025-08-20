@@ -26,3 +26,5 @@ const getBrowserInstructions = () => {
       ];
     }
   };
+
+  export default getBrowserInstructions;

@@ -4,8 +4,9 @@ import type { TMedAssistStore} from "./types";
 const storeInitialState = {
   sessionId: "",
   sessionToken: "",
-  isSocketIOConnected: false,
   isConnectionEstablished: false,
+  error: null,
+  isTimeoutError: false,
 };
 
 const useMedAssistStore = create<TMedAssistStore>((set) => ({
@@ -15,11 +16,15 @@ const useMedAssistStore = create<TMedAssistStore>((set) => ({
   sessionToken: "",
   setSessionToken: (sessionToken) => set({ sessionToken }),
 
-  isSocketIOConnected: false,
-  setSocketIOConnected: (connected: boolean) => set({ isSocketIOConnected: connected }),
-
   isConnectionEstablished: false,
   setConnectionEstablished: (established: boolean) => set({ isConnectionEstablished: established }),
+
+  // Error handling
+  error: null,
+  setError: (error: string | null) => set({ error }),
+  clearError: () => set({ error: null, isTimeoutError: false }),
+  isTimeoutError: false,
+  setTimeoutError: (isTimeout: boolean) => set({ isTimeoutError: isTimeout }),
 
   clearSession: () => set(storeInitialState),
 }));

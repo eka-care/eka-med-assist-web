@@ -2,6 +2,8 @@ import { useState, useRef, useMemo, useEffect } from "react";
 import { Mic, Send, Plus, Trash2, Check } from "lucide-react";
 import { Button, Input, voiceListeningGif } from "@ui/index";
 import { useAudioChunking } from "@/custom-hooks/useAudioChunking";
+import formatTime from "@/utils/formatTime";
+import useSessionStore from "@/stores/medAssistStore";
 
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
@@ -22,8 +24,8 @@ export function MessageInputCopy({
   onFinalAudioStream,
   onFileUpload,
   onInputChange,
-  onInputFocus,
-  onInputBlur,
+  // onInputFocus,
+  // onInputBlur,
   onAudioStream,
   placeholder = "Message Apollo Assist...",
   disabled = false,
@@ -39,9 +41,16 @@ export function MessageInputCopy({
   const [audioError, setAudioError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-
+  const isConnectionEstablished = useSessionStore(
+    (state) => state.isConnectionEstablished
+  );
   // Clean audio hook - only what we need
-  const { isRecording, error: audioChunkingError, start, stop } = useAudioChunking();
+  const {
+    isRecording,
+    error: audioChunkingError,
+    start,
+    stop,
+  } = useAudioChunking();
 
   useEffect(() => {
     if (audioChunkingError) {
@@ -61,7 +70,7 @@ export function MessageInputCopy({
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       stream.getTracks().forEach((track) => track.stop());
-      setError(null); // Clear any previous errors
+      setAudioError(null); // Clear any previous errors
       console.log("Microphone permission granted, error cleared");
     } catch (error) {
       if (error instanceof DOMException && error.name === "NotAllowedError") {
@@ -107,7 +116,7 @@ export function MessageInputCopy({
   }, [message, uploadedFiles]);
 
   // Check if input should be disabled (either disabled prop or streaming)
-  const isInputDisabled = disabled || isStreaming;
+  const isInputDisabled = disabled || isStreaming || !isConnectionEstablished;
 
   // Start recording
   const startRecording = async () => {
@@ -221,7 +230,7 @@ export function MessageInputCopy({
         if (!audioError) {
           setIsListening(true);
           startRecording();
-        } 
+        }
       });
     } else if (isRecording) {
       stopRecording();
@@ -238,14 +247,6 @@ export function MessageInputCopy({
       setUploadedFiles((prev) => [...prev, ...files]);
       e.target.value = ""; // Reset input
     }
-  };
-
-  const formatTime = (seconds: number) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins.toString().padStart(2, "0")}:${secs
-      .toString()
-      .padStart(2, "0")}`;
   };
 
   // Cleanup on unmount
@@ -312,12 +313,12 @@ export function MessageInputCopy({
         ) : (
           <div className="relative w-full">
             {/* Streaming indicator */}
-            {isStreaming && (
+            {/* {isStreaming && (
               <div className="absolute -top-6 left-0 right-0 flex items-center gap-2 text-xs text-blue-600">
                 <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
                 <span>Streaming response...</span>
               </div>
-            )}
+            )} */}
             <Input
               value={message}
               onChange={(e) => {
@@ -325,13 +326,13 @@ export function MessageInputCopy({
                 onInputChange?.(e.target.value);
               }}
               onKeyPress={handleKeyPress}
-              onFocus={onInputFocus}
-              onBlur={onInputBlur}
+              // onFocus={onInputFocus}
+              // onBlur={onInputBlur}
               placeholder={
                 isStreaming ? "Please wait for response..." : placeholder
               }
               disabled={isInputDisabled}
-              className="border-0 shadow-none focus-visible:ring-0 text-sm"
+              className="border-0 shadow-none focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm"
             />
           </div>
         )}
@@ -393,7 +394,7 @@ export function MessageInputCopy({
             size="sm"
             className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
             onClick={handleMicClick}
-            disabled={ disabled || isStreaming || !!audioError}>
+            disabled={disabled || isStreaming || !!audioError}>
             <Mic className="h-4 w-4 text-[var(--color-primary)]" />
           </Button>
 

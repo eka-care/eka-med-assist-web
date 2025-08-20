@@ -21,10 +21,11 @@ import {
   SocketEvent,
   ContentType,
   SocketCodes,
+  WebSocketErrorCodes,
 } from "../types/socket";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
-const BASE_URL = "wss://matrix-ws.dev.eka.care/ws/med-assist/session";
+const BASE_URL = "ws://fea0c1ed4375.ngrok-free.app/ws/med-assist/session";
 export class WebSocketService {
   private ws: WebSocket | null = null;
   public config: WebSocketConfig;
@@ -154,6 +155,29 @@ export class WebSocketService {
   }
 
   /**
+   * Regenerate response for a specific chat
+   */
+  public regenerateResponse(originalUserMessage: string): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+
+    console.log("Regenerating response for:", originalUserMessage);
+
+    // Clear any existing streaming message when regenerating
+    this.clearStreamingState();
+
+    const message: ChatRequest = {
+      ev: SocketEvent.CHAT,
+      ct: ContentType.TEXT,
+      ts: Date.now(),
+      data: { text: originalUserMessage },
+    };
+
+    this.sendMessage(message);
+  }
+
+  /**
    * Send a text message
    */
   public sendTextMessage(content: string): void {
@@ -168,7 +192,7 @@ export class WebSocketService {
       ev: SocketEvent.CHAT,
       ct: ContentType.TEXT,
       ts: Date.now(),
-      data: content,
+      data: { text: content },
     };
 
     this.sendMessage(message);
@@ -292,7 +316,7 @@ export class WebSocketService {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: 'start'
+      data: "start",
     };
     this.sendMessage(message);
   }
@@ -312,6 +336,18 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
+  public sendPillMessage(pillMessage: string, tool_use_id: string): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+    const message: ChatRequest = {
+      ev: SocketEvent.CHAT,
+      ct: ContentType.TEXT,
+      ts: Date.now(),
+      data: { text: pillMessage, tool_use_id: tool_use_id },
+    };
+    this.sendMessage(message);
+  }
   /**
    * Send audio end of stream
    */
@@ -383,21 +419,73 @@ export class WebSocketService {
   }
 
   /**
-   * Reconnect manually
+   * Unified reconnect function - handles all reconnection scenarios
    */
-  public async reconnect(): Promise<void> {
-    if (this.isReconnecting) return;
+  public async reconnect(
+    reason?: string,
+    resetAttempts: boolean = false
+  ): Promise<void> {
+    if (this.isReconnecting) {
+      console.log("Reconnection already in progress, skipping");
+      return;
+    }
+
+    console.log(
+      `Initiating reconnection${reason ? ` due to: ${reason}` : ""}...`
+    );
 
     this.isReconnecting = true;
     this.updateConnectionState(ConnectionState.RECONNECTING);
 
+    // Reset reconnection attempts if requested (e.g., for timeout errors)
+    if (resetAttempts) {
+      this.reconnectAttempts = 0;
+    }
+
     try {
+      // Close existing connection if any
+
+      this.disconnect();
+
+      // Attempt to reconnect
       await this.connect();
+
+      console.log("Reconnection successful");
+
+      // // Trigger reconnection success event
+      // this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
     } catch (error) {
+      console.error("Reconnection failed:", error);
+
+      // Handle reconnection error
       this.handleReconnectionError(error as Error);
     } finally {
       this.isReconnecting = false;
     }
+  }
+
+  /**
+   * Manually trigger a timeout error for testing
+   */
+  public triggerTimeoutError(): void {
+    console.log("Manually triggering timeout error for testing...");
+    const timeoutMessage: ErrorMessage = {
+      ev: "err",
+      ts: Date.now(),
+      code: WebSocketErrorCodes.TIMEOUT,
+      msg: "Request timed out",
+    };
+    this.handleError(timeoutMessage);
+  }
+
+  /**
+   * Get current session configuration
+   */
+  public getSessionConfig(): { sessionId: string; token: string } {
+    return {
+      sessionId: this.config.sessionId,
+      token: this.config.auth.token,
+    };
   }
 
   // Private methods
@@ -449,7 +537,7 @@ export class WebSocketService {
         const data: ServerMessage = JSON.parse(event.data);
         this.handleServerMessage(data);
       } catch (error) {
-        console.error("Failed to parse server message:", error);
+        console.error("Failed to parse server message:", error, event);
         this.triggerEvent(
           WEBSOCKET_SERVER_EVENTS.ERROR,
           new Error("Invalid message format")
@@ -491,20 +579,24 @@ export class WebSocketService {
   private handleConnectionEstablished(
     message: ConnectionEstablishedMessage
   ): void {
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, message);
+    console.log("Connection established", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
   }
 
   private handleChatResponse(message: ChatResponseMessage): void {
     console.log("Chat response received", message);
     if (message.ct === ContentType.FILE && message.data) {
       // This is an S3 URL for file upload
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message.data);
+      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message);
       console.log("File upload URL received", message, message.data);
 
       // If we have pending files, upload them automatically
       if (this.pendingFiles && this.pendingFiles.length > 0) {
         console.log("File upload URL received, uploading pending files");
-        this.uploadFilesToPresignedUrl(message.data?.url, this.pendingFiles)
+        this.uploadFilesToPresignedUrl(
+          message.data?.url || "",
+          this.pendingFiles
+        )
           .then(() => {
             // Clear pending files after successful upload
             this.pendingFiles = [];
@@ -514,27 +606,41 @@ export class WebSocketService {
             // Keep files in pending state for retry if needed
           });
       }
+    } else {
+      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message);
     }
+ 
   }
 
   private handleStreamResponse(message: StreamResponseMessage): void {
     if (message.ct === ContentType.TEXT && message.data) {
       console.log("Stream response received:", message.data);
-      // Create or update streaming message
-      if (!this.currentStreamMessage) {
-        this.currentStreamMessage = {
-          id: Date.now(),
-          content: "",
-          timestamp: new Date(),
-          type: "text",
-          metadata: { isStreaming: true },
-        };
+
+      // Handle progress messages
+      if (message.data.progress_msg) {
+        console.log("Progress message received:", message.data.progress_msg);
+        this.triggerEvent("progress_message", message.data.progress_msg);
+        return;
       }
 
-      // Add the new word/chunk to the existing content
-      this.currentStreamMessage.content += message.data;
-      // Send the PROGRESSIVE (accumulated) text, not just the new word
-      this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
+      // Handle text messages
+      if (message.data.text) {
+        // Create or update streaming message
+        if (!this.currentStreamMessage) {
+          this.currentStreamMessage = {
+            id: Date.now(),
+            content: "",
+            timestamp: new Date(),
+            type: "text",
+            metadata: { isStreaming: true },
+          };
+        }
+
+        // Add the new word/chunk to the existing content
+        this.currentStreamMessage.content += message.data.text;
+        // Send the PROGRESSIVE (accumulated) text, not just the new word
+        this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
+      }
     }
   }
 
@@ -568,11 +674,76 @@ export class WebSocketService {
   }
 
   private handleError(message: ErrorMessage): void {
-    const error = new Error(`${message.code}: ${message.msg}`);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
+    if (message.code === WebSocketErrorCodes.TIMEOUT) {
+      console.log("Timeout error received:", message);
+      console.log("Current connection state:", this.connectionState);
+      console.log("WebSocket ready state:", this.ws?.readyState);
+      console.log("Testing connection with ping...");
+
+      // First, try to send a ping to test if the connection is still alive
+      this.testConnectionWithPing()
+        .then((isAlive) => {
+          if (isAlive) {
+            console.log("Connection is alive, ping successful");
+            // Connection is alive, just trigger a regular error event
+            const error = new Error(`Request timed out. Please try again.`);
+            this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
+          } else {
+            console.log("Connection is dead, attempting to reconnect...");
+            // Connection is dead, attempt to reconnect
+            this.reconnect();
+          }
+        })
+        .catch((error) => {
+          console.log("Ping test failed, attempting to reconnect...", error);
+          // Ping test failed, attempt to reconnect
+          this.reconnect();
+        });
+      // if (this.isConnected()) {
+      //   console.log("Connection is alive, triggering error event");
+      //   const error = new Error(`Request timed out. Please try again.`);
+      //   this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
+      // } else {
+      //   console.log("Connection is dead, attempting to reconnect...");
+      //   // Connection is dead, attempt to reconnect with reset attempts
+      //   this.reconnect("timeout error", true);
+      // }
+    } else {
+      const error = new Error(`${message.code}: ${message.msg}`);
+      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
+    }
+  }
+
+  private async testConnectionWithPing(): Promise<boolean> {
+    return new Promise((resolve) => {
+      let pongReceived = false;
+      let timeoutId: NodeJS.Timeout;
+
+      // Set up a one-time pong listener
+      const pongHandler = () => {
+        pongReceived = true;
+        clearTimeout(timeoutId);
+        this.off(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
+        resolve(true);
+      };
+
+      // Set up timeout for ping test
+      timeoutId = setTimeout(() => {
+        this.off(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
+        resolve(false);
+      }, 5000); // 5 second timeout for ping test
+
+      // Listen for pong response
+      this.on(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
+
+      // Send ping
+      this.sendPing();
+    });
   }
 
   private handleDisconnectCode(code: number): void {
+    console.log("Handling disconnect code:", code);
+
     switch (code) {
       case SocketCodes.UNAUTHORIZED:
         this.triggerEvent(
@@ -596,6 +767,18 @@ export class WebSocketService {
         this.triggerEvent(
           WEBSOCKET_SERVER_EVENTS.ERROR,
           new Error("Internal server error")
+        );
+        break;
+      case SocketCodes.SERVER_RESTART:
+        this.triggerEvent(
+          WEBSOCKET_SERVER_EVENTS.ERROR,
+          new Error("Server restarted")
+        );
+        break;
+      case SocketCodes.ABNORMAL_CLOSURE:
+        this.triggerEvent(
+          WEBSOCKET_SERVER_EVENTS.ERROR,
+          new Error("Abnormal closure")
         );
         break;
       default:
@@ -649,23 +832,6 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * Get connection health information
-   */
-  public getConnectionHealth(): {
-    state: ConnectionStateType;
-    reconnectAttempts: number;
-    isReconnecting: boolean;
-    lastPing?: number;
-    lastPong?: number;
-  } {
-    return {
-      state: this.connectionState,
-      reconnectAttempts: this.reconnectAttempts,
-      isReconnecting: this.isReconnecting,
-    };
-  }
-
   private attemptReconnection(): void {
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.updateConnectionState(ConnectionState.ERROR);
@@ -696,7 +862,8 @@ export class WebSocketService {
             this.maxReconnectAttempts
           }`
         );
-        this.reconnect();
+        // Use the unified reconnect function
+        this.reconnect(`automatic attempt ${this.reconnectAttempts + 1}`);
       }
     }, delay);
   }
@@ -704,13 +871,15 @@ export class WebSocketService {
   private handleReconnectionError(error: Error): void {
     this.reconnectAttempts++;
     this.isReconnecting = false;
+
+    console.error("Reconnection error:", error);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
 
     if (this.reconnectAttempts >= this.maxReconnectAttempts) {
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_SERVER_EVENTS.ERROR,
-        new Error("Reconnect failed")
+        new Error("Maximum reconnection attempts exceeded")
       );
     } else {
       // Schedule next reconnection attempt

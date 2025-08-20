@@ -1,9 +1,16 @@
 import { Button } from "@ui/index";
+import { MULTI_SELECT_ADDITIONAL_OPTION } from "@ui/index";
 
 interface QuickAction {
   id: string;
   label: string;
   variant?: "default" | "outline" | "secondary" | "destructive";
+}
+
+export interface PillAction {
+  choices: string[];
+  tool_use_id: string;
+  additionalOption?: MULTI_SELECT_ADDITIONAL_OPTION;
 }
 
 interface QuickActionsProps {

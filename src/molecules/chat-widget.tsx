@@ -7,12 +7,18 @@ import useSessionStore from "@/stores/medAssistStore";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { WebSocketConfig } from "@/types/socket";
 import { MessageInputCopy } from "./message-input-copy";
+import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
+import { PillAction } from "./quick-actions";
 
 interface Message {
   id: string;
   content: string;
   isBot: boolean;
   files?: File[];
+  originalUserMessage?: string; // Store the original user message for regeneration
+  isRegenerating?: boolean; // Track if this message is being regenerated
+  pillData?: PillAction;
+  multiData?: PillAction;
 }
 
 interface ChatWidgetProps {
@@ -40,15 +46,27 @@ export function ChatWidget({
       isBot: true,
     },
   ]);
-  const [error, setError] = useState<string | null>(null);
+  const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const sessionId = useSessionStore((state) => state.sessionId);
   const sessionToken = useSessionStore((state) => state.sessionToken);
-  const isSocketIOConnected = useSessionStore(
-    (state) => state.isSocketIOConnected
-  );
   const isConnectionEstablished = useSessionStore(
     (state) => state.isConnectionEstablished
   );
+
+  useEffect(() => {
+    if (isConnectionEstablished) {
+      console.log(
+        "WebSocket connection ready for chat",
+        isConnectionEstablished
+      );
+    }
+  }, [isConnectionEstablished]);
+
+  // Error handling from store
+  const error = useSessionStore((state) => state.error);
+  const isTimeoutError = useSessionStore((state) => state.isTimeoutError);
+  const setError = useSessionStore((state) => state.setError);
+  const clearError = useSessionStore((state) => state.clearError);
 
   // Create socket configuration when session data is available
   const socketConfig: WebSocketConfig | null =
@@ -68,64 +86,162 @@ export function ChatWidget({
     setFilesForUpload,
     sendAudioStream,
     isStreaming,
-  } = useWebSocket(socketConfig, (botMessage: string) => {
-    // Handle bot response messages
-    console.log(
-      "onTextMessage called with:",
-      botMessage,
-      "isStreaming:",
-      isStreaming
-    );
+    regenerateResponse,
+    sendPillMessage,
+  } = useWebSocket(
+    socketConfig,
+    (botMessage: string) => {
+      // Handle bot response messages
+      console.log(
+        "onTextMessage called with:",
+        botMessage,
+        "isStreaming:",
+        isStreaming
+      );
 
-    setMessages((prev) => {
-      // Check if there's already a bot message at the end
-      const lastMessage = prev[prev.length - 1];
-      console.log("lastMessage", lastMessage);
-      console.log("isStreaming", isStreaming);
+      setMessages((prev) => {
+        // Check if there's already a bot message at the end
+        const lastMessage = prev[prev.length - 1];
+        console.log("lastMessage", lastMessage);
+        console.log("isStreaming", isStreaming);
 
-      // If we have a bot message and it's shorter than the incoming text, update it
-      if (
-        lastMessage &&
-        lastMessage.isBot &&
-        botMessage.length > lastMessage.content.length
-      ) {
-        // Update the existing bot message with progressive text
-        const updatedMessages = [...prev];
-        updatedMessages[updatedMessages.length - 1] = {
-          ...lastMessage,
-          content: botMessage,
-        };
-        return updatedMessages;
-      } else if (
-        lastMessage &&
-        lastMessage.isBot &&
-        botMessage.length <= lastMessage.content.length
-      ) {
-        // If the incoming text is shorter or equal, it might be a duplicate, skip
-        console.log(
-          "Skipping duplicate or shorter text:",
-          botMessage,
-          "vs",
-          lastMessage.content
-        );
-        return prev;
-      } else {
-        console.log("Creating new bot message because:", {
-          hasLastMessage: !!lastMessage,
-          isLastMessageBot: lastMessage?.isBot,
-          botMessageLength: botMessage.length,
-          lastMessageLength: lastMessage?.content?.length || 0,
-        });
-        // Create a new bot message
-        const newMessage: Message = {
-          id: Date.now().toString(),
-          content: botMessage,
-          isBot: true,
-        };
-        return [...prev, newMessage];
-      }
-    });
-  });
+        // If we have a bot message and it's shorter than the incoming text, update it
+        if (
+          lastMessage &&
+          lastMessage.isBot &&
+          botMessage.length > lastMessage.content.length
+        ) {
+          // Update the existing bot message with progressive text
+          const updatedMessages = [...prev];
+          updatedMessages[updatedMessages.length - 1] = {
+            ...lastMessage,
+            content: botMessage,
+            isRegenerating: false, // Clear regenerating state
+          };
+          return updatedMessages;
+        } else if (
+          lastMessage &&
+          lastMessage.isBot &&
+          botMessage.length <= lastMessage.content.length
+        ) {
+          // If the incoming text is shorter or equal, it might be a duplicate, skip
+          console.log(
+            "Skipping duplicate or shorter text:",
+            botMessage,
+            "vs",
+            lastMessage.content
+          );
+          return prev;
+        } else {
+          console.log("Creating new bot message because:", {
+            hasLastMessage: !!lastMessage,
+            isLastMessageBot: lastMessage?.isBot,
+            botMessageLength: botMessage.length,
+            lastMessageLength: lastMessage?.content?.length || 0,
+          });
+
+          // Check if we need to replace a regenerating message
+          const regeneratingMessageIndex = prev.findIndex(
+            (msg) => msg.isRegenerating
+          );
+          if (regeneratingMessageIndex !== -1) {
+            // Replace the regenerating message
+            const updatedMessages = [...prev];
+            updatedMessages[regeneratingMessageIndex] = {
+              ...updatedMessages[regeneratingMessageIndex],
+              content: botMessage,
+              isRegenerating: false,
+            };
+            return updatedMessages;
+          } else {
+            // Create a new bot message
+            const newMessage: Message = {
+              id: Date.now().toString(),
+              content: botMessage,
+              isBot: true,
+            };
+            return [...prev, newMessage];
+          }
+        }
+      });
+    },
+    (progressMsg: string) => {
+      // Handle progress messages
+      console.log("Progress message received:", progressMsg);
+      setProgressMessage(progressMsg);
+    },
+    (pillData: PillAction) => {
+      // Handle pill messages - merge with existing bot message
+      console.log("Pill message received:", pillData);
+
+      setMessages((prev) => {
+        // Find the last bot message to attach pills to it
+        let lastBotMessageIndex = -1;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (prev[i].isBot) {
+            lastBotMessageIndex = i;
+            break;
+          }
+        }
+
+        if (lastBotMessageIndex !== -1) {
+          console.log("Bot message found, updating with pill data", pillData);
+          // Update the last bot message with pill data
+          const updatedMessages = [...prev];
+          updatedMessages[lastBotMessageIndex] = {
+            ...updatedMessages[lastBotMessageIndex],
+            pillData: pillData, // Attach pills to the existing bot message
+          };
+          return updatedMessages;
+        } else {
+          console.log("No bot message found, creating a new one", pillData);
+          // If no bot message found, create a new one (fallback)
+          const newMessage: Message = {
+            id: Date.now().toString(),
+            content: "Here are some options:",
+            isBot: true,
+            pillData: pillData,
+          };
+          return [...prev, newMessage];
+        }
+      });
+    },
+    (multiData: PillAction) => {
+      // Handle multi messages - merge with existing bot message
+      console.log("Multi message received:", multiData);
+      setMessages((prev) => {
+        // Find the last bot message to attach pills to it
+        let lastBotMessageIndex = -1;
+        for (let i = prev.length - 1; i >= 0; i--) {
+          if (prev[i].isBot) {
+            lastBotMessageIndex = i;
+            break;
+          }
+        }
+
+        if (lastBotMessageIndex !== -1) {
+          console.log("Bot message found, updating with multi data", multiData);
+          // Update the last bot message with multi data
+          const updatedMessages = [...prev];
+          updatedMessages[lastBotMessageIndex] = {
+            ...updatedMessages[lastBotMessageIndex],
+            multiData: multiData, // Attach multi data to the existing bot message
+          };
+          return updatedMessages;
+        } else {
+          console.log("No bot message found, creating a new one", multiData);
+          // If no bot message found, create a new one (fallback)
+          const newMessage: Message = {
+            id: Date.now().toString(),
+            content: "Here are some options:",
+            isBot: true,
+            multiData: multiData,
+          };
+          return [...prev, newMessage];
+        }
+      });
+    }
+  );
 
   const [quickActions] = useState([
     { id: "doctor", label: "Help me find a doctor" },
@@ -159,6 +275,13 @@ export function ChatWidget({
     scrollToBottom();
   }, [messages, isStreaming]);
 
+  // Clear progress message when streaming starts or ends
+  useEffect(() => {
+    if (isStreaming) {
+      setProgressMessage(null);
+    }
+  }, [isStreaming]);
+
   const handleAudioStream = (audioBlob: Blob) => {
     console.log("called on Audio stream in chat widget");
     if (isStreaming) {
@@ -185,16 +308,6 @@ export function ChatWidget({
     });
   };
 
-  const getCurrentTimestamp = () => {
-    const now = new Date();
-    return now.toLocaleString("en-US", {
-      weekday: "short",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: true,
-    });
-  };
-
   const handleSendMessage = (content: string) => {
     // Block sending if currently streaming
     if (isStreaming) {
@@ -205,10 +318,14 @@ export function ChatWidget({
     // Clear any errors when sending a message
     clearError();
 
+    // Clear progress message when sending new message
+    setProgressMessage(null);
+
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
       isBot: false,
+      originalUserMessage: content, // Store for potential regeneration
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -277,6 +394,9 @@ export function ChatWidget({
     // Clear any errors when using quick actions
     clearError();
 
+    // Clear progress message when using quick action
+    setProgressMessage(null);
+
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       handleSendMessage(action.label);
@@ -290,10 +410,115 @@ export function ChatWidget({
     }
   };
 
-  const clearError = () => {
-    setError(null);
+  const handleRegenerate = async (messageId: string) => {
+    // Find the message to regenerate
+    const messageIndex = messages.findIndex((msg) => msg.id === messageId);
+    if (messageIndex === -1) {
+      console.error("Message not found for regeneration");
+      return;
+    }
+
+    const message = messages[messageIndex];
+
+    // Only regenerate bot messages
+    if (!message.isBot) {
+      console.error("Cannot regenerate user messages");
+      return;
+    }
+
+    // Find the previous user message
+    let userMessageIndex = messageIndex - 1;
+    while (userMessageIndex >= 0 && messages[userMessageIndex].isBot) {
+      userMessageIndex--;
+    }
+
+    if (userMessageIndex < 0) {
+      console.error("No user message found for regeneration");
+      return;
+    }
+
+    const userMessage = messages[userMessageIndex];
+    if (!userMessage.originalUserMessage) {
+      console.error("No original user message found for regeneration");
+      return;
+    }
+
+    // Block regeneration if currently streaming
+    if (isStreaming) {
+      console.log("Cannot regenerate while streaming");
+      return;
+    }
+
+    // Clear any errors when regenerating
+    clearError();
+
+    // Clear progress message when regenerating
+    setProgressMessage(null);
+
+    console.log("Regenerating response for message:", messageId);
+    console.log("Original user message:", userMessage.originalUserMessage);
+
+    // Mark the current bot message as regenerating
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      updatedMessages[messageIndex] = {
+        ...updatedMessages[messageIndex],
+        isRegenerating: true,
+        content: "Regenerating response...", // Show regenerating state
+      };
+      return updatedMessages;
+    });
+
+    // Send regenerate request
+    if (isConnectionEstablished) {
+      regenerateResponse(userMessage.originalUserMessage);
+    } else {
+      console.log("WebSocket not connected, cannot regenerate");
+      // Reset the message if connection failed
+      setMessages((prev) => {
+        const updatedMessages = [...prev];
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          isRegenerating: false,
+          content: message.content, // Restore original content
+        };
+        return updatedMessages;
+      });
+    }
   };
 
+  const handlePillClick = (pillText: string, tool_use_id: string) => {
+    console.log("Pill clicked:", pillText, "tool_use_id:", tool_use_id);
+
+    // Block pill clicks if currently streaming
+    if (isStreaming) {
+      console.log("Cannot use pill while streaming");
+      return;
+    }
+
+    // Clear any errors when using pills
+    clearError();
+
+    // Clear progress message when using pill
+    setProgressMessage(null);
+
+    // Add user message showing the pill selection
+    const newMessage: Message = {
+      id: Date.now().toString(),
+      content: `Selected: ${pillText}`,
+      isBot: false,
+      originalUserMessage: pillText,
+    };
+
+    setMessages((prev) => [...prev, newMessage]);
+
+    // Send pill message via WebSocket
+    if (isConnectionEstablished) {
+      sendPillMessage(pillText, tool_use_id);
+    } else {
+      console.log("WebSocket not connected, cannot send pill message");
+    }
+  };
   // Mobile full-screen styles
   const containerStyles = isMobile
     ? "fixed inset-0 z-50 bg-[var(--color-card)] flex flex-col h-screen w-screen"
@@ -337,6 +562,7 @@ export function ChatWidget({
             {messages.map((message, index) => (
               <MessageBubble
                 key={message.id}
+                messageId={message.id}
                 message={message.content}
                 isBot={message.isBot}
                 showActions={messages.length === 1}
@@ -346,6 +572,24 @@ export function ChatWidget({
                 isStreaming={
                   message.isBot && isStreaming && index === messages.length - 1
                 }
+                progressMessage={
+                  message.isBot && index === messages.length - 1
+                    ? progressMessage
+                    : null
+                }
+                isRegenerating={message.isRegenerating}
+                pillAction={message.pillData}
+                onPillClick={handlePillClick}
+                showRetry={isTimeoutError}
+                onRetry={() => {
+                  if (wsService) {
+                    clearError();
+                    wsService.reconnect("quick action retry after timeout");
+                  }
+                }}
+                onRegenerate={handleRegenerate}
+                multiData={message.multiData}
+                onMultiClick={handlePillClick}
               />
             ))}
           </div>
@@ -358,20 +602,25 @@ export function ChatWidget({
               <div className="text-orange-600 bg-orange-50">
                 Waiting for session...
               </div>
-            ) : !isSocketIOConnected ? (
-              <div className="text-orange-600 bg-orange-50">
-                Connecting to WebSocket server...
-              </div>
             ) : (
               <div className="text-orange-600 bg-orange-50">
-                Establishing WebSocket connection...
+                <span> Connecting to WebSocket server...</span>
+                <button
+                  onClick={() => {
+                    if (wsService) {
+                      wsService.reconnect("connection error retry");
+                    }
+                  }}
+                  className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                  Retry
+                </button>
               </div>
             )}
           </div>
         )}
 
         {/* Connection Error Status */}
-        {isSocketIOConnected && !isConnectionEstablished && (
+        {/* {!isConnectionEstablished && (
           <div className="px-4 py-2 text-center text-sm text-red-600 bg-red-50 border-t">
             <div className="flex items-center justify-center gap-2">
               <div className="w-2 h-2 bg-red-600 rounded-full"></div>
@@ -379,22 +628,12 @@ export function ChatWidget({
               <button
                 onClick={() => {
                   if (wsService) {
-                    wsService.reconnect();
+                    wsService.reconnect("connection error retry");
                   }
                 }}
                 className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
                 Retry
               </button>
-            </div>
-          </div>
-        )}
-
-        {/* Streaming Status */}
-        {/* {isStreaming && (
-          <div className="px-4 py-2 text-center text-sm text-blue-600 bg-blue-50 border-t">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-blue-600 rounded-full animate-pulse"></div>
-              <span>Bot is responding...</span>
             </div>
           </div>
         )} */}
@@ -416,11 +655,33 @@ export function ChatWidget({
                 />
               </svg>
               <span className="text-sm">{error}</span>
-              <button
-                onClick={clearError}
-                className="ml-auto text-red-500 hover:text-red-700">
-                ×
-              </button>
+              {isTimeoutError ? (
+                <div className="ml-auto flex gap-2">
+                  <button
+                    onClick={() => {
+                      if (wsService) {
+                        clearError();
+                        // The service will automatically handle ping test and reconnection
+                        // Just trigger a manual reconnection attempt
+                        wsService.reconnect("manual retry after timeout");
+                      }
+                    }}
+                    className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
+                    Retry
+                  </button>
+                  <button
+                    onClick={clearError}
+                    className="text-red-500 hover:text-red-700">
+                    ×
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={clearError}
+                  className="ml-auto text-red-500 hover:text-red-700">
+                  ×
+                </button>
+              )}
             </div>
           </div>
         )}
