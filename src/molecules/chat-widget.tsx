@@ -90,7 +90,6 @@ export function ChatWidget({
     sendPillMessage,
     regenerateResponse,
     isStreaming,
-    clearError: clearWebSocketError,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {

@@ -57,7 +57,6 @@ export function MessageInput({
     remainingTime,
     start,
     stop,
-    clearError,
   } = useAudioService();
 
   useEffect(() => {
