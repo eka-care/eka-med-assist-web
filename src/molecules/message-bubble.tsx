@@ -28,7 +28,7 @@ interface MessageBubbleProps {
   onPillClick?: (pillText: string, tool_use_id: string) => void; // Add pill click handler
   multiData?: PillAction; // Add multi data prop
   onMultiClick?: (multiText: string, tool_use_id: string) => void; // Add multi click handler
-  audioData?: any; // Add audio data support for V2
+  audioData?: any; // Add audio data support
 }
 
 export function MessageBubble({

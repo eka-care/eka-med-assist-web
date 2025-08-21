@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 // import { ChatWidget } from "./molecules/chat-widget";
 import startSession from "./api/post-start-session";
 import useSessionStore from "./stores/medAssistStore";
-import { ChatWidgetV2 } from "./molecules/chat-widget-v2";
+import { ChatWidget } from "./molecules/chat-widget";
 
 function App() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(true);
@@ -129,7 +129,7 @@ function App() {
                 ? "fixed inset-0 z-50 p-4"
                 : "fixed bottom-4 right-4 z-50"
             }>
-            <ChatWidgetV2
+            <ChatWidget
               title="Apollo Assist"
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}

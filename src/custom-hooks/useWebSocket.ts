@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import useMedAssistStore from "../stores/medAssistStore";
-import { WebSocketService } from "../services/WebSocketService";
 import {
   ContentType,
   type ChatResponseMessage,
@@ -8,11 +7,10 @@ import {
   type EndOfStreamMessage,
   type StreamResponseMessage,
 } from "../types/socket";
-import {
-  WEBSOCKET_CUSTOM_EVENTS,
-  WEBSOCKET_SERVER_EVENTS,
-} from "@/configs/enums";
+import { WEBSOCKET_CUSTOM_EVENTS, WEBSOCKET_SERVER_EVENTS } from "@/configs/enums";
 import { PillAction } from "@/molecules/quick-actions";
+import { WebSocketService } from "@/services/WebSocketService";
+import type { AudioData } from "@/services/audioService";
 
 export function useWebSocket(
   config: WebSocketConfig | null,
@@ -49,7 +47,6 @@ export function useWebSocket(
       WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
       (connected: boolean) => {
         console.log("WebSocket connection:", connected);
-
         setConnectionEstablished(connected);
       }
     );
@@ -99,13 +96,12 @@ export function useWebSocket(
               tool_use_id: message.data.tool_use_id,
             });
           }
-        }
-        if (
+        } else if (
           message.ct === ContentType.MULTI &&
           message.data.choices &&
           message.data.tool_use_id
         ) {
-          console.log("Multi message received:", message.data);
+          console.log("Multi message received:", message.data?.choices);
           // Call the callback to display the multi message
           if (onMultiMessage) {
             onMultiMessage({
@@ -116,32 +112,6 @@ export function useWebSocket(
         }
       }
     );
-
-    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: Error) => {
-      console.error("WebSocket error:", error);
-
-      // Check if this is a timeout error
-      const isTimeoutError = error.message.includes("Request timed out");
-
-      if (isTimeoutError) {
-        // Handle timeout error specifically
-        setError("Request timed out. Please try again.");
-        // Update the store to indicate this is a timeout error
-        useMedAssistStore.getState().setTimeoutError(true);
-        useMedAssistStore
-          .getState()
-          .setError("Request timed out. Please try again.");
-      } else {
-        // Handle other errors
-        setError(error.message);
-        useMedAssistStore.getState().setError(error.message);
-        useMedAssistStore.getState().setTimeoutError(false);
-      }
-
-      // setSocketIOConnected(false);
-      // setConnectionEstablished(false);
-    });
-
     wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.SERVER_RESTART, (data: any) => {
       console.log("SERVER_RESTART received:", data);
       if (wsRef.current) {
@@ -181,8 +151,34 @@ export function useWebSocket(
       (message: EndOfStreamMessage) => {
         console.log("END_OF_STREAM received:", message);
         setIsStreaming(false);
+        // Call the callback to display the end of stream message
+        if (onProgressMessage) {
+          onProgressMessage("");
+        }
       }
     );
+
+    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: Error) => {
+      console.error("WebSocket error:", error);
+
+      // Check if this is a timeout error
+      const isTimeoutError = error.message.includes("Request timed out");
+
+      if (isTimeoutError) {
+        // Handle timeout error specifically
+        setError("Request timed out. Please try again.");
+        // Update the store to indicate this is a timeout error
+        useMedAssistStore.getState().setTimeoutError(true);
+        useMedAssistStore
+          .getState()
+          .setError("Request timed out. Please try again.");
+      } else {
+        // Handle other errors
+        setError(error.message);
+        useMedAssistStore.getState().setError(error.message);
+        useMedAssistStore.getState().setTimeoutError(false);
+      }
+    });
 
     // Handle progress messages
     wsRef.current?.on("progress_message", (progressMessage: string) => {
@@ -212,38 +208,102 @@ export function useWebSocket(
       }
     });
 
-
     wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.RECONNECT, (data: any) => {
       console.log("RECONNECT received:", data);
       if (wsRef.current) {
         wsRef.current.reconnect("manual reconnect");
       }
     });
-    
-    // Connect
-    wsRef.current?.connect().catch((error) => {
-      console.error("Failed to connect WebSocket:", error);
-      setConnectionEstablished(false);
-    });
+    // Connect to WebSocket
+    service
+      .connect()
+      .then(() => {
+        console.log("WebSocket connected successfully");
+      })
+      .catch((error) => {
+        console.error("Failed to connect to WebSocket:", error);
+        setError(error.message);
+        setConnectionEstablished(false);
+      });
 
-    // Cleanup
+    // Cleanup function
     return () => {
       if (wsRef.current) {
-        console.log("cleanup called");
-
         wsRef.current.disconnect();
+        wsRef.current = null;
       }
       setConnectionEstablished(false);
     };
-  }, [config?.sessionId, config?.auth.token]);
+  }, [config?.sessionId, config?.auth.token, setConnectionEstablished]);
 
-  // Send text chat message
-  const sendChatMessage = (message: string) => {
-    if (wsRef.current && isConnectionEstablished) {
-      // Clear streaming state when starting a new chat
-      setIsStreaming(false);
-      wsRef.current.sendTextMessage(message);
-      console.log("Chat message sent:", message);
+  // Send text message
+  const sendTextMessage = (message: string) => {
+    if (wsRef.current?.isConnected()) {
+      try {
+        wsRef.current.sendChatMessage(message);
+      } catch (error) {
+        console.error("Failed to send text message:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to send message"
+        );
+      }
+    } else {
+      console.error("WebSocket not connected");
+      setError("WebSocket not connected");
+    }
+  };
+
+    // Send pill message
+    const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
+        if (wsRef.current && isConnectionEstablished) {
+          wsRef.current.sendPillMessage(pillMessage, tool_use_id);
+          console.log(
+            "Pill message sent:",
+            pillMessage,
+            "tool_use_id:",
+            tool_use_id
+          );
+        }
+      };
+  // Send full audio data (AudioService format)
+  const sendAudioData = (audioData: AudioData) => {
+    if (wsRef.current?.isConnected()) {
+      try {
+        if (!isAudioStreaming.current) {
+          wsRef.current?.sendAudioStreamStart();
+          isAudioStreaming.current = true;
+        }
+        console.log("Sending audio data via WebSocket:", audioData);
+        wsRef.current.sendAudioData(audioData);
+        isAudioStreaming.current = true;
+      } catch (error) {
+        console.error("Failed to send audio data:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to send audio"
+        );
+      }
+    } else {
+      console.error("WebSocket not connected");
+      setError("WebSocket not connected");
+    }
+  };
+
+
+  // Send end of audio stream
+  const sendEndOfAudioStream = () => {
+    if (wsRef.current?.isConnected()) {
+      try {
+        wsRef.current.sendAudioEndOfStream();
+        isAudioStreaming.current = false;
+      } catch (error) {
+        console.error("Failed to send end of audio stream:", error);
+        setError(
+          error instanceof Error ? error.message : "Failed to end audio stream"
+        );
+      }
+    } else {
+      console.error("WebSocket not connected");
+      setError("WebSocket not connected");
     }
   };
 
@@ -263,38 +323,16 @@ export function useWebSocket(
     }
   };
 
-  // Send audio stream chunk
-  const sendAudioStream = (audioData: Uint8Array) => {
-    if (!isAudioStreaming.current) {
-      wsRef.current?.sendAudioStreamStart();
-      isAudioStreaming.current = true;
-    }
-    console.log("Audio stream chunk received in useWebSocket:", audioData);
-    if (wsRef.current && isConnectionEstablished) {
-      wsRef.current.sendAudioStream(audioData);
-      console.log("Audio stream chunk sent");
-    }
-  };
-
-  // Send audio end of stream
-  const sendAudioEndOfStream = (audioData: Uint8Array) => {
-    if (wsRef.current && isConnectionEstablished) {
-      wsRef.current.sendAudioEndOfStream(audioData);
-      console.log("Audio end of stream sent");
-      isAudioStreaming.current = false;
-    }
-  };
-
-  // Set files for upload when presigned URL is received
-  const setFilesForUpload = (files: File[]) => {
-    setPendingFiles(files);
-    if (wsRef.current) {
-      wsRef.current.setFilesForUpload(files);
-    }
-    console.log(`Set ${files.length} files for upload`);
-  };
-
-  // Clear pending files
+    // Set files for upload when presigned URL is received
+    const setFilesForUpload = (files: File[]) => {
+        setPendingFiles(files);
+        if (wsRef.current) {
+          wsRef.current.setFilesForUpload(files);
+        }
+        console.log(`Set ${files.length} files for upload`);
+      };
+    
+        // Clear pending files
   const clearPendingFiles = () => {
     setPendingFiles([]);
     if (wsRef.current) {
@@ -302,6 +340,7 @@ export function useWebSocket(
     }
     console.log("Cleared pending files");
   };
+
 
   // Send PING function
   const sendPing = () => {
@@ -321,33 +360,43 @@ export function useWebSocket(
     }
   };
 
-  // Send pill message
-  const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
-    if (wsRef.current && isConnectionEstablished) {
-      wsRef.current.sendPillMessage(pillMessage, tool_use_id);
-      console.log(
-        "Pill message sent:",
-        pillMessage,
-        "tool_use_id:",
-        tool_use_id
-      );
-    }
+  // Clear error
+  const clearError = () => {
+    setError(null);
+  };
+
+  // Check if WebSocket is connected
+  const isConnected = () => {
+    return wsRef.current?.isConnected() || false;
+  };
+
+  // Get connection state
+  const getConnectionState = () => {
+    return wsRef.current?.getConnectionState() || null;
   };
 
   return {
-    wsService: wsRef.current,
-    sendPing,
-    sendChatMessage,
-    sendFileUploadRequest,
-    sendFileUploadComplete,
-    sendAudioStream,
-    sendAudioEndOfStream,
-    setFilesForUpload,
-    clearPendingFiles,
+    // State
     error,
     isStreaming,
-    isConnected: isConnectionEstablished,
-    regenerateResponse,
+    isAudioStreaming: isAudioStreaming.current,
+    isConnected: isConnected(),
+    connectionState: getConnectionState(),
+
+    // Actions
+    sendTextMessage,
+    sendAudioData,
+    sendEndOfAudioStream,
+    sendFileUploadRequest,
+    sendFileUploadComplete,
+    setFilesForUpload,
+    clearPendingFiles,
+    clearError,
     sendPillMessage,
+
+    sendPing,
+    regenerateResponse, 
+    // WebSocket service reference (for advanced usage)
+    webSocketService: wsRef.current,
   };
 }

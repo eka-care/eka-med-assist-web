@@ -1,186 +1,336 @@
 /**
- * Clean AudioService - Only captures audio and streams it
+ * AudioService - MediaRecorder Implementation
+ * Full MP3 audio recording with automatic 15-minute pause
  */
 
 export interface AudioConfig {
-  chunkSize: number;
-  sampleRate: number;
-  silenceThreshold: number;
-  silenceDuration: number;
+  mimeType: string;
+  audioBitsPerSecond: number;
+  maxRecordingDuration: number; // in milliseconds (15 minutes = 900000ms)
+  autoPauseEnabled: boolean;
 }
 
-export type AudioChunkCallback = (chunk: Uint8Array) => void;
+export interface AudioData {
+  audio: string; // Base64 encoded MP3 audio
+  format: string; // MIME type (e.g., "audio/mp3")
+  duration: number; // Recording duration in milliseconds
+  timestamp: number; // Recording start timestamp
+}
+
+export type AudioDataCallback = (data: AudioData) => void;
 export type ErrorCallback = (error: Error) => void;
+export type StatusCallback = (
+  status: "recording" | "paused" | "stopped"
+) => void;
 
 export class AudioService {
-  private audioContext: AudioContext | null = null;
+  private mediaRecorder: MediaRecorder | null = null;
   private mediaStream: MediaStream | null = null;
-  private sourceNode: MediaStreamAudioSourceNode | null = null;
-  private workletNode: AudioWorkletNode | null = null;
   private isInitialized = false;
   private isActive = false;
+  private recordingStartTime: number = 0;
+  private autoPauseTimer: NodeJS.Timeout | null = null;
+  private audioChunks: Blob[] = [];
 
+  // Configuration
   private config: AudioConfig;
-  private chunkCallback: AudioChunkCallback | null = null;
+
+  // Callbacks
+  private audioDataCallback: AudioDataCallback | null = null;
   private errorCallback: ErrorCallback | null = null;
+  private statusCallback: StatusCallback | null = null;
 
   constructor(config: Partial<AudioConfig> = {}) {
     this.config = {
-      chunkSize: 256,
-      sampleRate: 16000,
-      silenceThreshold: 0.01,
-      silenceDuration: 0.3,
+      mimeType: "audio/webm;codecs=opus", // Fallback to webm if mp3 not supported
+      audioBitsPerSecond: 128000, // 128 kbps
+      maxRecordingDuration: 900000, // 15 minutes in milliseconds
+      autoPauseEnabled: true,
       ...config,
     };
   }
 
+  /**
+   * Initialize the service and check MediaRecorder support
+   */
   async initialize(): Promise<void> {
     try {
-      this.audioContext = new AudioContext({
-        sampleRate: this.config.sampleRate,
-        latencyHint: "interactive",
-      });
+      // Check if MediaRecorder is supported
+      if (!window.MediaRecorder) {
+        throw new Error("MediaRecorder is not supported in this browser");
+      }
 
-      await this.audioContext.audioWorklet.addModule(
-        "/audio-chunk-processor.js"
+      // Check for MP3 support and fallback to best available format
+      const supportedTypes = MediaRecorder.isTypeSupported("audio/mp3")
+        ? ["audio/mp3"]
+        : ["audio/wav"];
+
+      // Update config with supported mime type
+      this.config.mimeType = supportedTypes[0];
+
+      console.log(
+        `AudioService initialized with format: ${this.config.mimeType}`
       );
-
-      this.workletNode = new AudioWorkletNode(
-        this.audioContext,
-        "audio-chunk-processor",
-        {
-          numberOfInputs: 1,
-          numberOfOutputs: 0,
-          channelCount: 1,
-          processorOptions: this.config,
-        }
-      );
-
-      this.workletNode.port.onmessage = this.handleWorkletMessage.bind(this);
       this.isInitialized = true;
     } catch (error) {
       throw new Error(`Audio initialization failed: ${error}`);
     }
   }
 
+  /**
+   * Start recording audio
+   */
   async start(
-    onChunk: AudioChunkCallback,
-    onError?: ErrorCallback
+    onAudioData: AudioDataCallback,
+    onError?: ErrorCallback,
+    onStatus?: StatusCallback
   ): Promise<void> {
     if (!this.isInitialized) throw new Error("Not initialized");
     if (this.isActive) throw new Error("Already active");
 
     try {
-      this.chunkCallback = onChunk;
+      this.audioDataCallback = onAudioData;
       this.errorCallback = onError || null;
+      this.statusCallback = onStatus || null;
 
+      // Get user media
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
           echoCancellation: false,
           noiseSuppression: false,
           autoGainControl: false,
-          sampleRate: this.config.sampleRate,
+          sampleRate: 44100,
           channelCount: 1,
         },
       });
 
-      this.sourceNode = this.audioContext!.createMediaStreamSource(
-        this.mediaStream
-      );
-      this.sourceNode.connect(this.workletNode!);
-
-      this.workletNode!.port.postMessage({
-        type: "configure",
-        data: this.config,
+      // Create MediaRecorder
+      this.mediaRecorder = new MediaRecorder(this.mediaStream, {
+        mimeType: this.config.mimeType,
+        audioBitsPerSecond: this.config.audioBitsPerSecond,
       });
+
+      // Set up event handlers
+      this.setupMediaRecorderEvents();
+
+      // Start recording
+      this.mediaRecorder.start();
       this.isActive = true;
+      this.recordingStartTime = Date.now();
+      this.audioChunks = [];
+
+      // Set up auto-pause timer if enabled
+      if (this.config.autoPauseEnabled) {
+        this.setupAutoPauseTimer();
+      }
+
+      this.statusCallback?.("recording");
+      console.log("Audio recording started with MediaRecorder");
     } catch (error) {
       throw new Error(`Failed to start: ${error}`);
     }
   }
 
+  /**
+   * Stop recording manually
+   */
   stop(): void {
-    if (!this.isActive) return;
+    if (!this.isActive || !this.mediaRecorder) return;
 
     try {
+      // Clear auto-pause timer
+      if (this.autoPauseTimer) {
+        clearTimeout(this.autoPauseTimer);
+        this.autoPauseTimer = null;
+      }
+
+      // Stop MediaRecorder
+      if (this.mediaRecorder.state === "recording") {
+        this.mediaRecorder.stop();
+      }
+
+      // Stop media stream
       if (this.mediaStream) {
         this.mediaStream.getTracks().forEach((track) => track.stop());
         this.mediaStream = null;
       }
 
-      if (this.sourceNode) {
-        this.sourceNode.disconnect();
-        this.sourceNode = null;
-      }
-
-      if (this.workletNode) {
-        this.workletNode.port.postMessage({ type: "reset" });
-      }
-
       this.isActive = false;
-      this.chunkCallback = null;
+      this.statusCallback?.("stopped");
+      console.log("Audio recording stopped manually");
     } catch (error) {
       this.errorCallback?.(new Error(`Failed to stop: ${error}`));
     }
   }
 
+  /**
+   * Pause recording (for auto-pause functionality)
+   */
+  private pauseRecording(): void {
+    if (!this.isActive || !this.mediaRecorder) return;
+
+    try {
+      if (this.mediaRecorder.state === "recording") {
+        this.mediaRecorder.stop();
+      }
+
+      this.isActive = false;
+      this.statusCallback?.("paused");
+      console.log("Audio recording paused automatically after 15 minutes");
+    } catch (error) {
+      this.errorCallback?.(new Error(`Failed to pause recording: ${error}`));
+    }
+  }
+
+  /**
+   * Set up MediaRecorder event handlers
+   */
+  private setupMediaRecorderEvents(): void {
+    if (!this.mediaRecorder) return;
+
+    this.mediaRecorder.ondataavailable = (event) => {
+      if (event.data.size > 0) {
+        this.audioChunks.push(event.data);
+      }
+    };
+
+    this.mediaRecorder.onstop = async () => {
+      try {
+        if (this.audioChunks.length > 0) {
+          // Create blob from audio chunks
+          const audioBlob = new Blob(this.audioChunks, {
+            type: this.config.mimeType,
+          });
+
+          // Convert to base64
+          const base64Audio = await this.blobToBase64(audioBlob);
+
+          // Calculate duration
+          const duration = Date.now() - this.recordingStartTime;
+
+          // Create audio data object
+          const audioData: AudioData = {
+            audio: base64Audio,
+            format: this.config.mimeType,
+            duration: duration,
+            timestamp: this.recordingStartTime,
+          };
+
+          // Send to callback
+          this.audioDataCallback?.(audioData);
+
+          // Clear chunks
+          this.audioChunks = [];
+        }
+      } catch (error) {
+        console.error("Error processing recorded audio:", error);
+        this.errorCallback?.(new Error(`Audio processing failed: ${error}`));
+      }
+    };
+
+    this.mediaRecorder.onerror = (event) => {
+      console.error("MediaRecorder error:", event);
+      this.errorCallback?.(new Error("MediaRecorder encountered an error"));
+    };
+
+    this.mediaRecorder.onstart = () => {
+      console.log("MediaRecorder started recording");
+    };
+  }
+
+  /**
+   * Set up auto-pause timer for 15-minute limit
+   */
+  private setupAutoPauseTimer(): void {
+    if (this.autoPauseTimer) {
+      clearTimeout(this.autoPauseTimer);
+    }
+
+    this.autoPauseTimer = setTimeout(() => {
+      console.log("Auto-pause timer triggered after 15 minutes");
+      this.pauseRecording();
+    }, this.config.maxRecordingDuration);
+  }
+
+  /**
+   * Convert blob to base64 string
+   */
+  private blobToBase64(blob: Blob): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        if (typeof reader.result === "string") {
+          // Remove data URL prefix (e.g., "data:audio/mp3;base64,")
+          const base64 = reader.result.split(",")[1];
+          resolve(base64);
+        } else {
+          reject(new Error("Failed to convert blob to base64"));
+        }
+      };
+      reader.onerror = () => reject(new Error("FileReader error"));
+      reader.readAsDataURL(blob);
+    });
+  }
+
+  /**
+   * Clean up resources
+   */
   async cleanup(): Promise<void> {
     this.stop();
 
-    if (this.workletNode) {
-      this.workletNode.disconnect();
-      this.workletNode = null;
-    }
+    try {
+      if (this.mediaRecorder) {
+        this.mediaRecorder = null;
+      }
 
-    if (this.audioContext) {
-      await this.audioContext.close();
-      this.audioContext = null;
-    }
+      if (this.mediaStream) {
+        this.mediaStream.getTracks().forEach((track) => track.stop());
+        this.mediaStream = null;
+      }
 
-    this.isInitialized = false;
+      this.isInitialized = false;
+      this.audioChunks = [];
+      console.log("AudioServiceV2 cleaned up");
+    } catch (error) {
+      console.error("Error during cleanup:", error);
+    }
   }
 
+  /**
+   * Check if service is active
+   */
   isServiceActive(): boolean {
     return this.isActive;
   }
 
-  private handleWorkletMessage(event: MessageEvent): void {
-    const { type, ...chunkData } = event.data;
-
-    if (type === "chunk" && this.chunkCallback) {
-      try {
-        console.log("Received chunk in audio service", event);
-
-        const audioData = this.convertToUint8Array(chunkData.audioData);
-        this.chunkCallback(audioData);
-        console.log("Sent chunk to callback in audio service");
-      } catch (error) {
-        this.errorCallback?.(new Error(`Chunk processing failed: ${error}`));
-      }
-    } else if (type === "error") {
-      this.errorCallback?.(new Error(chunkData.message));
-    }
+  /**
+   * Check if service is initialized
+   */
+  isServiceInitialized(): boolean {
+    return this.isInitialized;
   }
 
-  private convertToUint8Array(audioData: Float32Array): Uint8Array {
-    const int16Array = new Int16Array(audioData.length);
-    for (let i = 0; i < audioData.length; i++) {
-      int16Array[i] = Math.max(-32768, Math.min(32767, audioData[i] * 32767));
-    }
-    const res = new Uint8Array(int16Array.buffer);
-    console.log("Converted to uint8Array", res);
-
-    return res;
+  /**
+   * Get current configuration
+   */
+  getConfig(): AudioConfigV2 {
+    return { ...this.config };
   }
 
-  //   const uint8Array = new Uint8Array(audioData.length * 4);
-  //   const buffer = new ArrayBuffer(audioData.length * 4);
-  //   const view = new DataView(buffer);
+  /**
+   * Get current recording duration
+   */
+  getCurrentDuration(): number {
+    if (!this.isActive) return 0;
+    return Date.now() - this.recordingStartTime;
+  }
 
-  //   for (let i = 0; i < audioData.length; i++) {
-  //     view.setFloat32(i * 4, audioData[i], true);
-  //   }
-
-  //   uint8Array.set(new Uint8Array(buffer));
-  //   return uint8Array;
+  /**
+   * Get remaining time before auto-pause
+   */
+  getRemainingTime(): number {
+    if (!this.isActive || !this.config.autoPauseEnabled) return 0;
+    const elapsed = Date.now() - this.recordingStartTime;
+    return Math.max(0, this.config.maxRecordingDuration - elapsed);
+  }
 }

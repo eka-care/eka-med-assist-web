@@ -1,11 +1,9 @@
 import { WEBSOCKET_SERVER_EVENTS } from "@/configs/enums";
 import type {
   WebSocketConfig,
-  ChatMessage,
   ServerMessage,
   ClientMessage,
   ChatRequest,
-  AudioStreamRequest,
   AudioEndOfStreamRequest,
   StreamResponseMessage,
   EndOfStreamMessage,
@@ -15,17 +13,18 @@ import type {
   SyncMessage,
   PongMessage,
   ConnectionStateType,
+  AudioStreamRequestV2,
 } from "../types/socket";
 import {
   ConnectionState,
   SocketEvent,
   ContentType,
-  SocketCodes,
-  WebSocketErrorCodes,
 } from "../types/socket";
+import type { AudioData } from "./audioServiceV2";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 const BASE_URL = "ws://fea0c1ed4375.ngrok-free.app/ws/med-assist/session";
+
 export class WebSocketService {
   private ws: WebSocket | null = null;
   public config: WebSocketConfig;
@@ -37,8 +36,6 @@ export class WebSocketService {
   private isReconnecting: boolean = false;
   private pingInterval: TimeoutHandle | null = null;
   private connectionTimeout: TimeoutHandle | null = null;
-  private currentStreamMessage: ChatMessage | null = null;
-  private pendingFiles: File[] = [];
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -98,104 +95,243 @@ export class WebSocketService {
       console.log(
         "Connecting to WebSocket:",
         wsUrl,
-        "reconnectAttempts",
-        this.reconnectAttempts
+        "with session ID:",
+        this.config.sessionId
       );
+
       this.ws = new WebSocket(wsUrl);
 
-      this.setupEventListeners();
-      this.setupConnectionTimeout();
+      // Set up WebSocket event handlers
+      this.setupWebSocketHandlers();
 
-      return new Promise((resolve, reject) => {
+      // Set connection timeout
+      this.connectionTimeout = setTimeout(() => {
+        if (this.connectionState === ConnectionState.CONNECTING) {
+          console.log("Connection timeout");
+          this.cleanup();
+          this.updateConnectionState(ConnectionState.ERROR);
+          this.triggerEvent(
+            WEBSOCKET_SERVER_EVENTS.ERROR,
+            new Error("Connection timeout")
+          );
+        }
+      }, this.config.options?.connectionTimeout || 60000);
+
+      // Wait for connection to be established
+      await new Promise<void>((resolve, reject) => {
         if (!this.ws) {
-          reject(new Error("WebSocket initialization failed"));
+          reject(new Error("WebSocket not initialized"));
           return;
         }
 
-        this.ws.onopen = () => {
-          console.log("WebSocket connection opened");
-          this.updateConnectionState(ConnectionState.CONNECTED);
-          this.reconnectAttempts = 0;
+        const onOpen = () => {
+          console.log("WebSocket connected successfully");
           this.isReconnecting = false;
+          this.reconnectAttempts = 0;
+          this.updateConnectionState(ConnectionState.CONNECTED);
           this.startPingInterval();
-          this.triggerEvent(
-            WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
-            true
-          );
+          this.triggerEvent("connection_state_change", true);
           resolve();
         };
 
-        this.ws.onerror = (error) => {
-          console.log("WebSocket connection error", error);
-          this.updateConnectionState(ConnectionState.ERROR);
+        const onError = (error: Event) => {
+          console.error("WebSocket connection error:", error);
           this.isReconnecting = false;
-          reject(error);
+          this.updateConnectionState(ConnectionState.ERROR);
+          reject(new Error("WebSocket connection failed"));
         };
+
+        this.ws.onopen = onOpen;
+        this.ws.onerror = onError;
       });
     } catch (error) {
-      console.log("WebSocket connection error from catch block", error);
-      this.updateConnectionState(ConnectionState.ERROR);
+      console.error("Failed to connect:", error);
       this.isReconnecting = false;
+      this.updateConnectionState(ConnectionState.ERROR);
+      this.triggerEvent(
+        WEBSOCKET_SERVER_EVENTS.ERROR,
+        error instanceof Error ? error : new Error("Connection failed")
+      );
       throw error;
     }
   }
 
   /**
-   * Disconnect from the WebSocket server
+   * Set up WebSocket event handlers
    */
-  public disconnect(): void {
-    console.log("WebSocket disconnect called");
-    if (this.ws) {
-      this.stopPingInterval();
-      this.clearConnectionTimeout();
-      this.ws.close(SocketCodes.OK);
-      this.ws = null;
-      this.updateConnectionState(ConnectionState.DISCONNECTED);
+  private setupWebSocketHandlers(): void {
+    if (!this.ws) return;
+
+    this.ws.onopen = () => {
+      console.log("WebSocket opened");
+    };
+
+    this.ws.onmessage = (event) => {
+      try {
+        const data: ServerMessage = JSON.parse(event.data);
+        this.handleServerMessage(data);
+      } catch (error) {
+        console.error("Failed to parse WebSocket message:", error);
+      }
+    };
+
+    this.ws.onclose = (event) => {
+      console.log("WebSocket closed:", event.code, event.reason);
+      this.handleConnectionClose(event);
+    };
+
+    this.ws.onerror = (error) => {
+      console.error("WebSocket error:", error);
+      this.triggerEvent(
+        WEBSOCKET_SERVER_EVENTS.ERROR,
+        new Error("WebSocket error occurred")
+      );
+    };
+  }
+
+  /**
+   * Handle server messages
+   */
+  private handleServerMessage(message: ServerMessage): void {
+    console.log("Received server message:", message);
+
+    switch (message.ev) {
+      case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
+        this.handleConnectionEstablished(message as ConnectionEstablishedMessage);
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.CHAT:
+        this.handleChatMessage(message as ChatResponseMessage);
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.STREAM:
+        this.handleStreamMessage(message as StreamResponseMessage);
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.END_OF_STREAM:
+        this.handleEndOfStreamMessage(message as EndOfStreamMessage);
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.PONG:
+        this.handlePongMessage(message as PongMessage);
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.SYNC:
+        this.handleSyncMessage(message as SyncMessage);
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.ERROR:
+        this.handleErrorMessage(message as ErrorMessage);
+        break;
+
+      default:
+        console.warn("Unknown event type:", message.ev);
     }
   }
 
   /**
-   * Regenerate response for a specific chat
+   * Handle connection established message
    */
-  public regenerateResponse(originalUserMessage: string): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
-    }
-
-    console.log("Regenerating response for:", originalUserMessage);
-
-    // Clear any existing streaming message when regenerating
-    this.clearStreamingState();
-
-    const message: ChatRequest = {
-      ev: SocketEvent.CHAT,
-      ct: ContentType.TEXT,
-      ts: Date.now(),
-      data: { text: originalUserMessage },
-    };
-
-    this.sendMessage(message);
+  private handleConnectionEstablished(message: ConnectionEstablishedMessage): void {
+    console.log("Connection established:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
   }
 
   /**
-   * Send a text message
+   * Handle chat message
    */
-  public sendTextMessage(content: string): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
+  private handleChatMessage(message: ChatResponseMessage): void {
+    console.log("Chat message received:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message);
+  }
+
+  /**
+   * Handle stream message
+   */
+  private handleStreamMessage(message: StreamResponseMessage): void {
+    console.log("Stream message received:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.STREAM, message);
+  }
+
+  /**
+   * Handle end of stream message
+   */
+  private handleEndOfStreamMessage(message: EndOfStreamMessage): void {
+    console.log("End of stream message received:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.END_OF_STREAM, message);
+  }
+
+  /**
+   * Handle pong message
+   */
+  private handlePongMessage(message: PongMessage): void {
+    console.log("Pong message received:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.PONG, message);
+  }
+
+  /**
+   * Handle sync message
+   */
+  private handleSyncMessage(message: SyncMessage): void {
+    console.log("Sync message received:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.SYNC, message);
+  }
+
+  /**
+   * Handle error message
+   */
+  private handleErrorMessage(message: ErrorMessage): void {
+    console.error("Error message received:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(message.msg));
+  }
+
+  /**
+   * Handle connection close
+   */
+  private handleConnectionClose(event: CloseEvent): void {
+    this.cleanup();
+    this.updateConnectionState(ConnectionState.DISCONNECTED);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, false);
+
+    // Attempt to reconnect if not manually closed
+    if (event.code !== 1000 && !this.isReconnecting) {
+      this.attemptReconnect();
+    }
+  }
+
+  /**
+   * Attempt to reconnect
+   */
+  private attemptReconnect(): void {
+    if (this.isReconnecting || this.reconnectAttempts >= this.maxReconnectAttempts) {
+      return;
     }
 
-    // Clear any existing streaming message when starting a new chat
-    this.clearStreamingState();
+    console.log(`Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
+    
+    setTimeout(() => {
+      this.connect().catch((error) => {
+        console.error("Reconnection failed:", error);
+      });
+    }, this.reconnectDelay);
+  }
 
-    const message: ChatRequest = {
+  /**
+   * Send chat message
+   */
+  public sendChatMessage(message: string): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket not connected");
+    }
+
+    const chatMessage: ChatRequest = {
       ev: SocketEvent.CHAT,
       ct: ContentType.TEXT,
       ts: Date.now(),
-      data: { text: content },
+      data: { text: message },
     };
 
-    this.sendMessage(message);
+    this.sendMessage(chatMessage);
   }
 
   /**
@@ -237,7 +373,6 @@ export class WebSocketService {
    * Set files for upload when presigned URL is received
    */
   public setFilesForUpload(files: File[]): void {
-    this.pendingFiles = files;
     console.log(`Set ${files.length} files for upload`);
   }
 
@@ -245,7 +380,6 @@ export class WebSocketService {
    * Clear pending files
    */
   public clearPendingFiles(): void {
-    this.pendingFiles = [];
     console.log("Cleared pending files");
   }
 
@@ -253,10 +387,96 @@ export class WebSocketService {
    * Clear streaming state
    */
   public clearStreamingState(): void {
-    this.currentStreamMessage = null;
     console.log("Cleared streaming state");
   }
 
+  public async reconnect(
+    reason?: string,
+    resetAttempts: boolean = false
+  ): Promise<void> {
+    if (this.isReconnecting) {
+      console.log("Reconnection already in progress, skipping");
+      return;
+    }
+
+    console.log(
+      `Initiating reconnection${reason ? ` due to: ${reason}` : ""}...`
+    );
+
+    this.isReconnecting = true;
+    this.updateConnectionState(ConnectionState.RECONNECTING);
+
+    // Reset reconnection attempts if requested (e.g., for timeout errors)
+    if (resetAttempts) {
+      this.reconnectAttempts = 0;
+    }
+
+    try {
+      // Close existing connection if any
+
+      this.disconnect();
+
+      // Attempt to reconnect
+      await this.connect();
+
+      console.log("Reconnection successful");
+
+      // // Trigger reconnection success event
+      // this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
+    } catch (error) {
+      console.error("Reconnection failed:", error);
+
+      // Handle reconnection error
+      this.handleReconnectionError(error as Error);
+    } finally {
+      this.isReconnecting = false;
+    }
+  }
+
+
+  private handleReconnectionError(error: Error): void {
+    this.reconnectAttempts++;
+    this.isReconnecting = false;
+
+    console.error("Reconnection error:", error);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
+
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.updateConnectionState(ConnectionState.ERROR);
+      this.triggerEvent(
+        WEBSOCKET_SERVER_EVENTS.ERROR,
+        new Error("Maximum reconnection attempts exceeded")
+      );
+    } else {
+      // Schedule next reconnection attempt
+      this.attemptReconnect();
+    }
+  }
+
+
+    /**
+   * Regenerate response for a specific chat
+   */
+    public regenerateResponse(originalUserMessage: string): void {
+        if (!this.isConnected()) {
+          throw new Error("WebSocket is not connected");
+        }
+    
+        console.log("Regenerating response for:", originalUserMessage);
+    
+        // Clear any existing streaming message when regenerating
+        this.clearStreamingState();
+    
+        const message: ChatRequest = {
+          ev: SocketEvent.CHAT,
+          ct: ContentType.TEXT,
+          ts: Date.now(),
+          data: { text: originalUserMessage },
+        };
+    
+        this.sendMessage(message);
+      }
+    
   /**
    * Upload files to presigned URL
    */
@@ -306,36 +526,85 @@ export class WebSocketService {
   }
 
   /**
-   * Send audio stream chunk
+   * Send audio stream start
    */
   public sendAudioStreamStart(): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
-    const message: AudioStreamRequest = {
+    const message: AudioStreamRequestV2 = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: "start",
+      data: {audio: "start", format: "audio/mp3"},
     };
     this.sendMessage(message);
   }
-  public sendAudioStream(audioData: Uint8Array): void {
+
+  /**
+   * Send full audio data (AudioService format) - CHANGED FROM ORIGINAL
+   */
+  public sendAudioStream(audioData: AudioData): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
-    const base64Audio = btoa(String.fromCharCode(...audioData));
 
-    const message: AudioStreamRequest = {
+    const message: AudioStreamRequestV2 = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: base64Audio,
+      data: {
+        audio: audioData.audio, // Base64 encoded audio
+        format: audioData.format, // MIME type
+      },
     };
-    console.log("Sending audio stream message:", message);
+
+    console.log("Sending full audio data:", message);
     this.sendMessage(message);
   }
 
+  /**
+   * Send full audio data to backend (AudioService format) - NEW METHOD
+   */
+  public sendAudioData(audioData: AudioData): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket not connected");
+    }
+
+    const message: AudioStreamRequestV2 = {
+      ev: SocketEvent.STREAM,
+      ct: ContentType.AUDIO,
+      ts: Date.now(),
+      data: {
+        audio: audioData.audio, // Base64 encoded audio
+        format: audioData.format, // MIME type
+      },
+    };
+
+    console.log("Sending full audio data to backend:", message);
+    this.sendMessage(message);
+  }
+
+    /**
+   * Send audio end of stream - CHANGED FROM ORIGINAL
+   */
+    public sendAudioEndOfStream(): void {
+        if (!this.isConnected()) {
+          throw new Error("WebSocket is not connected");
+        }
+        console.log("Sending audio end of stream");
+        const message: AudioEndOfStreamRequest = {
+          ev: SocketEvent.END_OF_STREAM,
+          ct: ContentType.AUDIO,
+          ts: Date.now(),
+        };
+    
+        this.sendMessage(message);
+      }
+    
+  /**
+   * Send pill message
+   */
   public sendPillMessage(pillMessage: string, tool_use_id: string): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
@@ -348,22 +617,7 @@ export class WebSocketService {
     };
     this.sendMessage(message);
   }
-  /**
-   * Send audio end of stream
-   */
-  public sendAudioEndOfStream(audioData: Uint8Array): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
-    }
-    console.log("Sending audio end of stream", audioData);
-    const message: AudioEndOfStreamRequest = {
-      ev: SocketEvent.END_OF_STREAM,
-      ct: ContentType.AUDIO,
-      ts: Date.now(),
-    };
 
-    this.sendMessage(message);
-  }
 
   /**
    * Send ping message
@@ -400,490 +654,68 @@ export class WebSocketService {
   }
 
   /**
-   * Get current connection state
+   * Trigger event
+   */
+  private triggerEvent(event: string, data: any): void {
+    const callbacks = this.eventCallbacks.get(event);
+    if (callbacks) {
+      callbacks.forEach((callback) => {
+        try {
+          callback(data);
+        } catch (error) {
+          console.error("Error in event callback:", error);
+        }
+      });
+    }
+  }
+
+  /**
+   * Start ping interval
+   */
+  private startPingInterval(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+    }
+
+    this.pingInterval = setInterval(() => {
+      this.sendPing();
+    }, this.config.options?.pingInterval || 30000);
+  }
+
+  /**
+   * Check if WebSocket is connected
+   */
+  public isConnected(): boolean {
+    return this.ws?.readyState === WebSocket.OPEN;
+  }
+
+  /**
+   * Get connection state
    */
   public getConnectionState(): ConnectionStateType {
     return this.connectionState;
   }
 
   /**
-   * Check if connected
+   * Update connection state
    */
-  public isConnected(): boolean {
-    return (
-      this.connectionState === ConnectionState.CONNECTED &&
-      this.ws?.readyState === WebSocket.OPEN
-    );
+  private updateConnectionState(state: ConnectionStateType): void {
+    this.connectionState = state;
+    console.log("Connection state updated:", state);
   }
 
   /**
-   * Unified reconnect function - handles all reconnection scenarios
+   * Disconnect WebSocket
    */
-  public async reconnect(
-    reason?: string,
-    resetAttempts: boolean = false
-  ): Promise<void> {
-    if (this.isReconnecting) {
-      console.log("Reconnection already in progress, skipping");
-      return;
-    }
-
-    console.log(
-      `Initiating reconnection${reason ? ` due to: ${reason}` : ""}...`
-    );
-
-    this.isReconnecting = true;
-    this.updateConnectionState(ConnectionState.RECONNECTING);
-
-    // Reset reconnection attempts if requested (e.g., for timeout errors)
-    if (resetAttempts) {
-      this.reconnectAttempts = 0;
-    }
-
-    try {
-      // Close existing connection if any
-
-      this.disconnect();
-
-      // Attempt to reconnect
-      await this.connect();
-
-      console.log("Reconnection successful");
-
-      // // Trigger reconnection success event
-      // this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
-    } catch (error) {
-      console.error("Reconnection failed:", error);
-
-      // Handle reconnection error
-      this.handleReconnectionError(error as Error);
-    } finally {
-      this.isReconnecting = false;
+  public disconnect(): void {
+    if (this.ws) {
+      this.ws.close(1000, "Manual disconnect");
     }
   }
 
   /**
-   * Manually trigger a timeout error for testing
+   * Send message to WebSocket
    */
-  public triggerTimeoutError(): void {
-    console.log("Manually triggering timeout error for testing...");
-    const timeoutMessage: ErrorMessage = {
-      ev: "err",
-      ts: Date.now(),
-      code: WebSocketErrorCodes.TIMEOUT,
-      msg: "Request timed out",
-    };
-    this.handleError(timeoutMessage);
-  }
-
-  /**
-   * Get current session configuration
-   */
-  public getSessionConfig(): { sessionId: string; token: string } {
-    return {
-      sessionId: this.config.sessionId,
-      token: this.config.auth.token,
-    };
-  }
-
-  // Private methods
-
-  private setupEventListeners(): void {
-    if (!this.ws) return;
-
-    // Remove any existing listeners to prevent duplicates
-    this.ws.onopen = null;
-    this.ws.onclose = null;
-    this.ws.onerror = null;
-    this.ws.onmessage = null;
-
-    this.ws.onopen = () => {
-      console.log("WebSocket connection opened");
-      this.updateConnectionState(ConnectionState.CONNECTED);
-      this.reconnectAttempts = 0;
-      this.isReconnecting = false;
-      this.startPingInterval();
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
-    };
-
-    this.ws.onclose = (event) => {
-      console.log("WebSocket connection closed:", event.code, event.reason);
-      this.updateConnectionState(ConnectionState.DISCONNECTED);
-      this.stopPingInterval();
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, false);
-
-      // Handle custom close codes
-      if (event.code !== SocketCodes.OK) {
-        this.handleDisconnectCode(event.code);
-      }
-
-      // Only attempt reconnection if we're not manually disconnecting
-      if (this.connectionState !== ConnectionState.DISCONNECTED) {
-        this.attemptReconnection();
-      }
-    };
-
-    this.ws.onerror = (error) => {
-      console.log("WebSocket error:", error);
-      this.updateConnectionState(ConnectionState.ERROR);
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
-      this.handleReconnectionError(new Error("WebSocket error"));
-    };
-
-    this.ws.onmessage = (event) => {
-      try {
-        const data: ServerMessage = JSON.parse(event.data);
-        this.handleServerMessage(data);
-      } catch (error) {
-        console.error("Failed to parse server message:", error, event);
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Invalid message format")
-        );
-      }
-    };
-  }
-
-  private handleServerMessage(message: ServerMessage): void {
-    switch (message.ev) {
-      case SocketEvent.CONNECTION_ESTABLISHED:
-        this.handleConnectionEstablished(
-          message as ConnectionEstablishedMessage
-        );
-        break;
-      case SocketEvent.CHAT:
-        this.handleChatResponse(message as ChatResponseMessage);
-        break;
-      case SocketEvent.STREAM:
-        this.handleStreamResponse(message as StreamResponseMessage);
-        break;
-      case SocketEvent.END_OF_STREAM:
-        this.handleEndOfStream(message as EndOfStreamMessage);
-        break;
-      case SocketEvent.SYNC:
-        this.handleSync(message as SyncMessage);
-        break;
-      case SocketEvent.PONG:
-        this.handlePong(message as PongMessage);
-        break;
-      case SocketEvent.ERROR:
-        this.handleError(message as ErrorMessage);
-        break;
-      default:
-        console.warn("Unknown message type:", (message as any).ev);
-    }
-  }
-
-  private handleConnectionEstablished(
-    message: ConnectionEstablishedMessage
-  ): void {
-    console.log("Connection established", message);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
-  }
-
-  private handleChatResponse(message: ChatResponseMessage): void {
-    console.log("Chat response received", message);
-    if (message.ct === ContentType.FILE && message.data) {
-      // This is an S3 URL for file upload
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message);
-      console.log("File upload URL received", message, message.data);
-
-      // If we have pending files, upload them automatically
-      if (this.pendingFiles && this.pendingFiles.length > 0) {
-        console.log("File upload URL received, uploading pending files");
-        this.uploadFilesToPresignedUrl(
-          message.data?.url || "",
-          this.pendingFiles
-        )
-          .then(() => {
-            // Clear pending files after successful upload
-            this.pendingFiles = [];
-          })
-          .catch((error) => {
-            console.error("Failed to upload files:", error);
-            // Keep files in pending state for retry if needed
-          });
-      }
-    } else {
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message);
-    }
-  }
-
-  private handleStreamResponse(message: StreamResponseMessage): void {
-    if (message.ct === ContentType.TEXT && message.data) {
-      console.log("Stream response received:", message.data);
-
-      // Handle progress messages
-      if (message.data.progress_msg) {
-        console.log("Progress message received:", message.data.progress_msg);
-        this.triggerEvent("progress_message", message.data.progress_msg);
-        return;
-      }
-
-      // Handle text messages
-      if (message.data.text) {
-        // Create or update streaming message
-        if (!this.currentStreamMessage) {
-          this.currentStreamMessage = {
-            id: Date.now(),
-            content: "",
-            timestamp: new Date(),
-            type: "text",
-            metadata: { isStreaming: true },
-          };
-        }
-
-        // Add the new word/chunk to the existing content
-        this.currentStreamMessage.content += message.data.text;
-        // Send the PROGRESSIVE (accumulated) text, not just the new word
-        this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
-      }
-    }
-  }
-
-  private handleEndOfStream(message: EndOfStreamMessage): void {
-    if (message.ct === ContentType.TEXT && this.currentStreamMessage) {
-      // Finalize the streaming message
-      this.currentStreamMessage.metadata = {
-        ...this.currentStreamMessage.metadata,
-        isStreaming: false,
-      };
-      this.triggerEvent(
-        WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
-        this.currentStreamMessage
-      );
-      // Clear the streaming message
-      this.currentStreamMessage = null;
-    }
-  }
-
-  private handleSync(message: SyncMessage): void {
-    // Handle sync message (currently not needed in frontend)
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.SYNC, message);
-  }
-
-  private handlePong(message: PongMessage): void {
-    // Trigger pong event with client timestamp and server timestamp
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.PONG, {
-      cts: message.cts, // client timestamp
-      ts: message.ts, // server timestamp
-    });
-  }
-
-  private handleError(message: ErrorMessage): void {
-    if (message.code === WebSocketErrorCodes.TIMEOUT) {
-      console.log("Timeout error received:", message);
-      console.log("Current connection state:", this.connectionState);
-      console.log("WebSocket ready state:", this.ws?.readyState);
-      console.log("Testing connection with ping...");
-
-      // First, try to send a ping to test if the connection is still alive
-      this.testConnectionWithPing()
-        .then((isAlive) => {
-          if (isAlive) {
-            console.log("Connection is alive, ping successful");
-            // Connection is alive, just trigger a regular error event
-            const error = new Error(`Request timed out. Please try again.`);
-            this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
-          } else {
-            console.log("Connection is dead, attempting to reconnect...");
-            // Connection is dead, attempt to reconnect
-            this.reconnect();
-          }
-        })
-        .catch((error) => {
-          console.log("Ping test failed, attempting to reconnect...", error);
-          // Ping test failed, attempt to reconnect
-          this.reconnect();
-        });
-      // if (this.isConnected()) {
-      //   console.log("Connection is alive, triggering error event");
-      //   const error = new Error(`Request timed out. Please try again.`);
-      //   this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
-      // } else {
-      //   console.log("Connection is dead, attempting to reconnect...");
-      //   // Connection is dead, attempt to reconnect with reset attempts
-      //   this.reconnect("timeout error", true);
-      // }
-    } else {
-      const error = new Error(`${message.code}: ${message.msg}`);
-      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
-    }
-  }
-
-  private async testConnectionWithPing(): Promise<boolean> {
-    return new Promise((resolve) => {
-      let pongReceived = false;
-      let timeoutId: NodeJS.Timeout;
-
-      // Set up a one-time pong listener
-      const pongHandler = () => {
-        pongReceived = true;
-        clearTimeout(timeoutId);
-        this.off(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
-        resolve(pongReceived);
-      };
-
-      // Set up timeout for ping test
-      timeoutId = setTimeout(() => {
-        this.off(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
-        resolve(false);
-      }, 5000); // 5 second timeout for ping test
-
-      // Listen for pong response
-      this.on(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
-
-      // Send ping
-      this.sendPing();
-    });
-  }
-
-  private handleDisconnectCode(code: number): void {
-    console.log("Handling disconnect code:", code);
-
-    switch (code) {
-      case SocketCodes.UNAUTHORIZED:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Unauthorized access")
-        );
-        break;
-      case SocketCodes.FORBIDDEN:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Access forbidden")
-        );
-        break;
-      case SocketCodes.NOT_FOUND:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Session not found")
-        );
-        break;
-      case SocketCodes.INTERNAL_SERVER_ERROR:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Internal server error")
-        );
-        break;
-      case SocketCodes.SERVER_RESTART:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Server restarted")
-        );
-        break;
-      case SocketCodes.ABNORMAL_CLOSURE:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Abnormal closure")
-        );
-        break;
-      default:
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error(`Connection closed with code: ${code}`)
-        );
-    }
-  }
-
-  private setupConnectionTimeout(): void {
-    this.clearConnectionTimeout();
-    this.connectionTimeout = setTimeout(() => {
-      if (this.connectionState === ConnectionState.CONNECTING) {
-        this.updateConnectionState(ConnectionState.ERROR);
-        this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Connection timeout")
-        );
-      }
-    }, this.config.options?.connectionTimeout || 20000);
-  }
-
-  private clearConnectionTimeout(): void {
-    if (this.connectionTimeout) {
-      clearTimeout(this.connectionTimeout);
-      this.connectionTimeout = null;
-    }
-  }
-
-  private startPingInterval(): void {
-    this.stopPingInterval();
-    const interval = this.config.options?.pingInterval || 30000;
-    console.log(`Starting ping interval: ${interval}ms`);
-
-    this.pingInterval = setInterval(() => {
-      if (this.isConnected()) {
-        this.sendPing();
-      } else {
-        console.log("WebSocket not connected, stopping ping interval");
-        this.stopPingInterval();
-      }
-    }, interval);
-  }
-
-  private stopPingInterval(): void {
-    if (this.pingInterval) {
-      console.log("Stopping ping interval");
-      clearInterval(this.pingInterval);
-      this.pingInterval = null;
-    }
-  }
-
-  private attemptReconnection(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.updateConnectionState(ConnectionState.ERROR);
-      this.triggerEvent(
-        WEBSOCKET_SERVER_EVENTS.ERROR,
-        new Error("Reconnect failed")
-      );
-      return;
-    }
-
-    // Prevent multiple simultaneous reconnection attempts
-    if (this.isReconnecting) {
-      console.log("Reconnection already in progress, skipping");
-      return;
-    }
-
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
-    console.log(
-      `Scheduling reconnection attempt ${
-        this.reconnectAttempts + 1
-      } in ${delay}ms`
-    );
-
-    setTimeout(() => {
-      if (!this.isConnected() && !this.isReconnecting) {
-        console.log(
-          `Attempting reconnection ${this.reconnectAttempts + 1}/${
-            this.maxReconnectAttempts
-          }`
-        );
-        // Use the unified reconnect function
-        this.reconnect(`automatic attempt ${this.reconnectAttempts + 1}`);
-      }
-    }, delay);
-  }
-
-  private handleReconnectionError(error: Error): void {
-    this.reconnectAttempts++;
-    this.isReconnecting = false;
-
-    console.error("Reconnection error:", error);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
-
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.updateConnectionState(ConnectionState.ERROR);
-      this.triggerEvent(
-        WEBSOCKET_SERVER_EVENTS.ERROR,
-        new Error("Maximum reconnection attempts exceeded")
-      );
-    } else {
-      // Schedule next reconnection attempt
-      this.attemptReconnection();
-    }
-  }
-
   private sendMessage(
     message: ClientMessage | { ev: string; ts: number }
   ): void {
@@ -894,68 +726,26 @@ export class WebSocketService {
     }
   }
 
-  private triggerEvent(event: string, data?: any): void {
-    const callbacks = this.eventCallbacks.get(event);
-    if (callbacks) {
-      callbacks.forEach((callback) => {
-        try {
-          callback(data);
-        } catch (error) {
-          console.error(`Error in event callback for ${event}:`, error);
-        }
-      });
+  /**
+   * Cleanup resources
+   */
+  private cleanup(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+
+    if (this.connectionTimeout) {
+      clearTimeout(this.connectionTimeout);
+      this.connectionTimeout = null;
+    }
+
+    if (this.ws) {
+      this.ws.onopen = null;
+      this.ws.onmessage = null;
+      this.ws.onclose = null;
+      this.ws.onerror = null;
+      this.ws = null;
     }
   }
-
-  private updateConnectionState(state: ConnectionStateType): void {
-    this.connectionState = state;
-    this.triggerEvent("connection_state_change", state);
-  }
-}
-
-// Export singleton instance for global usage
-let webSocketServiceInstance: WebSocketService | null = null;
-
-export const createWebSocketService = (
-  config: WebSocketConfig
-): WebSocketService => {
-  // If we already have an instance with the same config, return it
-  if (
-    webSocketServiceInstance &&
-    webSocketServiceInstance.config.sessionId === config.sessionId &&
-    webSocketServiceInstance.config.auth.token === config.auth.token
-  ) {
-    return webSocketServiceInstance;
-  }
-
-  // If we have an existing instance with different config, disconnect it first
-  if (webSocketServiceInstance) {
-    webSocketServiceInstance.disconnect();
-  }
-
-  // Create new instance
-  webSocketServiceInstance = new WebSocketService(config);
-  return webSocketServiceInstance;
-};
-
-export const getWebSocketService = (): WebSocketService | null => {
-  return webSocketServiceInstance;
-};
-
-export const destroyWebSocketService = (): void => {
-  if (webSocketServiceInstance) {
-    webSocketServiceInstance.disconnect();
-    webSocketServiceInstance = null;
-  }
-};
-
-// Add method to check if instance exists with current config
-export const hasWebSocketServiceWithConfig = (
-  config: WebSocketConfig
-): boolean => {
-  return (
-    webSocketServiceInstance !== null &&
-    webSocketServiceInstance.config.sessionId === config.sessionId &&
-    webSocketServiceInstance.config.auth.token === config.auth.token
-  );
-};
+} 

@@ -1,11 +1,11 @@
 /**
- * AudioServiceV2 Hook - Full MP3 audio recording with auto-pause
+ * AudioService Hook - Full MP3 audio recording with auto-pause
  */
 
-import { AudioServiceV2, type AudioData } from "@/services/audioServiceV2";
+import { AudioService, type AudioData } from "@/services/audioService";
 import { useState, useRef, useCallback, useEffect } from "react";
 
-export interface UseAudioServiceV2Return {
+export interface UseAudioServiceReturn {
   isRecording: boolean;
   error: Error | null;
   recordingDuration: number;
@@ -17,13 +17,13 @@ export interface UseAudioServiceV2Return {
   getRemainingTime: () => number;
 }
 
-export function useAudioServiceV2() {
+export function useAudioService() {
   const [isRecording, setIsRecording] = useState(false);
   const [error, setError] = useState<Error | null>(null);
   const [recordingDuration, setRecordingDuration] = useState(0);
   const [remainingTime, setRemainingTime] = useState(0);
 
-  const serviceRef = useRef<AudioServiceV2 | null>(null);
+  const serviceRef = useRef<AudioService | null>(null);
   const durationIntervalRef = useRef<NodeJS.Timeout | null>(null);
 
   // Update duration and remaining time every second while recording
@@ -53,13 +53,13 @@ export function useAudioServiceV2() {
     async (onAudioData: (audioData: AudioData) => void) => {
       try {
         if (!serviceRef.current) {
-          const service = new AudioServiceV2({
+          const service = new AudioService({
             maxRecordingDuration: 900000, // 15 minutes
             autoPauseEnabled: true,
             audioBitsPerSecond: 128000, // 128 kbps
           });
           await service.initialize();
-          console.log("AudioServiceV2 initialized in useAudioServiceV2");
+          console.log("AudioService initialized in useAudioService");
           serviceRef.current = service;
         }
 
@@ -78,7 +78,7 @@ export function useAudioServiceV2() {
           },
           // Error callback
           (err) => {
-            console.error("Audio error in useAudioServiceV2:", err);
+            console.error("Audio error in useAudioService:", err);
             setError(err);
             setIsRecording(false);
             stopDurationTracking();
