@@ -80,6 +80,10 @@ export function MessageInputCopyV2({
     }
   }, [recordingDuration, isRecording]);
 
+  useEffect(() => {
+    console.log("file uploads", uploadedFiles);
+  }, [uploadedFiles]);
+
   const checkMicrophonePermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
@@ -196,7 +200,7 @@ export function MessageInputCopyV2({
         // Fallback: create empty audio data
         const emptyAudioData: AudioData = {
           audio: "",
-          format: "audio/mp3",
+          format: "audio/mp4",
           duration: 0,
           timestamp: Date.now(),
         };
@@ -207,7 +211,7 @@ export function MessageInputCopyV2({
       // Fallback: create empty audio data
       const emptyAudioData: AudioData = {
         audio: "",
-        format: "audio/mp3",
+        format: "audio/mp4",
         duration: 0,
         timestamp: Date.now(),
       };

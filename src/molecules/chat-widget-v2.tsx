@@ -4,12 +4,12 @@ import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
 import { Card } from "@ui/index";
 import useSessionStore from "@/stores/medAssistStore";
-import { useWebSocketV2 } from "@/custom-hooks/useWebSocketV2";
 import type { WebSocketConfig } from "@/types/socket";
 import { MessageInputCopyV2 } from "./message-input-copy-v2";
 import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { PillAction } from "./quick-actions";
 import type { AudioData } from "@/services/audioServiceV2";
+import { useWebSocketV2 } from "@/custom-hooks/useWebSocketV2";
 
 interface Message {
   id: string;
@@ -85,7 +85,6 @@ export function ChatWidgetV2({
     sendTextMessage: sendChatMessage,
     setFilesForUpload,
     sendFileUploadRequest,
-    sendFileUploadComplete,
     sendEndOfAudioStream: sendAudioEndOfStream,
     sendAudioData,
     sendPillMessage,

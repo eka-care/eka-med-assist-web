@@ -60,13 +60,24 @@ export class AudioServiceV2 {
         throw new Error("MediaRecorder is not supported in this browser");
       }
 
-      // Check for MP3 support and fallback to best available format
-      const supportedTypes = MediaRecorder.isTypeSupported("audio/mp3")
-        ? ["audio/mp3"]
-        : ["audio/wav"];
+      // Check for supported audio formats in order of preference
+      const supportedTypes = [
+        "audio/mp3",
+        "audio/ogg;codecs=opus",
+        "audio/mp4",
+        "audio/ogg",
+        "audio/wav",
+      ].filter((type) => MediaRecorder.isTypeSupported(type));
 
-      // Update config with supported mime type
+      if (supportedTypes.length === 0) {
+        throw new Error("No supported audio formats found in this browser");
+      }
+
+      // Update config with best supported mime type
       this.config.mimeType = supportedTypes[0];
+
+      console.log("Supported audio formats:", supportedTypes);
+      console.log("Selected format:", this.config.mimeType);
 
       console.log(
         `AudioServiceV2 initialized with format: ${this.config.mimeType}`
@@ -104,11 +115,34 @@ export class AudioServiceV2 {
         },
       });
 
-      // Create MediaRecorder
-      this.mediaRecorder = new MediaRecorder(this.mediaStream, {
-        mimeType: this.config.mimeType,
-        audioBitsPerSecond: this.config.audioBitsPerSecond,
-      });
+      // Create MediaRecorder with fallback if the selected format fails
+      let mediaRecorder: MediaRecorder;
+      try {
+        mediaRecorder = new MediaRecorder(this.mediaStream, {
+          mimeType: this.config.mimeType,
+          audioBitsPerSecond: this.config.audioBitsPerSecond,
+        });
+      } catch (error) {
+        console.warn(
+          `Failed to create MediaRecorder with ${this.config.mimeType}, trying without mimeType`
+        );
+        // Fallback: create MediaRecorder without specifying mimeType
+        mediaRecorder = new MediaRecorder(this.mediaStream, {
+          audioBitsPerSecond: this.config.audioBitsPerSecond,
+        });
+        // Update the config to reflect the actual format being used
+        this.config.mimeType = mediaRecorder.mimeType;
+        console.log("Fallback MIME type selected:", this.config.mimeType);
+      }
+
+      this.mediaRecorder = mediaRecorder;
+
+      // Verify MediaRecorder is in a valid state
+      if (this.mediaRecorder.state !== "inactive") {
+        throw new Error(
+          `MediaRecorder in invalid state: ${this.mediaRecorder.state}`
+        );
+      }
 
       // Set up event handlers
       this.setupMediaRecorderEvents();
@@ -126,7 +160,10 @@ export class AudioServiceV2 {
 
       this.statusCallback?.("recording");
       console.log("Audio recording started with MediaRecorder");
+      console.log("Using MIME type:", this.config.mimeType);
+      console.log("MediaRecorder state:", this.mediaRecorder.state);
     } catch (error) {
+      console.error("Detailed error in start method:", error);
       throw new Error(`Failed to start: ${error}`);
     }
   }
@@ -235,6 +272,10 @@ export class AudioServiceV2 {
 
     this.mediaRecorder.onstart = () => {
       console.log("MediaRecorder started recording");
+      if (this.mediaRecorder) {
+        console.log("MediaRecorder state:", this.mediaRecorder.state);
+        console.log("MediaRecorder MIME type:", this.mediaRecorder.mimeType);
+      }
     };
   }
 

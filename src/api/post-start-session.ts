@@ -1,3 +1,5 @@
+import { PRODUCTION_CONFIG } from "@/configs/production";
+
 // Default JWT payload for the session
 const defaultJWTPayload = {
   aud: "androiddoc",
@@ -27,7 +29,7 @@ const defaultJWTPayload = {
 const startSession = async () => {
   try {
     const response = await fetch(
-      "https://fea0c1ed4375.ngrok-free.app/med-assist/session",
+      `https:${PRODUCTION_CONFIG.BASE_API_URL}/med-assist/session`,
       {
         method: "POST",
         headers: {
