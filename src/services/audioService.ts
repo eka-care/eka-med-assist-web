@@ -76,8 +76,8 @@ export class AudioService {
 
       this.mediaStream = await navigator.mediaDevices.getUserMedia({
         audio: {
-          echoCancellation: true,
-          noiseSuppression: true,
+          echoCancellation: false,
+          noiseSuppression: false,
           autoGainControl: false,
           sampleRate: this.config.sampleRate,
           channelCount: 1,
