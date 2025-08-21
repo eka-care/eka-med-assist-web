@@ -10,7 +10,7 @@
     /* Bundler mode */
     "moduleResolution": "bundler",
     "allowImportingTsExtensions": true,
-    "verbatimModuleSyntax": true,
+    "verbatimModuleSyntax": false,
     "moduleDetection": "force",
     "noEmit": true,
     "jsx": "react-jsx",
@@ -19,7 +19,6 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "erasableSyntaxOnly": true,
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true,
 
@@ -32,7 +31,10 @@
       "@ui/*": ["packages/ui/base/src/*"],
       "@ui-components/*": ["packages/ui/base/src/shadcn-ui/components/ui/*"],
       "@ui-lib/*": ["packages/ui/base/src/shadcn-ui/lib/*"],
-      "@ui-eka/*": ["packages/ui/base/src/eka-ui/*"]
+      "@ui-eka/*": ["packages/ui/base/src/eka-ui/*"],
+      "@/components/*": ["packages/ui/base/src/shadcn-ui/components/*"],
+      "@/lib/*": ["packages/ui/base/src/shadcn-ui/lib/*"],
+      "@/hooks/*": ["packages/ui/base/src/shadcn-ui/hooks/*"]
     }
   },
   "include": ["src", "packages/ui/base/src"]

@@ -1,13 +1,15 @@
-import { Button } from "@ui/index";
 import { useState, useEffect } from "react";
+// import { ChatWidget } from "./molecules/chat-widget";
+import startSession from "./api/post-start-session";
+import useSessionStore from "./stores/medAssistStore";
 import { ChatWidget } from "./molecules/chat-widget";
-import { useTheme } from "@ui/index";
 
 function App() {
-  const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+  const [isWidgetOpen, setIsWidgetOpen] = useState(true);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const { theme, setTheme } = useTheme();
+  const setSessionId = useSessionStore((state) => state.setSessionId);
+  const setSessionToken = useSessionStore((state) => state.setSessionToken);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -19,11 +21,84 @@ function App() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  const handleOpenWidget = () => {
-    setIsWidgetOpen(true);
+  //PROD=================================================================================
+  // useEffect(() => {
+  //   const handleMessage = (event: MessageEvent) => {
+  //     // Validate message origin for security
+  //     // if (event.origin !== window.location.origin) {
+  //     //   console.log("Invalid origin:", event.origin);
+  //     //   return;
+  //     // }
+  //     console.log("Received message:", event.data);
+
+  //     switch (event.data.type) {
+  //       case "SESSION_STARTED":
+  //         console.log("Session started by widget-loader:", event.data.session);
+  //         // Set session data from widget-loader
+  //         setSessionId(event.data.session.session_id);
+  //         setSessionToken(event.data.session.session_token);
+  //         // Show the widget
+  //         setIsWidgetOpen(true);
+  //         break;
+
+  //       case "WIDGET_CLOSING":
+  //         console.log("Widget is closing from widget-loader");
+  //         // Widget-loader is closing the iframe, so hide our React widget
+  //         setIsWidgetOpen(false);
+  //         setIsExpanded(false);
+  //         break;
+
+  //       default:
+  //         console.log("Unknown message type:", event.data.type);
+  //         // handleOpenWidget();
+  //         break;
+  //     }
+  //   };
+
+  //   window.addEventListener("message", handleMessage);
+  //   return () => window.removeEventListener("message", handleMessage);
+  // }, []);
+
+  //DEV=================================================================================
+  useEffect(() => {
+    handleOpenWidget();
+  }, []);
+
+  const handleOpenWidget = async () => {
+    console.log("hi from  open fun");
+
+    try {
+      //add loading state
+      const { session_id, session_token } = await startSession();
+      if (!session_id || !session_token) {
+        throw new Error("Failed to start a new session");
+      }
+      setSessionId(session_id);
+      setSessionToken(session_token);
+
+      setIsWidgetOpen(true);
+    } catch (error) {
+      console.log("Falied to start a new session",error);
+      //TODO: Show error to the user
+    } finally {
+      //setLoading(false)
+      //setIsWidgetOpen(true);
+    }
   };
 
+  console.log("isWidgetOpen", isWidgetOpen);
+
+
   const handleCloseWidget = () => {
+    // Send message to widget-loader to close the iframe
+    if (window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "WIDGET_CLOSE_REQUESTED",
+        },
+        "*"
+      );
+    }
     setIsWidgetOpen(false);
     setIsExpanded(false);
   };
@@ -32,57 +107,8 @@ function App() {
     setIsExpanded(!isExpanded);
   };
 
-  const handleThemeChange = (newTheme: string) => {
-    setTheme(newTheme as any);
-  };
-
-  const themes = [
-    { name: "Patient Light", value: "patient-light" },
-    { name: "Patient Dark", value: "patient-dark" },
-    { name: "Doctor Light", value: "doctor-light" },
-    { name: "Doctor Dark", value: "doctor-dark" },
-    { name: "Client", value: "client" },
-  ];
-
   return (
-    <div className="min-h-screen bg-background">
-      {/* Demo page content */}
-      <div className="p-8">
-        <h1 className="text-3xl font-bold text-center mb-8 text-foreground">
-          Apollo Assist Demo
-        </h1>
-
-        {/* Theme Switcher */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <div className="flex flex-wrap gap-2 justify-center">
-            {themes.map((themeOption) => (
-              <Button
-                key={themeOption.value}
-                onClick={() => handleThemeChange(themeOption.value)}
-                variant={theme === themeOption.value ? "default" : "outline"}
-                className="text-sm">
-                {themeOption.name}
-              </Button>
-            ))}
-          </div>
-        </div>
-
-        <div className="max-w-4xl mx-auto">
-          <p className="text-muted-foreground mb-8 text-center">
-            Click the button below to open the chat widget. On mobile devices,
-            it will take full screen.
-          </p>
-
-          <div className="text-center">
-            <Button
-              onClick={handleOpenWidget}
-              className="px-6 py-3 rounded-full">
-              Open Apollo Assist
-            </Button>
-          </div>
-        </div>
-      </div>
-
+    <div>
       {/* Chat Widget */}
       {isWidgetOpen && (
         <>
