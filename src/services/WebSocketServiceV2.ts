@@ -576,11 +576,11 @@ export class WebSocketServiceV2 {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
-    const message: AudioStreamRequest = {
+    const message: AudioStreamRequestV2 = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: "start",
+      data: {audio: "start", format: "audio/mp3"},
     };
     this.sendMessage(message);
   }

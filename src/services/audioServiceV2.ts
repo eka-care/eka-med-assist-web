@@ -63,12 +63,6 @@ export class AudioServiceV2 {
       // Check for MP3 support and fallback to best available format
       const supportedTypes = MediaRecorder.isTypeSupported("audio/mp3")
         ? ["audio/mp3"]
-        : MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
-        ? ["audio/webm;codecs=opus"]
-        : MediaRecorder.isTypeSupported("audio/webm")
-        ? ["audio/webm"]
-        : MediaRecorder.isTypeSupported("audio/mp4")
-        ? ["audio/mp4"]
         : ["audio/wav"];
 
       // Update config with supported mime type
