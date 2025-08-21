@@ -1,7 +1,8 @@
 import { useState, useEffect } from "react";
-import { ChatWidget } from "./molecules/chat-widget";
-// import startSession from "./api/post-start-session";
+// import { ChatWidget } from "./molecules/chat-widget";
+import startSession from "./api/post-start-session";
 import useSessionStore from "./stores/medAssistStore";
+import { ChatWidgetV2 } from "./molecules/chat-widget-v2";
 
 function App() {
   const [isWidgetOpen, setIsWidgetOpen] = useState(true);
@@ -21,69 +22,69 @@ function App() {
   }, []);
 
   //PROD=================================================================================
-  useEffect(() => {
-    const handleMessage = (event: MessageEvent) => {
-      // Validate message origin for security
-      // if (event.origin !== window.location.origin) {
-      //   console.log("Invalid origin:", event.origin);
-      //   return;
-      // }
-      console.log("Received message:", event.data);
-
-      switch (event.data.type) {
-        case "SESSION_STARTED":
-          console.log("Session started by widget-loader:", event.data.session);
-          // Set session data from widget-loader
-          setSessionId(event.data.session.session_id);
-          setSessionToken(event.data.session.session_token);
-          // Show the widget
-          setIsWidgetOpen(true);
-          break;
-
-        case "WIDGET_CLOSING":
-          console.log("Widget is closing from widget-loader");
-          // Widget-loader is closing the iframe, so hide our React widget
-          setIsWidgetOpen(false);
-          setIsExpanded(false);
-          break;
-
-        default:
-          console.log("Unknown message type:", event.data.type);
-          // handleOpenWidget();
-          break;
-      }
-    };
-
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, []);
-
-  //DEV=================================================================================
   // useEffect(() => {
-  //   handleOpenWidget();
+  //   const handleMessage = (event: MessageEvent) => {
+  //     // Validate message origin for security
+  //     // if (event.origin !== window.location.origin) {
+  //     //   console.log("Invalid origin:", event.origin);
+  //     //   return;
+  //     // }
+  //     console.log("Received message:", event.data);
+
+  //     switch (event.data.type) {
+  //       case "SESSION_STARTED":
+  //         console.log("Session started by widget-loader:", event.data.session);
+  //         // Set session data from widget-loader
+  //         setSessionId(event.data.session.session_id);
+  //         setSessionToken(event.data.session.session_token);
+  //         // Show the widget
+  //         setIsWidgetOpen(true);
+  //         break;
+
+  //       case "WIDGET_CLOSING":
+  //         console.log("Widget is closing from widget-loader");
+  //         // Widget-loader is closing the iframe, so hide our React widget
+  //         setIsWidgetOpen(false);
+  //         setIsExpanded(false);
+  //         break;
+
+  //       default:
+  //         console.log("Unknown message type:", event.data.type);
+  //         // handleOpenWidget();
+  //         break;
+  //     }
+  //   };
+
+  //   window.addEventListener("message", handleMessage);
+  //   return () => window.removeEventListener("message", handleMessage);
   // }, []);
 
-  // const handleOpenWidget = async () => {
-  //   console.log("hi from  open fun");
+  //DEV=================================================================================
+  useEffect(() => {
+    handleOpenWidget();
+  }, []);
 
-  //   try {
-  //     //add loading state
-  //     const { session_id, session_token } = await startSession();
-  //     if (!session_id || !session_token) {
-  //       throw new Error("Failed to start a new session");
-  //     }
-  //     setSessionId(session_id);
-  //     setSessionToken(session_token);
+  const handleOpenWidget = async () => {
+    console.log("hi from  open fun");
 
-  //     setIsWidgetOpen(true);
-  //   } catch (error) {
-  //     console.log("Falied to start a new session",error);
-  //     //TODO: Show error to the user
-  //   } finally {
-  //     //setLoading(false)
-  //     //setIsWidgetOpen(true);
-  //   }
-  // };
+    try {
+      //add loading state
+      const { session_id, session_token } = await startSession();
+      if (!session_id || !session_token) {
+        throw new Error("Failed to start a new session");
+      }
+      setSessionId(session_id);
+      setSessionToken(session_token);
+
+      setIsWidgetOpen(true);
+    } catch (error) {
+      console.log("Falied to start a new session",error);
+      //TODO: Show error to the user
+    } finally {
+      //setLoading(false)
+      //setIsWidgetOpen(true);
+    }
+  };
 
   console.log("isWidgetOpen", isWidgetOpen);
 
@@ -128,7 +129,7 @@ function App() {
                 ? "fixed inset-0 z-50 p-4"
                 : "fixed bottom-4 right-4 z-50"
             }>
-            <ChatWidget
+            <ChatWidgetV2
               title="Apollo Assist"
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}

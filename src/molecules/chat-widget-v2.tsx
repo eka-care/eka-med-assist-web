@@ -4,11 +4,12 @@ import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
 import { Card } from "@ui/index";
 import useSessionStore from "@/stores/medAssistStore";
-import { useWebSocket } from "@/custom-hooks/useWebSocket";
+import { useWebSocketV2 } from "@/custom-hooks/useWebSocketV2";
 import type { WebSocketConfig } from "@/types/socket";
-import { MessageInputCopy } from "./message-input-copy";
+import { MessageInputCopyV2 } from "./message-input-copy-v2";
 import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { PillAction } from "./quick-actions";
+import type { AudioData } from "@/services/audioServiceV2";
 
 interface Message {
   id: string;
@@ -19,6 +20,7 @@ interface Message {
   isRegenerating?: boolean; // Track if this message is being regenerated
   pillData?: PillAction;
   multiData?: PillAction;
+  audioData?: AudioData; // Add audio data support
 }
 
 interface ChatWidgetProps {
@@ -30,7 +32,7 @@ interface ChatWidgetProps {
   isMobile?: boolean;
 }
 
-export function ChatWidget({
+export function ChatWidgetV2({
   title = "Apollo Assist",
   className = "",
   onClose,
@@ -77,18 +79,20 @@ export function ChatWidget({
         }
       : null;
 
-  // Use WebSocket hook
+  // Use WebSocketV2 hook
   const {
-    wsService,
-    sendChatMessage,
-    sendFileUploadRequest,
-    sendAudioEndOfStream,
+    webSocketService: wsService,
+    sendTextMessage: sendChatMessage,
     setFilesForUpload,
-    sendAudioStream,
-    isStreaming,
-    regenerateResponse,
+    sendFileUploadRequest,
+    sendFileUploadComplete,
+    sendEndOfAudioStream: sendAudioEndOfStream,
+    sendAudioData,
     sendPillMessage,
-  } = useWebSocket(
+    regenerateResponse,
+    isStreaming,
+    clearError: clearWebSocketError,
+  } = useWebSocketV2(
     socketConfig,
     (botMessage: string) => {
       // Handle bot response messages
@@ -282,8 +286,9 @@ export function ChatWidget({
     }
   }, [isStreaming]);
 
-  const handleAudioStream = (audioBlob: Blob) => {
-    console.log("called on Audio stream in chat widget");
+  // CHANGED: Now handles AudioData instead of Blob
+  const handleAudioStream = (audioData: AudioData) => {
+    console.log("called on Audio stream in chat widget V2");
     if (isStreaming) {
       console.log("Cannot send voice while streaming");
       return;
@@ -292,20 +297,15 @@ export function ChatWidget({
     // Clear any errors when starting audio streaming
     clearError();
 
-    console.log("Audio stream received:", audioBlob);
+    console.log("Audio stream received:", audioData);
 
-    // Convert Blob to Uint8Array and stream to WebSocket
-    audioBlob.arrayBuffer().then((buffer) => {
-      const uint8Array = new Uint8Array(buffer);
-
-      if (isConnectionEstablished) {
-        // Stream audio data to WebSocket
-        console.log("called on sendAudioStream of socket in chat widget");
-        sendAudioStream(uint8Array);
-      } else {
-        console.log("WebSocket not connected, cannot stream audio");
-      }
-    });
+    if (isConnectionEstablished) {
+      // Send full audio data to WebSocket
+      console.log("called on sendAudioData of socket in chat widget V2");
+      sendAudioData(audioData);
+    } else {
+      console.log("WebSocket not connected, cannot stream audio");
+    }
   };
 
   const handleSendMessage = (content: string) => {
@@ -337,27 +337,28 @@ export function ChatWidget({
     }
   };
 
-  const handleAudioEndOfStream = (audioData: Blob) => {
-    console.log("Audio end of stream received:", audioData);
-    // Convert Blob to Uint8Array and stream to WebSocket
-    audioData.arrayBuffer().then((buffer) => {
-      const uint8Array = new Uint8Array(buffer);
+  // CHANGED: Now handles AudioData instead of Blob
+  const handleFinalAudioStream = (audioData: AudioData) => {
+    console.log("Final audio stream received:", audioData);
+
     // Create user message with audio data
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: `Audio message sent`,
+      content: `Audio message (${Math.round(audioData.duration / 1000)}s)`,
       isBot: false,
+      audioData: audioData, // Store the audio data
     };
 
     setMessages((prev) => [...prev, newMessage]);
-    
-      if (isConnectionEstablished) {
-        // Stream audio data to WebSocket
-        sendAudioEndOfStream(uint8Array);
-      } else {
-        console.log("WebSocket not connected, cannot stream audio");
-      }
-    });
+
+    if (isConnectionEstablished) {
+      // Send the full audio data
+      sendAudioData(audioData);
+      // Send end of stream signal
+      sendAudioEndOfStream();
+    } else {
+      console.log("WebSocket not connected, cannot stream audio");
+    }
   };
 
   const handleFileUpload = (files: FileList) => {
@@ -480,6 +481,17 @@ export function ChatWidget({
     // Send regenerate request
     if (isConnectionEstablished) {
       regenerateResponse(userMessage.originalUserMessage);
+      // For now, just clear the regenerating state since regenerateResponse is not available
+      console.log("Regenerate requested for:", userMessage.originalUserMessage);
+      setMessages((prev) => {
+        const updatedMessages = [...prev];
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          isRegenerating: false,
+          content: "Regeneration not implemented in V2 yet",
+        };
+        return updatedMessages;
+      });
     } else {
       console.log("WebSocket not connected, cannot regenerate");
       // Reset the message if connection failed
@@ -523,10 +535,13 @@ export function ChatWidget({
     // Send pill message via WebSocket
     if (isConnectionEstablished) {
       sendPillMessage(pillText, tool_use_id);
+      // For now, just log since sendPillMessage is not available in V2
+      console.log("Pill message would be sent:", pillText, tool_use_id);
     } else {
       console.log("WebSocket not connected, cannot send pill message");
     }
   };
+
   // Mobile full-screen styles
   const containerStyles = isMobile
     ? "fixed inset-0 z-50 bg-[var(--color-card)] flex flex-col h-screen w-screen"
@@ -598,6 +613,7 @@ export function ChatWidget({
                 onRegenerate={handleRegenerate}
                 multiData={message.multiData}
                 onMultiClick={handlePillClick}
+                audioData={message.audioData} // Pass audio data to MessageBubble
               />
             ))}
           </div>
@@ -626,25 +642,6 @@ export function ChatWidget({
             )}
           </div>
         )}
-
-        {/* Connection Error Status */}
-        {/* {!isConnectionEstablished && (
-          <div className="px-4 py-2 text-center text-sm text-red-600 bg-red-50 border-t">
-            <div className="flex items-center justify-center gap-2">
-              <div className="w-2 h-2 bg-red-600 rounded-full"></div>
-              <span>Connection failed. </span>
-              <button
-                onClick={() => {
-                  if (wsService) {
-                    wsService.reconnect("connection error retry");
-                  }
-                }}
-                className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
-                Retry
-              </button>
-            </div>
-          </div>
-        )} */}
 
         {/* Simple Error Display */}
         {error && (
@@ -694,9 +691,9 @@ export function ChatWidget({
           </div>
         )}
 
-        <MessageInputCopy
+        <MessageInputCopyV2
           onSendMessage={handleSendMessage}
-          onFinalAudioStream={handleAudioEndOfStream}
+          onFinalAudioStream={handleFinalAudioStream}
           onAudioStream={handleAudioStream}
           onFileUpload={handleFileUpload}
           disabled={!isConnectionEstablished}

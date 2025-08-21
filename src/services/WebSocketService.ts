@@ -355,13 +355,11 @@ export class WebSocketService {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
-    const base64Audio = btoa(String.fromCharCode(...audioData));
-
+    console.log("Sending audio end of stream", audioData);
     const message: AudioEndOfStreamRequest = {
       ev: SocketEvent.END_OF_STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: base64Audio,
     };
 
     this.sendMessage(message);
@@ -609,7 +607,6 @@ export class WebSocketService {
     } else {
       this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CHAT, message);
     }
- 
   }
 
   private handleStreamResponse(message: StreamResponseMessage): void {
@@ -724,7 +721,7 @@ export class WebSocketService {
         pongReceived = true;
         clearTimeout(timeoutId);
         this.off(WEBSOCKET_SERVER_EVENTS.PONG, pongHandler);
-        resolve(true);
+        resolve(pongReceived);
       };
 
       // Set up timeout for ping test

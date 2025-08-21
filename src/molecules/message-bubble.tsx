@@ -28,6 +28,7 @@ interface MessageBubbleProps {
   onPillClick?: (pillText: string, tool_use_id: string) => void; // Add pill click handler
   multiData?: PillAction; // Add multi data prop
   onMultiClick?: (multiText: string, tool_use_id: string) => void; // Add multi click handler
+  audioData?: any; // Add audio data support for V2
 }
 
 export function MessageBubble({
@@ -48,6 +49,7 @@ export function MessageBubble({
   onPillClick,
   multiData,
   onMultiClick,
+  audioData,
 }: MessageBubbleProps) {
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
@@ -123,6 +125,17 @@ export function MessageBubble({
               <span className="ml-2 text-blue-600 animate-pulse">
                 🔄 Regenerating...
               </span>
+            )}
+            {/* Display audio data for user messages */}
+            {!isBot && audioData && (
+              <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
+                <div className="text-xs text-[var(--color-muted-foreground)]">
+                  🎵 Audio Message ({Math.round(audioData.duration / 1000)}s)
+                </div>
+                <div className="text-xs text-[var(--color-muted-foreground)] mt-1">
+                  Format: {audioData.format}
+                </div>
+              </div>
             )}
           </div>
 

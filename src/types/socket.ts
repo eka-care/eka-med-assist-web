@@ -53,7 +53,9 @@ export interface BaseMessage {
   ts: number; // timestamp
   cts?: number; // client timestamp
 }
-
+export interface PingRequest extends BaseMessage {
+  ev: typeof SocketEvent.PING;
+}
 // Client to Server: Chat message
 export interface ChatRequest extends BaseMessage {
   ev: typeof SocketEvent.CHAT;
@@ -67,12 +69,16 @@ export interface AudioStreamRequest extends BaseMessage {
   ct: typeof ContentType.AUDIO;
   data: string; // audio data as Uint8Array for real-time streaming
 }
-
+export interface AudioStreamRequestV2 extends BaseMessage {
+  ev: typeof SocketEvent.STREAM;
+  ct: typeof ContentType.AUDIO;
+  data: {audio: string, format: string}; // audio data as Uint8Array for real-time streaming
+}
 // Client to Server: Audio end of stream
 export interface AudioEndOfStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.END_OF_STREAM;
   ct: typeof ContentType.AUDIO;
-  data: string; // final audio chunk as Uint8Array
+  // data: string; // final audio chunk as Uint8Array
 }
 
 // Server to Client: Connection established
@@ -153,7 +159,9 @@ export type ServerMessage =
 export type ClientMessage =
   | ChatRequest
   | AudioStreamRequest
-  | AudioEndOfStreamRequest;
+  | AudioEndOfStreamRequest
+  | AudioStreamRequestV2
+  | PingRequest;
 
 // Chat message for UI
 export interface ChatMessage {
