@@ -57,6 +57,7 @@ export function MessageInput({
     remainingTime,
     start,
     stop,
+    clearError,
   } = useAudioService();
 
   useEffect(() => {
@@ -78,6 +79,10 @@ export function MessageInput({
       setRecordingTime(Math.floor(recordingDuration / 1000));
     }
   }, [recordingDuration, isRecording]);
+
+  useEffect(() => {
+    console.log("file uploads", uploadedFiles);
+  }, [uploadedFiles]);
 
   const checkMicrophonePermission = async () => {
     try {
@@ -195,7 +200,7 @@ export function MessageInput({
         // Fallback: create empty audio data
         const emptyAudioData: AudioData = {
           audio: "",
-          format: "audio/mp3",
+          format: "audio/mp4",
           duration: 0,
           timestamp: Date.now(),
         };
@@ -206,7 +211,7 @@ export function MessageInput({
       // Fallback: create empty audio data
       const emptyAudioData: AudioData = {
         audio: "",
-        format: "audio/mp3",
+        format: "audio/mp4",
         duration: 0,
         timestamp: Date.now(),
       };
@@ -235,7 +240,7 @@ export function MessageInput({
 
       // Send audio if any
       if (isAudioStreaming) {
-        console.log("called sendRecording in message-input");
+        console.log("called sendRecording in message-input-copy-v2");
         sendRecording();
       }
 

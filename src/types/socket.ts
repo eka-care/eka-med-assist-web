@@ -64,15 +64,11 @@ export interface ChatRequest extends BaseMessage {
 }
 
 // Client to Server: Audio stream
+
 export interface AudioStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
   ct: typeof ContentType.AUDIO;
-  data: string; // audio data as Uint8Array for real-time streaming
-}
-export interface AudioStreamRequestV2 extends BaseMessage {
-  ev: typeof SocketEvent.STREAM;
-  ct: typeof ContentType.AUDIO;
-  data: {audio: string, format: string}; // audio data as Uint8Array for real-time streaming
+  data: { audio: string; format: string }; // audio data as Uint8Array for real-time streaming
 }
 // Client to Server: Audio end of stream
 export interface AudioEndOfStreamRequest extends BaseMessage {
@@ -100,7 +96,7 @@ export interface ChatResponseMessage extends BaseMessage {
     exp?: number;
     tool_use_id?: string;
     choices?: string[];
-    additional_option: MULTI_SELECT_ADDITIONAL_OPTION
+    additional_option: MULTI_SELECT_ADDITIONAL_OPTION;
   }; // S3 presigned URL
   // ct: typeof ContentType.FILE;
   // data: { url: string; exp?: number }; // S3 presigned URL
@@ -160,7 +156,7 @@ export type ClientMessage =
   | ChatRequest
   | AudioStreamRequest
   | AudioEndOfStreamRequest
-  | AudioStreamRequestV2
+  | AudioStreamRequest
   | PingRequest;
 
 // Chat message for UI

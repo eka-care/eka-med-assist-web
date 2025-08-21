@@ -7,10 +7,13 @@ import {
   type EndOfStreamMessage,
   type StreamResponseMessage,
 } from "../types/socket";
-import { WEBSOCKET_CUSTOM_EVENTS, WEBSOCKET_SERVER_EVENTS } from "@/configs/enums";
+import {
+  WEBSOCKET_CUSTOM_EVENTS,
+  WEBSOCKET_SERVER_EVENTS,
+} from "@/configs/enums";
 import { PillAction } from "@/molecules/quick-actions";
-import { WebSocketService } from "@/services/WebSocketService";
 import type { AudioData } from "@/services/audioService";
+import { WebSocketService } from "@/services/WebSocketService";
 
 export function useWebSocket(
   config: WebSocketConfig | null,
@@ -18,6 +21,7 @@ export function useWebSocket(
   onProgressMessage?: (message: string) => void,
   onPillMessage?: (pillData: PillAction) => void,
   onMultiMessage?: (multiData: PillAction) => void
+  //   onAudioData?: (audioData: AudioData) => void
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -26,6 +30,10 @@ export function useWebSocket(
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const { isConnectionEstablished, setConnectionEstablished } =
     useMedAssistStore();
+
+  useEffect(() => {
+    console.log("pendingFiles", pendingFiles);
+  }, [pendingFiles]);
 
   useEffect(() => {
     if (!config) {
@@ -39,7 +47,7 @@ export function useWebSocket(
     }
     // Create WebSocket service
     const service = new WebSocketService(config);
-    console.log("WebSocket service created:", service);
+    console.log("WebSocket service  created:", service);
     wsRef.current = service;
 
     // Set up event listeners
@@ -64,16 +72,14 @@ export function useWebSocket(
     wsRef.current?.on(
       WEBSOCKET_SERVER_EVENTS.CHAT,
       (message: ChatResponseMessage) => {
-        console.log("CHAT received:", message);
         if (
           message.ct === ContentType.FILE &&
           message.data &&
-          "url" in message.data &&
-          pendingFiles.length > 0
+          "url" in message.data
         ) {
           console.log("File upload URL received:", message.data);
           service
-            .uploadFilesToPresignedUrl(message.data?.url || "", pendingFiles)
+            .uploadFilesToPresignedUrl(message.data?.url || "")
             .then(() => {
               setPendingFiles([]);
               console.log("Files uploaded successfully");
@@ -253,19 +259,24 @@ export function useWebSocket(
     }
   };
 
-    // Send pill message
-    const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
-        if (wsRef.current && isConnectionEstablished) {
-          wsRef.current.sendPillMessage(pillMessage, tool_use_id);
-          console.log(
-            "Pill message sent:",
-            pillMessage,
-            "tool_use_id:",
-            tool_use_id
-          );
-        }
-      };
-  // Send full audio data (AudioService format)
+  // Send chat message (alias for sendTextMessage)
+  const sendChatMessage = (message: string) => {
+    sendTextMessage(message);
+  };
+
+  // Send pill message
+  const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
+    if (wsRef.current && isConnectionEstablished) {
+      wsRef.current.sendPillMessage(pillMessage, tool_use_id);
+      console.log(
+        "Pill message sent:",
+        pillMessage,
+        "tool_use_id:",
+        tool_use_id
+      );
+    }
+  };
+  // Send full audio data (AudioServiceV2 format)
   const sendAudioData = (audioData: AudioData) => {
     if (wsRef.current?.isConnected()) {
       try {
@@ -287,7 +298,6 @@ export function useWebSocket(
       setError("WebSocket not connected");
     }
   };
-
 
   // Send end of audio stream
   const sendEndOfAudioStream = () => {
@@ -315,6 +325,17 @@ export function useWebSocket(
     }
   };
 
+  //   // Send file upload (alias for sendFileUploadRequest)
+  //   const sendFileUpload = (files: FileList) => {
+  //     if (wsRef.current && isConnectionEstablished) {
+  //       const fileArray = Array.from(files);
+  //       setPendingFiles(fileArray);
+  //       wsRef.current.setFilesForUpload(fileArray);
+  //       wsRef.current.sendFileUploadRequest();
+  //       console.log("File upload sent:", fileArray.length, "files");
+  //     }
+  //   };
+
   // Send file upload completion
   const sendFileUploadComplete = (s3Url: string) => {
     if (wsRef.current && isConnectionEstablished) {
@@ -323,16 +344,17 @@ export function useWebSocket(
     }
   };
 
-    // Set files for upload when presigned URL is received
-    const setFilesForUpload = (files: File[]) => {
-        setPendingFiles(files);
-        if (wsRef.current) {
-          wsRef.current.setFilesForUpload(files);
-        }
-        console.log(`Set ${files.length} files for upload`);
-      };
-    
-        // Clear pending files
+  // Set files for upload when presigned URL is received
+  const setFilesForUpload = (files: File[]) => {
+    console.log("setFilesForUpload called with:", files);
+    setPendingFiles(files);
+    if (wsRef.current) {
+      wsRef.current.setFilesForUpload(files);
+    }
+    console.log(`Set ${files.length} files for upload`);
+  };
+
+  // Clear pending files
   const clearPendingFiles = () => {
     setPendingFiles([]);
     if (wsRef.current) {
@@ -340,7 +362,6 @@ export function useWebSocket(
     }
     console.log("Cleared pending files");
   };
-
 
   // Send PING function
   const sendPing = () => {
@@ -385,6 +406,7 @@ export function useWebSocket(
 
     // Actions
     sendTextMessage,
+    sendChatMessage,
     sendAudioData,
     sendEndOfAudioStream,
     sendFileUploadRequest,
@@ -393,9 +415,8 @@ export function useWebSocket(
     clearPendingFiles,
     clearError,
     sendPillMessage,
-
     sendPing,
-    regenerateResponse, 
+    regenerateResponse,
     // WebSocket service reference (for advanced usage)
     webSocketService: wsRef.current,
   };

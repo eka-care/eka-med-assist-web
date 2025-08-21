@@ -1,6 +1,7 @@
 import { WEBSOCKET_SERVER_EVENTS } from "@/configs/enums";
 import type {
   WebSocketConfig,
+  ChatMessage,
   ServerMessage,
   ClientMessage,
   ChatRequest,
@@ -13,17 +14,14 @@ import type {
   SyncMessage,
   PongMessage,
   ConnectionStateType,
-  AudioStreamRequestV2,
+  AudioStreamRequest,
 } from "../types/socket";
-import {
-  ConnectionState,
-  SocketEvent,
-  ContentType,
-} from "../types/socket";
-import type { AudioData } from "./audioServiceV2";
+import { ConnectionState, SocketEvent, ContentType } from "../types/socket";
+import type { AudioData } from "./audioService";
+import { PRODUCTION_CONFIG } from "@/configs/production";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
-const BASE_URL = "ws://fea0c1ed4375.ngrok-free.app/ws/med-assist/session";
+const BASE_URL = `ws:${PRODUCTION_CONFIG.BASE_API_URL}/ws/med-assist/session`;
 
 export class WebSocketService {
   private ws: WebSocket | null = null;
@@ -36,6 +34,8 @@ export class WebSocketService {
   private isReconnecting: boolean = false;
   private pingInterval: TimeoutHandle | null = null;
   private connectionTimeout: TimeoutHandle | null = null;
+  private currentStreamMessage: ChatMessage | null = null;
+  private pendingFiles: File[] = [];
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -176,7 +176,7 @@ export class WebSocketService {
     };
 
     this.ws.onclose = (event) => {
-      console.log("WebSocket closed:", event.code, event.reason);
+      console.log("WebSocket closed:", event.code, event);
       this.handleConnectionClose(event);
     };
 
@@ -197,7 +197,9 @@ export class WebSocketService {
 
     switch (message.ev) {
       case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
-        this.handleConnectionEstablished(message as ConnectionEstablishedMessage);
+        this.handleConnectionEstablished(
+          message as ConnectionEstablishedMessage
+        );
         break;
 
       case WEBSOCKET_SERVER_EVENTS.CHAT:
@@ -232,7 +234,9 @@ export class WebSocketService {
   /**
    * Handle connection established message
    */
-  private handleConnectionEstablished(message: ConnectionEstablishedMessage): void {
+  private handleConnectionEstablished(
+    message: ConnectionEstablishedMessage
+  ): void {
     console.log("Connection established:", message);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
   }
@@ -249,16 +253,60 @@ export class WebSocketService {
    * Handle stream message
    */
   private handleStreamMessage(message: StreamResponseMessage): void {
-    console.log("Stream message received:", message);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.STREAM, message);
+    if (message.ct === ContentType.TEXT && message.data) {
+      console.log("Stream response received:", message.data);
+
+      // Handle progress messages
+      if (message.data.progress_msg) {
+        console.log("Progress message received:", message.data.progress_msg);
+        this.triggerEvent("progress_message", message.data.progress_msg);
+        return;
+      }
+
+      // Handle text messages
+      if (message.data.text) {
+        // Create or update streaming message
+        if (!this.currentStreamMessage) {
+          this.currentStreamMessage = {
+            id: Date.now(),
+            content: "",
+            timestamp: new Date(),
+            type: "text",
+            metadata: { isStreaming: true },
+          };
+        }
+
+        // Add the new word/chunk to the existing content
+        this.currentStreamMessage.content += message.data.text;
+        // Send the PROGRESSIVE (accumulated) text, not just the new word
+        this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
+      }
+    } else {
+      // For non-text streams, just pass through
+      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.STREAM, message);
+    }
   }
 
   /**
    * Handle end of stream message
    */
   private handleEndOfStreamMessage(message: EndOfStreamMessage): void {
-    console.log("End of stream message received:", message);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.END_OF_STREAM, message);
+    if (message.ct === ContentType.TEXT && this.currentStreamMessage) {
+      // Finalize the streaming message
+      this.currentStreamMessage.metadata = {
+        ...this.currentStreamMessage.metadata,
+        isStreaming: false,
+      };
+      this.triggerEvent(
+        WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
+        this.currentStreamMessage
+      );
+      // Clear the streaming message
+      this.currentStreamMessage = null;
+    } else {
+      // For non-text end of streams, just pass through
+      this.triggerEvent(WEBSOCKET_SERVER_EVENTS.END_OF_STREAM, message);
+    }
   }
 
   /**
@@ -303,12 +351,19 @@ export class WebSocketService {
    * Attempt to reconnect
    */
   private attemptReconnect(): void {
-    if (this.isReconnecting || this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (
+      this.isReconnecting ||
+      this.reconnectAttempts >= this.maxReconnectAttempts
+    ) {
       return;
     }
 
-    console.log(`Attempting to reconnect (${this.reconnectAttempts + 1}/${this.maxReconnectAttempts})`);
-    
+    console.log(
+      `Attempting to reconnect (${this.reconnectAttempts + 1}/${
+        this.maxReconnectAttempts
+      })`
+    );
+
     setTimeout(() => {
       this.connect().catch((error) => {
         console.error("Reconnection failed:", error);
@@ -332,6 +387,13 @@ export class WebSocketService {
     };
 
     this.sendMessage(chatMessage);
+  }
+
+  /**
+   * Send text message (alias for sendChatMessage)
+   */
+  public sendTextMessage(message: string): void {
+    this.sendChatMessage(message);
   }
 
   /**
@@ -373,6 +435,7 @@ export class WebSocketService {
    * Set files for upload when presigned URL is received
    */
   public setFilesForUpload(files: File[]): void {
+    this.pendingFiles = files;
     console.log(`Set ${files.length} files for upload`);
   }
 
@@ -380,6 +443,7 @@ export class WebSocketService {
    * Clear pending files
    */
   public clearPendingFiles(): void {
+    this.pendingFiles = [];
     console.log("Cleared pending files");
   }
 
@@ -387,6 +451,7 @@ export class WebSocketService {
    * Clear streaming state
    */
   public clearStreamingState(): void {
+    this.currentStreamMessage = null;
     console.log("Cleared streaming state");
   }
 
@@ -433,7 +498,6 @@ export class WebSocketService {
     }
   }
 
-
   private handleReconnectionError(error: Error): void {
     this.reconnectAttempts++;
     this.isReconnecting = false;
@@ -449,49 +513,81 @@ export class WebSocketService {
       );
     } else {
       // Schedule next reconnection attempt
-      this.attemptReconnect();
+      this.attemptReconnection();
     }
   }
 
+  private attemptReconnection(): void {
+    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+      this.updateConnectionState(ConnectionState.ERROR);
+      this.triggerEvent(
+        WEBSOCKET_SERVER_EVENTS.ERROR,
+        new Error("Reconnect failed")
+      );
+      return;
+    }
 
-    /**
+    // Prevent multiple simultaneous reconnection attempts
+    if (this.isReconnecting) {
+      console.log("Reconnection already in progress, skipping");
+      return;
+    }
+
+    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+    console.log(
+      `Scheduling reconnection attempt ${
+        this.reconnectAttempts + 1
+      } in ${delay}ms`
+    );
+
+    setTimeout(() => {
+      if (!this.isConnected() && !this.isReconnecting) {
+        console.log(
+          `Attempting reconnection ${this.reconnectAttempts + 1}/${
+            this.maxReconnectAttempts
+          }`
+        );
+        // Use the unified reconnect function
+        this.reconnect(`automatic attempt ${this.reconnectAttempts + 1}`);
+      }
+    }, delay);
+  }
+
+  /**
    * Regenerate response for a specific chat
    */
-    public regenerateResponse(originalUserMessage: string): void {
-        if (!this.isConnected()) {
-          throw new Error("WebSocket is not connected");
-        }
-    
-        console.log("Regenerating response for:", originalUserMessage);
-    
-        // Clear any existing streaming message when regenerating
-        this.clearStreamingState();
-    
-        const message: ChatRequest = {
-          ev: SocketEvent.CHAT,
-          ct: ContentType.TEXT,
-          ts: Date.now(),
-          data: { text: originalUserMessage },
-        };
-    
-        this.sendMessage(message);
-      }
-    
+  public regenerateResponse(originalUserMessage: string): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+
+    console.log("Regenerating response for:", originalUserMessage);
+
+    // Clear any existing streaming message when regenerating
+    this.clearStreamingState();
+
+    const message: ChatRequest = {
+      ev: SocketEvent.CHAT,
+      ct: ContentType.TEXT,
+      ts: Date.now(),
+      data: { text: originalUserMessage },
+    };
+
+    this.sendMessage(message);
+  }
+
   /**
    * Upload files to presigned URL
    */
-  public async uploadFilesToPresignedUrl(
-    presignedUrl: string,
-    files: File[]
-  ): Promise<void> {
+  public async uploadFilesToPresignedUrl(presignedUrl: string): Promise<void> {
     console.log("hi from uploadFilesToPresignedUrl");
 
     try {
       console.log(
-        `Uploading ${files.length} files to presigned URL ${presignedUrl}`
+        `Uploading ${this.pendingFiles.length} files to presigned URL ${presignedUrl}`
       );
 
-      for (const file of files) {
+      for (const file of this.pendingFiles) {
         console.log(
           `Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
         );
@@ -510,7 +606,7 @@ export class WebSocketService {
           );
         }
 
-        console.log(`Successfully uploaded ${file.name}`);
+        console.log(`Successfully uploaded ${file.name}`, response);
       }
 
       console.log(
@@ -532,11 +628,11 @@ export class WebSocketService {
     if (!this.isConnected()) {
       throw new Error("WebSocket is not connected");
     }
-    const message: AudioStreamRequestV2 = {
+    const message: AudioStreamRequest = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      data: {audio: "start", format: "audio/mp3"},
+      data: { audio: "start", format: "audio/mp4" },
     };
     this.sendMessage(message);
   }
@@ -549,7 +645,7 @@ export class WebSocketService {
       throw new Error("WebSocket is not connected");
     }
 
-    const message: AudioStreamRequestV2 = {
+    const message: AudioStreamRequest = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
@@ -571,7 +667,7 @@ export class WebSocketService {
       throw new Error("WebSocket not connected");
     }
 
-    const message: AudioStreamRequestV2 = {
+    const message: AudioStreamRequest = {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
@@ -585,23 +681,23 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
-    /**
+  /**
    * Send audio end of stream - CHANGED FROM ORIGINAL
    */
-    public sendAudioEndOfStream(): void {
-        if (!this.isConnected()) {
-          throw new Error("WebSocket is not connected");
-        }
-        console.log("Sending audio end of stream");
-        const message: AudioEndOfStreamRequest = {
-          ev: SocketEvent.END_OF_STREAM,
-          ct: ContentType.AUDIO,
-          ts: Date.now(),
-        };
-    
-        this.sendMessage(message);
-      }
-    
+  public sendAudioEndOfStream(): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+    console.log("Sending audio end of stream");
+    const message: AudioEndOfStreamRequest = {
+      ev: SocketEvent.END_OF_STREAM,
+      ct: ContentType.AUDIO,
+      ts: Date.now(),
+    };
+
+    this.sendMessage(message);
+  }
+
   /**
    * Send pill message
    */
@@ -617,7 +713,6 @@ export class WebSocketService {
     };
     this.sendMessage(message);
   }
-
 
   /**
    * Send ping message
@@ -708,6 +803,8 @@ export class WebSocketService {
    * Disconnect WebSocket
    */
   public disconnect(): void {
+    console.log("WebSocket disconnect called");
+
     if (this.ws) {
       this.ws.close(1000, "Manual disconnect");
     }
@@ -748,4 +845,4 @@ export class WebSocketService {
       this.ws = null;
     }
   }
-} 
+}

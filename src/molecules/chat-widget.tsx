@@ -4,12 +4,12 @@ import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
 import { Card } from "@ui/index";
 import useSessionStore from "@/stores/medAssistStore";
-import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { WebSocketConfig } from "@/types/socket";
 import { MessageInput } from "./message-input";
 import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { PillAction } from "./quick-actions";
 import type { AudioData } from "@/services/audioService";
+import { useWebSocket } from "@/custom-hooks/useWebSocket";
 
 interface Message {
   id: string;
@@ -79,7 +79,7 @@ export function ChatWidget({
         }
       : null;
 
-  // Use WebSocket hook
+  // Use WebSocketV2 hook
   const {
     webSocketService: wsService,
     sendTextMessage: sendChatMessage,
@@ -90,6 +90,7 @@ export function ChatWidget({
     sendPillMessage,
     regenerateResponse,
     isStreaming,
+    clearError: clearWebSocketError,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
@@ -299,7 +300,7 @@ export function ChatWidget({
 
     if (isConnectionEstablished) {
       // Send full audio data to WebSocket
-      console.log("called on sendAudioData of socket in chat widget");
+      console.log("called on sendAudioData of socket in chat widget V2");
       sendAudioData(audioData);
     } else {
       console.log("WebSocket not connected, cannot stream audio");
