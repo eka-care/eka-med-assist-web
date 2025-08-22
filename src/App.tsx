@@ -5,9 +5,10 @@ import useSessionStore from "./stores/medAssistStore";
 import { ChatWidget } from "./molecules/chat-widget";
 
 function App() {
-  const [isWidgetOpen, setIsWidgetOpen] = useState(true);
+  const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
   const setSessionId = useSessionStore((state) => state.setSessionId);
   const setSessionToken = useSessionStore((state) => state.setSessionToken);
 
@@ -21,73 +22,68 @@ function App() {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
-  //PROD=================================================================================
-  // useEffect(() => {
-  //   const handleMessage = (event: MessageEvent) => {
-  //     // Validate message origin for security
-  //     // if (event.origin !== window.location.origin) {
-  //     //   console.log("Invalid origin:", event.origin);
-  //     //   return;
-  //     // }
-  //     console.log("Received message:", event.data);
+  // Handle messages from widget-loader
+  useEffect(() => {
+    const handleMessage = (event: MessageEvent) => {
+      console.log("Received message:", event.data);
 
-  //     switch (event.data.type) {
-  //       case "SESSION_STARTED":
-  //         console.log("Session started by widget-loader:", event.data.session);
-  //         // Set session data from widget-loader
-  //         setSessionId(event.data.session.session_id);
-  //         setSessionToken(event.data.session.session_token);
-  //         // Show the widget
-  //         setIsWidgetOpen(true);
-  //         break;
+      switch (event.data.type) {
+        case "WIDGET_INITIALIZE":
+          console.log("Widget initializing, starting session...");
+          handleOpenWidget();
+          break;
 
-  //       case "WIDGET_CLOSING":
-  //         console.log("Widget is closing from widget-loader");
-  //         // Widget-loader is closing the iframe, so hide our React widget
-  //         setIsWidgetOpen(false);
-  //         setIsExpanded(false);
-  //         break;
+        case "WIDGET_CLOSING":
+          console.log("Widget is closing from widget-loader");
+          setIsWidgetOpen(false);
+          setIsExpanded(false);
+          break;
 
-  //       default:
-  //         console.log("Unknown message type:", event.data.type);
-  //         // handleOpenWidget();
-  //         break;
-  //     }
-  //   };
+        default:
+          console.log("Unknown message type:", event.data.type);
+          //handleCloseWidget();
+          break;
+      }
+    };
 
-  //   window.addEventListener("message", handleMessage);
-  //   return () => window.removeEventListener("message", handleMessage);
-  // }, []);
+    window.addEventListener("message", handleMessage);
+    return () => window.removeEventListener("message", handleMessage);
+  }, []);
 
   //DEV=================================================================================
   useEffect(() => {
-    handleOpenWidget();
+    // Only auto-open in development or when not in iframe
+    console.log("import.meta.env.VITE_IS_DEV", import.meta.env.VITE_IS_DEV);
+    if (!import.meta.env.VITE_IS_DEV || import.meta.env.VITE_IS_DEV === "false") {
+      console.log("Not in development, not opening widget");
+    } else {
+      handleOpenWidget();
+    }
   }, []);
 
   const handleOpenWidget = async () => {
-    console.log("hi from  open fun");
+    console.log("Starting new session...");
+    setIsLoading(true);
 
     try {
-      //add loading state
       const { session_id, session_token } = await startSession();
       if (!session_id || !session_token) {
         throw new Error("Failed to start a new session");
       }
+
       setSessionId(session_id);
       setSessionToken(session_token);
-
       setIsWidgetOpen(true);
+      console.log("Session started successfully");
     } catch (error) {
-      console.log("Falied to start a new session",error);
-      //TODO: Show error to the user
+      console.error("Failed to start a new session:", error);
+      // TODO: Show error to the user
     } finally {
-      //setLoading(false)
-      //setIsWidgetOpen(true);
+      setIsLoading(false);
     }
   };
 
   console.log("isWidgetOpen", isWidgetOpen);
-
 
   const handleCloseWidget = () => {
     // Send message to widget-loader to close the iframe
@@ -106,6 +102,18 @@ function App() {
   const handleExpandWidget = () => {
     setIsExpanded(!isExpanded);
   };
+
+  // Show loading state while initializing
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Initializing Medical Assistant...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>

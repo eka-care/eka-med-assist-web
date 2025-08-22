@@ -4,7 +4,7 @@ export const PRODUCTION_CONFIG = {
   API_BASE_URL: "https://d4e4d5a82013.ngrok-free.app",
   WIDGET_URL: "https://your-vercel-domain.vercel.app",
   ENVIRONMENT: "production",
-  BASE_API_URL: "//c099d9f1f4b3.ngrok-free.app"
+  BASE_API_URL: "//matrix.dev.eka.care"
 };
 
 // Update this after Vercel deployment

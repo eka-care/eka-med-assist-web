@@ -18,11 +18,9 @@ import type {
 } from "../types/socket";
 import { ConnectionState, SocketEvent, ContentType } from "../types/socket";
 import type { AudioData } from "./audioService";
-import { PRODUCTION_CONFIG } from "@/configs/production";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
-const BASE_URL = `ws:${PRODUCTION_CONFIG.BASE_API_URL}/ws/med-assist/session`;
-
+const BASE_URL = `wss://matrix-ws.dev.eka.care/ws/med-assist/session`;
 export class WebSocketService {
   private ws: WebSocket | null = null;
   public config: WebSocketConfig;
