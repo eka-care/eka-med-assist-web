@@ -5,6 +5,9 @@ export type TMedAssistStore = {
   sessionToken: string;
   setSessionToken: (sessionToken: string) => void;
 
+  widgetName: string;
+  setWidgetName: (widgetName: string) => void;
+
   isConnectionEstablished: boolean;
   setConnectionEstablished: (established: boolean) => void;
 

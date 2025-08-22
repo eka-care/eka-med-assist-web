@@ -7,6 +7,7 @@ const storeInitialState = {
   isConnectionEstablished: false,
   error: null,
   isTimeoutError: false,
+  widgetName: "Med Assist",
 };
 
 const useMedAssistStore = create<TMedAssistStore>((set) => ({
@@ -15,6 +16,9 @@ const useMedAssistStore = create<TMedAssistStore>((set) => ({
 
   sessionToken: "",
   setSessionToken: (sessionToken) => set({ sessionToken }),
+
+  widgetName: "Med Assist",
+  setWidgetName: (widgetName) => set({ widgetName }),
 
   isConnectionEstablished: false,
   setConnectionEstablished: (established: boolean) => set({ isConnectionEstablished: established }),

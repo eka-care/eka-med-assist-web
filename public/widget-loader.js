@@ -5,6 +5,7 @@
   var defaultConfig = {
     theme: "doctor-light",
     position: "bottom-right",
+    widgetName: "Med Assist",
     widgetUrl: "https://your-cdn-domain.com/widget.html", // This will be your CDN URL
   };
 

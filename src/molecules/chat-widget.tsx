@@ -34,7 +34,7 @@ interface ChatWidgetProps {
 }
 
 export function ChatWidget({
-  title = "Apollo Assist",
+  title = "Med Assist",
   className = "",
   onClose,
   onStartSession,
@@ -46,7 +46,7 @@ export function ChatWidget({
     {
       id: "1",
       content:
-        "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+        `Hi, I'm ${title}, your personal support for all medical needs. How can I help you?`,
       isBot: true,
     },
   ]);
@@ -262,7 +262,6 @@ export function ChatWidget({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    console.log("scrollToBottom called");
     if (scrollAreaRef.current) {
       // Use setTimeout to ensure DOM is fully updated
       setTimeout(() => {
@@ -288,7 +287,6 @@ export function ChatWidget({
 
   // CHANGED: Now handles AudioData instead of Blob
   const handleAudioStream = (audioData: AudioData) => {
-    console.log("called on Audio stream in chat widget V2");
     if (isStreaming) {
       console.log("Cannot send voice while streaming");
       return;
@@ -760,6 +758,7 @@ export function ChatWidget({
           disabled={!isConnectionEstablished}
           isStreaming={isStreaming}
           setError={setError}
+          placeholder={`Message ${title}...`}
         />
       </div>
     </Card>

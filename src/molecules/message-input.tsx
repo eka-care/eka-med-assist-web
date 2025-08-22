@@ -14,7 +14,7 @@ interface MessageInputProps {
   onInputFocus?: () => void;
   onInputBlur?: () => void;
   onAudioStream?: (audioData: AudioData) => void;
-  placeholder?: string;
+  placeholder: string;
   disabled?: boolean;
   isStreaming?: boolean;
   setError: (error: string) => void;
@@ -28,7 +28,7 @@ export function MessageInput({
   // onFocus,
   // onBlur,
   onAudioStream,
-  placeholder = "Message Apollo Assist...",
+  placeholder,
   disabled = false,
   isStreaming = false,
   setError,
