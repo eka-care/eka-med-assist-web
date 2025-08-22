@@ -89,6 +89,13 @@ export class AudioService {
   }
 
   /**
+   * Check if the service is initialized
+   */
+  getInitializationStatus(): boolean {
+    return this.isInitialized;
+  }
+
+  /**
    * Start recording audio
    */
   async start(

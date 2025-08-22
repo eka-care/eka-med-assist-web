@@ -52,14 +52,24 @@ export function useAudioService() {
   const start = useCallback(
     async (onAudioData: (audioData: AudioData) => void) => {
       try {
-        if (!serviceRef.current) {
+        // Check if service exists and is initialized, if not, reinitialize
+        if (
+          !serviceRef.current ||
+          !serviceRef.current.getInitializationStatus()
+        ) {
+          console.log(
+            "AudioService not initialized or missing, reinitializing..."
+          );
+          if (serviceRef.current) {
+            serviceRef.current.cleanup();
+          }
           const service = new AudioService({
             maxRecordingDuration: 900000, // 15 minutes
             autoPauseEnabled: true,
             audioBitsPerSecond: 128000, // 128 kbps
           });
           await service.initialize();
-          console.log("AudioService initialized in useAudioService");
+          console.log("AudioService reinitialized in useAudioService");
           serviceRef.current = service;
         }
 
@@ -106,6 +116,32 @@ export function useAudioService() {
     [startDurationTracking, stopDurationTracking]
   );
 
+  // Add reinitialize function
+  const reinitialize = useCallback(async () => {
+    try {
+      console.log("Reinitializing AudioService...");
+      if (serviceRef.current) {
+        serviceRef.current.cleanup();
+      }
+      const service = new AudioService({
+        maxRecordingDuration: 900000, // 15 minutes
+        autoPauseEnabled: true,
+        audioBitsPerSecond: 128000, // 128 kbps
+      });
+      await service.initialize();
+      console.log("AudioService reinitialized successfully");
+      serviceRef.current = service;
+      setError(null);
+      return true;
+    } catch (error) {
+      console.error("Failed to reinitialize AudioService:", error);
+      setError(
+        error instanceof Error ? error : new Error("Reinitialization failed")
+      );
+      return false;
+    }
+  }, []);
+
   const stop = useCallback(() => {
     if (serviceRef.current) {
       serviceRef.current.stop();
@@ -149,5 +185,6 @@ export function useAudioService() {
     clearError,
     getCurrentDuration,
     getRemainingTime,
+    reinitialize, // Export reinitialize function
   };
 }

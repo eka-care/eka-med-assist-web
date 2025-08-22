@@ -55,9 +55,9 @@ export function MessageInput({
     isRecording,
     error: audioServiceError,
     recordingDuration,
-    remainingTime,
     start,
     stop,
+    reinitialize,
   } = useAudioService();
 
   // Reset sending state when streaming starts or stops
@@ -79,6 +79,24 @@ export function MessageInput({
       }
     }
   }, [audioServiceError, setError]);
+
+  // Handle audio reinitialization when widget reopens
+  useEffect(() => {
+    // Clear audio errors when widget reopens
+    if (!disabled && !isStreaming) {
+      setAudioError(null);
+      // Try to reinitialize AudioService if there was an error
+      if (audioServiceError && reinitialize) {
+        console.log("Attempting to reinitialize AudioService...");
+        reinitialize().then((success) => {
+          if (success) {
+            console.log("AudioService reinitialized successfully");
+            setAudioError(null);
+          }
+        });
+      }
+    }
+  }, [disabled, isStreaming, audioServiceError, reinitialize]);
 
   // Update recording time from the hook's duration tracking
   useEffect(() => {
@@ -172,6 +190,32 @@ export function MessageInput({
       }, 1000);
     } catch (error) {
       console.error("Error starting recording:", error);
+      // If it's an initialization error, try to reinitialize
+      if (error instanceof Error && error.message.includes("Not initialized")) {
+        console.log(
+          "AudioService not initialized in startRecording, attempting reinitialization..."
+        );
+        try {
+          const success = await reinitialize();
+          if (success) {
+            console.log(
+              "AudioService reinitialized in startRecording, trying again..."
+            );
+            // Retry recording after reinitialization
+            await startRecording();
+          } else {
+            throw new Error("Failed to reinitialize AudioService");
+          }
+        } catch (reinitError) {
+          console.error(
+            "Failed to reinitialize AudioService in startRecording:",
+            reinitError
+          );
+          throw new Error("Audio service unavailable");
+        }
+      } else {
+        throw error;
+      }
     }
   };
 
@@ -228,7 +272,9 @@ export function MessageInput({
       };
       await onFinalAudioStream(emptyAudioData);
     } finally {
-      console.log("finally called in sendRecording and re-enabling send button");
+      console.log(
+        "finally called in sendRecording and re-enabling send button"
+      );
       //setIsSending(false); // Re-enable send button
     }
   };
@@ -286,15 +332,44 @@ export function MessageInput({
     }
   };
 
-  const handleMicClick = () => {
+  const handleMicClick = async () => {
     if (!isListening && !isRecording) {
-      // Check microphone permissions first
-      checkMicrophonePermission().then(() => {
+      try {
+        // Check microphone permissions first
+        await checkMicrophonePermission();
         if (!audioError) {
           setIsListening(true);
-          startRecording();
+          await startRecording();
         }
-      });
+      } catch (error) {
+        console.error("Error starting recording:", error);
+        // If it's an initialization error, try to reinitialize
+        if (
+          error instanceof Error &&
+          error.message.includes("Not initialized")
+        ) {
+          console.log(
+            "AudioService not initialized, attempting reinitialization..."
+          );
+          try {
+            const success = await reinitialize();
+            if (success) {
+              console.log(
+                "AudioService reinitialized, trying to start recording again..."
+              );
+              setIsListening(true);
+              await startRecording();
+            } else {
+              setError("Failed to initialize audio service. Please try again.");
+            }
+          } catch (reinitError) {
+            console.error("Failed to reinitialize AudioService:", reinitError);
+            setError("Audio service unavailable. Please try again.");
+          }
+        } else {
+          setError("Failed to start recording. Please try again.");
+        }
+      }
     } else if (isRecording) {
       stopRecording();
     }
@@ -434,17 +509,6 @@ export function MessageInput({
           <span className={isSending ? "opacity-50" : ""}>
             {formatTime(recordingTime)}
           </span>
-          {isRecording && remainingTime > 0 && (
-            <span
-              className={`text-xs text-orange-600 ${
-                isSending ? "opacity-50" : ""
-              }`}>
-              {Math.floor(remainingTime / 60000)}:
-              {(Math.floor(remainingTime / 1000) % 60)
-                .toString()
-                .padStart(2, "0")}
-            </span>
-          )}
         </div>
       )}
 
