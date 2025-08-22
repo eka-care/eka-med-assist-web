@@ -390,7 +390,6 @@ export function ChatWidget({
     clearError();
 
     const fileArray = Array.from(files);
-    const fileNames = fileArray.map((f) => f.name).join(", ");
 
     const newMessage: Message = {
       id: Date.now().toString(),
@@ -683,7 +682,7 @@ export function ChatWidget({
 
         {/* Connection Status */}
         {!isConnectionEstablished && (
-          <div className="px-4 py-2 text-center text-sm border-t">
+          <div className="px-4 py-2 text-center text-sm">
             {!sessionId || !sessionToken ? (
               <div className="text-orange-600 bg-orange-50">
                 Waiting for session...
