@@ -107,12 +107,12 @@ export function useWebSocket(
           message.data.choices &&
           message.data.tool_use_id
         ) {
-          console.log("Multi message received:", message.data?.choices);
           // Call the callback to display the multi message
           if (onMultiMessage) {
             onMultiMessage({
               choices: message.data.choices,
               tool_use_id: message.data.tool_use_id,
+              ...(message.data.additional_option ? {additionalOption: message.data.additional_option} : {}),
             });
           }
         }
