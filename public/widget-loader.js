@@ -246,19 +246,22 @@
     if (!iframe) {
       iframe = createWidgetIframe(config);
       document.body.appendChild(iframe);
-    }
 
-    // Show widget first
-    iframe.style.display = "block";
-
-    // Hide the widget button when widget is open
-    if (button) {
-      button.style.display = "none";
-    }
-
-    // Send message to React app to initialize itself
-    iframe.addEventListener("load", function () {
-      // Wait for iframe to load, then send initialization message
+      // Add load event listener only once when iframe is created
+      iframe.addEventListener("load", function () {
+        // Wait for iframe to load, then send initialization message
+        setTimeout(() => {
+          iframe.contentWindow.postMessage(
+            {
+              type: "WIDGET_INITIALIZE",
+              config: config,
+            },
+            "*"
+          );
+        }, 100);
+      });
+    } else {
+      // Iframe already exists, send initialization message immediately
       setTimeout(() => {
         iframe.contentWindow.postMessage(
           {
@@ -268,7 +271,15 @@
           "*"
         );
       }, 100);
-    });
+    }
+
+    // Show widget first
+    iframe.style.display = "block";
+
+    // Hide the widget button when widget is open
+    if (button) {
+      button.style.display = "none";
+    }
   }
 
   // Hide widget

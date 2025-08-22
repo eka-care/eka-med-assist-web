@@ -28,6 +28,7 @@ interface ChatWidgetProps {
   className?: string;
   onClose?: () => void;
   onExpand?: () => void;
+  onStartSession?: () => void;
   isExpanded?: boolean;
   isMobile?: boolean;
 }
@@ -36,6 +37,7 @@ export function ChatWidget({
   title = "Apollo Assist",
   className = "",
   onClose,
+  onStartSession,
   onExpand,
   isExpanded = false,
   isMobile = false,
@@ -306,7 +308,7 @@ export function ChatWidget({
     }
   };
 
-  const handleSendMessage = (content: string) => {
+  const handleSendMessage = async (content: string) => {
     // Block sending if currently streaming
     if (isStreaming) {
       console.log("Cannot send message while streaming");
@@ -328,38 +330,56 @@ export function ChatWidget({
 
     setMessages((prev) => [...prev, newMessage]);
 
-    if (isConnectionEstablished) {
-      sendChatMessage(content);
-    } else {
-      console.log("WebSocket not connected, cannot send message");
+    try {
+      if (isConnectionEstablished) {
+        await sendChatMessage(content);
+        console.log("Message sent successfully");
+      } else {
+        console.log("WebSocket not connected, cannot send message");
+        setError("Connection lost. Please wait for reconnection.");
+        throw new Error("WebSocket not connected");
+      }
+    } catch (error) {
+      console.error("Failed to send message:", error);
+      setError("Failed to send message. Please try again.");
+      throw error; // Re-throw to let MessageInput handle the error state
     }
   };
 
   // CHANGED: Now handles AudioData instead of Blob
-  const handleFinalAudioStream = (audioData: AudioData) => {
+  const handleFinalAudioStream = async (audioData: AudioData) => {
     console.log("Final audio stream received:", audioData);
 
     // Create user message with audio data
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: `Audio message (${Math.round(audioData.duration / 1000)}s)`,
+      content: "🎤 Voice message sent", // Cleaner, simpler text
       isBot: false,
       audioData: audioData, // Store the audio data
     };
 
     setMessages((prev) => [...prev, newMessage]);
 
-    if (isConnectionEstablished) {
-      // Send the full audio data
-      sendAudioData(audioData);
-      // Send end of stream signal
-      sendAudioEndOfStream();
-    } else {
-      console.log("WebSocket not connected, cannot stream audio");
+    try {
+      if (isConnectionEstablished) {
+        // Send the full audio data
+        await sendAudioData(audioData);
+        // Send end of stream signal
+        await sendAudioEndOfStream();
+        console.log("Audio sent successfully");
+      } else {
+        console.log("WebSocket not connected, cannot stream audio");
+        setError("Connection lost. Please wait for reconnection.");
+        throw new Error("WebSocket not connected");
+      }
+    } catch (error) {
+      console.error("Failed to send audio:", error);
+      setError("Failed to send audio message. Please try again.");
+      throw error;
     }
   };
 
-  const handleFileUpload = (files: FileList) => {
+  const handleFileUpload = async (files: FileList) => {
     // Block file upload if currently streaming
     if (isStreaming) {
       console.log("Cannot upload file while streaming");
@@ -374,24 +394,35 @@ export function ChatWidget({
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: `Uploaded files: ${fileNames}`,
+      content: `📎 ${
+        fileArray.length > 1 ? `${fileArray.length} files` : "File"
+      } uploaded`, // Cleaner text
       isBot: false,
       files: fileArray,
     };
 
     setMessages((prev) => [...prev, newMessage]);
 
-    // Send file upload request via WebSocket
-    if (isConnectionEstablished) {
-      // Set files for upload when presigned URL is received
-      setFilesForUpload(fileArray);
-      sendFileUploadRequest();
-    } else {
-      console.log("WebSocket not connected, cannot upload file");
+    try {
+      // Send file upload request via WebSocket
+      if (isConnectionEstablished) {
+        // Set files for upload when presigned URL is received
+        setFilesForUpload(fileArray);
+        await sendFileUploadRequest();
+        console.log("File upload request sent successfully");
+      } else {
+        console.log("WebSocket not connected, cannot upload file");
+        setError("Connection lost. Please wait for reconnection.");
+        throw new Error("WebSocket not connected");
+      }
+    } catch (error) {
+      console.error("Failed to upload file:", error);
+      setError("Failed to upload file. Please try again.");
+      throw error;
     }
   };
 
-  const handleQuickAction = (actionId: string) => {
+  const handleQuickAction = async (actionId: string) => {
     // Block quick actions if currently streaming
     if (isStreaming) {
       console.log("Cannot use quick action while streaming");
@@ -406,7 +437,12 @@ export function ChatWidget({
 
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
-      handleSendMessage(action.label);
+      try {
+        await handleSendMessage(action.label);
+      } catch (error) {
+        console.error("Failed to send quick action:", error);
+        // Error is already handled in handleSendMessage
+      }
     }
   };
 
@@ -476,23 +512,42 @@ export function ChatWidget({
       return updatedMessages;
     });
 
-    // Send regenerate request
-    if (isConnectionEstablished) {
-      regenerateResponse(userMessage.originalUserMessage);
-      // For now, just clear the regenerating state since regenerateResponse is not available
-      console.log("Regenerate requested for:", userMessage.originalUserMessage);
-      setMessages((prev) => {
-        const updatedMessages = [...prev];
-        updatedMessages[messageIndex] = {
-          ...updatedMessages[messageIndex],
-          isRegenerating: false,
-          content: "Regeneration not implemented in V2 yet",
-        };
-        return updatedMessages;
-      });
-    } else {
-      console.log("WebSocket not connected, cannot regenerate");
-      // Reset the message if connection failed
+    try {
+      // Send regenerate request
+      if (isConnectionEstablished) {
+        await regenerateResponse(userMessage.originalUserMessage);
+        // For now, just clear the regenerating state since regenerateResponse is not available
+        console.log(
+          "Regenerate requested for:",
+          userMessage.originalUserMessage
+        );
+        setMessages((prev) => {
+          const updatedMessages = [...prev];
+          updatedMessages[messageIndex] = {
+            ...updatedMessages[messageIndex],
+            isRegenerating: false,
+            content: "Regeneration not implemented in V2 yet",
+          };
+          return updatedMessages;
+        });
+      } else {
+        console.log("WebSocket not connected, cannot regenerate");
+        setError("Connection lost. Please wait for reconnection.");
+        // Reset the message if connection failed
+        setMessages((prev) => {
+          const updatedMessages = [...prev];
+          updatedMessages[messageIndex] = {
+            ...updatedMessages[messageIndex],
+            isRegenerating: false,
+            content: message.content, // Restore original content
+          };
+          return updatedMessages;
+        });
+      }
+    } catch (error) {
+      console.error("Failed to regenerate:", error);
+      setError("Failed to regenerate response. Please try again.");
+      // Reset the message on error
       setMessages((prev) => {
         const updatedMessages = [...prev];
         updatedMessages[messageIndex] = {
@@ -505,7 +560,7 @@ export function ChatWidget({
     }
   };
 
-  const handlePillClick = (pillText: string, tool_use_id: string) => {
+  const handlePillClick = async (pillText: string, tool_use_id: string) => {
     console.log("Pill clicked:", pillText, "tool_use_id:", tool_use_id);
 
     // Block pill clicks if currently streaming
@@ -523,20 +578,28 @@ export function ChatWidget({
     // Add user message showing the pill selection
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: `Selected: ${pillText}`,
+      content: `✅ Selected: ${pillText}`, // Cleaner text with checkmark
       isBot: false,
       originalUserMessage: pillText,
     };
 
     setMessages((prev) => [...prev, newMessage]);
 
-    // Send pill message via WebSocket
-    if (isConnectionEstablished) {
-      sendPillMessage(pillText, tool_use_id);
-      // For now, just log since sendPillMessage is not available in V2
-      console.log("Pill message would be sent:", pillText, tool_use_id);
-    } else {
-      console.log("WebSocket not connected, cannot send pill message");
+    try {
+      // Send pill message via WebSocket
+      if (isConnectionEstablished) {
+        await sendPillMessage(pillText, tool_use_id);
+        // For now, just log since sendPillMessage is not available in V2
+        console.log("Pill message would be sent:", pillText, tool_use_id);
+      } else {
+        console.log("WebSocket not connected, cannot send pill message");
+        setError("Connection lost. Please wait for reconnection.");
+        throw new Error("WebSocket not connected");
+      }
+    } catch (error) {
+      console.error("Failed to send pill message:", error);
+      setError("Failed to send selection. Please try again.");
+      throw error;
     }
   };
 
@@ -562,6 +625,7 @@ export function ChatWidget({
         onMenuAction={handleMenuAction}
         isExpanded={isExpanded}
         isMobile={isMobile}
+        onStartSession={onStartSession}
         isConnected={isConnectionEstablished}
       />
 

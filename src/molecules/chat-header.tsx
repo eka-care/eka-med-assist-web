@@ -24,9 +24,9 @@ export function ChatHeader({
   title,
   onExpand,
   onClose,
-  onMenuAction,
+  // onMenuAction,
   onStartSession,
-  onClearSession,
+  // onClearSession,
   isExpanded = false,
   isMobile = false,
   isConnected = false,
@@ -61,18 +61,18 @@ export function ChatHeader({
             <DropdownMenuItem onClick={() => onStartSession?.()}>
               Start New Session
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onClearSession?.()}>
+            {/* <DropdownMenuItem onClick={() => onClearSession?.()}>
               Clear Session
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onMenuAction?.("clear")}>
+            </DropdownMenuItem> */}
+            {/* <DropdownMenuItem onClick={() => onMenuAction?.("clear")}>
               Clear Chat
-            </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => onMenuAction?.("export")}>
+            </DropdownMenuItem> */}
+            {/* <DropdownMenuItem onClick={() => onMenuAction?.("export")}>
               Export Chat
             </DropdownMenuItem>
             <DropdownMenuItem onClick={() => onMenuAction?.("settings")}>
               Settings
-            </DropdownMenuItem>
+            </DropdownMenuItem> */}
           </DropdownMenuContent>
         </DropdownMenu>
 
