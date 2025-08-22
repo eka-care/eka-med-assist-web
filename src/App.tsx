@@ -1,17 +1,17 @@
 import { useEffect, useState } from "react";
 // import { ChatWidget } from "./molecules/chat-widget";
 import startSession from "./api/post-start-session";
+import { config } from "./configs/constants";
 import { ChatWidget } from "./molecules/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
-import { config } from "./configs/constants";
 
 function App() {
-  const [isWidgetOpen, setIsWidgetOpen] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(false);
-  const [isMobile, setIsMobile] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const setSessionId = useSessionStore((state) => state.setSessionId);
-  const setSessionToken = useSessionStore((state) => state.setSessionToken);
+    const [isWidgetOpen, setIsWidgetOpen] = useState(false);
+    const [isExpanded, setIsExpanded] = useState(false);
+    const [isMobile, setIsMobile] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
+    const setSessionId = useSessionStore((state) => state.setSessionId);
+    const setSessionToken = useSessionStore((state) => state.setSessionToken);
 
     useEffect(() => {
         const checkMobile = () => {
@@ -28,17 +28,17 @@ function App() {
         const handleMessage = (event: MessageEvent) => {
             console.log("Received message:", event.data);
 
-      switch (event.data.type) {
-        case "WIDGET_INITIALIZE":
-          console.log("Widget initializing, starting session...");
-          // Reset any previous state when reopening
-          setIsWidgetOpen(false);
-          setIsExpanded(false);
-          setSessionId("");
-          setSessionToken("");
-          // Start fresh session
-          handleOpenWidget();
-          break;
+            switch (event.data.type) {
+                case "WIDGET_INITIALIZE":
+                    console.log("Widget initializing, starting session...");
+                    // Reset any previous state when reopening
+                    setIsWidgetOpen(false);
+                    setIsExpanded(false);
+                    setSessionId("");
+                    setSessionToken("");
+                    // Start fresh session
+                    handleOpenWidget();
+                    break;
 
                 case "WIDGET_CLOSING":
                     console.log("Widget is closing from widget-loader");
@@ -53,14 +53,14 @@ function App() {
             }
         };
 
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [setSessionId, setSessionToken]);
+        window.addEventListener("message", handleMessage);
+        return () => window.removeEventListener("message", handleMessage);
+    }, [setSessionId, setSessionToken]);
 
-  //DEV=================================================================================
-  const handleOpenWidget = async () => {
-    console.log("Starting new session...");
-    setIsLoading(true);
+    //DEV=================================================================================
+    const handleOpenWidget = async () => {
+        console.log("Starting new session...");
+        setIsLoading(true);
 
         try {
             // We need to handle if there is an open session already
@@ -69,33 +69,33 @@ function App() {
                 throw new Error("Failed to start a new session");
             }
 
-      setSessionId(session_id);
-      setSessionToken(session_token);
-      setIsWidgetOpen(true); // Make sure widget is set as open
-      console.log("Session started successfully, widget opened");
-    } catch (error) {
-      console.error("Failed to start a new session:", error);
-      // TODO: Show error to the user
-      // setIsWidgetOpen(false); // Keep widget closed on error
-    } finally {
-      setIsLoading(false);
-      setIsWidgetOpen(true);
-    }
-  };
+            setSessionId(session_id);
+            setSessionToken(session_token);
+            setIsWidgetOpen(true); // Make sure widget is set as open
+            console.log("Session started successfully, widget opened");
+        } catch (error) {
+            console.error("Failed to start a new session:", error);
+            // TODO: Show error to the user
+            // setIsWidgetOpen(false); // Keep widget closed on error
+        } finally {
+            setIsLoading(false);
+            setIsWidgetOpen(true);
+        }
+    };
 
-  useEffect(() => {
-    // Only auto-open in development or when not in iframe
-    console.log("evvironment", config.ENVIRONMENT);
-    if (
-      config.ENVIRONMENT === "production"
-    ) {
-      console.log("Not in development, not opening widget");
-    } else {
-      handleOpenWidget();
-    }
-  }, []);
+    useEffect(() => {
+        // Only auto-open in development or when not in iframe
+        console.log("evvironment", config.ENVIRONMENT);
+        if (
+            config.ENVIRONMENT === "production"
+        ) {
+            console.log("Not in development, not opening widget");
+        } else {
+            handleOpenWidget();
+        }
+    }, []);
 
-  console.log("isWidgetOpen", isWidgetOpen);
+    console.log("isWidgetOpen", isWidgetOpen);
 
     const handleCloseWidget = () => {
         // Send message to widget-loader to close the iframe
@@ -140,28 +140,28 @@ function App() {
                         />
                     )}
 
-          {/* Widget positioned for web or mobile */}
-          <div
-            className={
-              isMobile
-                ? "fixed inset-0 z-50"
-                : isExpanded
-                ? "fixed inset-0 z-50 p-4"
-                : "fixed bottom-4 right-4 z-50"
-            }>
-            <ChatWidget
-              title="Apollo Assist"
-              onClose={handleCloseWidget}
-              onExpand={handleExpandWidget}
-              isExpanded={isExpanded}
-              isMobile={isMobile}
-              onStartSession={handleOpenWidget}
-            />
-          </div>
-        </>
-      )}
-    </div>
-  );
+                    {/* Widget positioned for web or mobile */}
+                    <div
+                        className={
+                            isMobile
+                                ? "fixed inset-0 z-50"
+                                : isExpanded
+                                    ? "fixed inset-0 z-50 p-4"
+                                    : "fixed bottom-4 right-4 z-50"
+                        }>
+                        <ChatWidget
+                            title="Apollo Assist"
+                            onClose={handleCloseWidget}
+                            onExpand={handleExpandWidget}
+                            isExpanded={isExpanded}
+                            isMobile={isMobile}
+                            onStartSession={handleOpenWidget}
+                        />
+                    </div>
+                </>
+            )}
+        </div>
+    );
 }
 
 export default App;
