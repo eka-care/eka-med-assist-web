@@ -15,17 +15,17 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24.2.0'
           
       - name: Get the version
         id: get_version
         run: echo VERSION=$(echo $GITHUB_REF | cut -d / -f 3) >> $GITHUB_OUTPUT
         
       - name: Install dependencies
-        run: npm install
+        run: yarn install
 
       - name: Build project
-        run: npm run build
+        run: yarn build
         
       - name: iam role for the github runner
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
