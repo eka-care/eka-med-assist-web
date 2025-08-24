@@ -188,6 +188,12 @@
 
   // Initialize widget
   function initWidget(config) {
+    // Prevent double initialization
+    if (window.EkaMedAssist && window.EkaMedAssist._initialized) {
+      console.warn("Eka Medical Assistant Widget already initialized");
+      return;
+    }
+
     config = Object.assign({}, defaultConfig, config);
 
     // Create isolated CSS
@@ -197,6 +203,12 @@
     var button = createWidgetButton(config);
     document.body.appendChild(button);
 
+    // Mark as initialized
+    if (window.EkaMedAssist) {
+      window.EkaMedAssist._initialized = true;
+      window.EkaMedAssist._button = button;
+    }
+
     console.log(
       "Eka Medical Assistant Widget loader initialized with config:",
       config
@@ -205,10 +217,30 @@
 
   // Global API
   window.EkaMedAssist = {
-    init: initWidget,
+    init: function(config) {
+      initWidget(config);
+    },
     show: showWidget,
     hide: hideWidget,
     toggle: toggleWidget,
     config: defaultConfig,
+    _initialized: false,
+    _button: null,
   };
+
+  // Auto-initialize on DOM ready with default config
+  function autoInit() {
+    if (!window.EkaMedAssist._initialized) {
+      initWidget(defaultConfig);
+    }
+  }
+
+  // Check if DOM is ready
+  if (document.readyState === "loading") {
+    // DOM is still loading, wait for it
+    document.addEventListener("DOMContentLoaded", autoInit);
+  } else {
+    // DOM is already ready, initialize immediately
+    autoInit();
+  }
 })();
