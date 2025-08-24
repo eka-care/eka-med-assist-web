@@ -23,39 +23,6 @@ function App() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
-    // Handle messages from widget-loader
-    useEffect(() => {
-        const handleMessage = (event: MessageEvent) => {
-            console.log("Received message:", event.data);
-
-            switch (event.data.type) {
-                case "WIDGET_INITIALIZE":
-                    console.log("Widget initializing, starting session...");
-                    // Reset any previous state when reopening
-                    setIsWidgetOpen(false);
-                    setIsExpanded(false);
-                    setSessionId("");
-                    setSessionToken("");
-                    // Start fresh session
-                    handleOpenWidget();
-                    break;
-
-                case "WIDGET_CLOSING":
-                    console.log("Widget is closing from widget-loader");
-                    setIsWidgetOpen(false);
-                    setIsExpanded(false);
-                    break;
-
-                default:
-                    console.log("Unknown message type:", event.data.type);
-                    //handleCloseWidget();
-                    break;
-            }
-        };
-
-        window.addEventListener("message", handleMessage);
-        return () => window.removeEventListener("message", handleMessage);
-    }, [setSessionId, setSessionToken]);
 
     //DEV=================================================================================
     const handleOpenWidget = async () => {
@@ -98,15 +65,6 @@ function App() {
     console.log("isWidgetOpen", isWidgetOpen);
 
     const handleCloseWidget = () => {
-        // Send message to widget-loader to close the iframe
-        if (window.parent !== window) {
-            window.parent.postMessage(
-                {
-                    type: "WIDGET_CLOSE_REQUESTED",
-                },
-                "*"
-            );
-        }
         setIsWidgetOpen(false);
         setIsExpanded(false);
     };

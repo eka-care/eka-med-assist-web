@@ -61,45 +61,9 @@
         display: block;
       }
       
-      .eka-widget-iframe {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        background: white;
-        z-index: 999998;
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        width: 400px;
-        height: 600px;
-        display: none;
-      }
-      
-      .eka-widget-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 999997;
-        display: none;
-      }
-      
-      .eka-widget-overlay.active {
-        display: block;
-      }
 
       /* Mobile responsive */
       @media (max-width: 768px) {
-        .eka-widget-iframe {
-          width: 100%;
-          height: 100%;
-          bottom: 0;
-          right: 0;
-          border-radius: 0;
-        }
-        
         .eka-widget-button {
           bottom: 15px;
           right: 15px;
@@ -203,114 +167,24 @@
     return button;
   }
 
-  // Create widget iframe
-  function createWidgetIframe(config) {
-    var iframe = document.createElement("iframe");
-    iframe.className = "eka-widget-iframe";
-    iframe.src = config.widgetUrl;
-    iframe.id = "eka-widget-iframe";
-
-    return iframe;
-  }
-
-  // Create overlay
-  function createOverlay() {
-    var overlay = document.createElement("div");
-    overlay.className = "eka-widget-overlay";
-    overlay.id = "eka-widget-overlay";
-
-    overlay.addEventListener("click", function () {
-      hideWidget();
-    });
-
-    return overlay;
-  }
 
   // Toggle widget visibility
   function toggleWidget(config) {
-    var iframe = document.getElementById("eka-widget-iframe");
-    var button = document.querySelector(".eka-widget-button");
-
-    if (iframe && iframe.style.display !== "none") {
-      hideWidget();
-    } else {
-      showWidget(config);
-    }
+    // TODO: Implement direct React app mounting
+    console.log("Toggle widget clicked", config);
   }
 
-  // Enhanced showWidget function
+  // Show widget
   function showWidget(config) {
-    var iframe = document.getElementById("eka-widget-iframe");
-    var button = document.querySelector(".eka-widget-button");
-
-    if (!iframe) {
-      iframe = createWidgetIframe(config);
-      document.body.appendChild(iframe);
-
-      // Add load event listener only once when iframe is created
-      iframe.addEventListener("load", function () {
-        // Wait for iframe to load, then send initialization message
-        setTimeout(() => {
-          iframe.contentWindow.postMessage(
-            {
-              type: "WIDGET_INITIALIZE",
-              config: config,
-            },
-            "*"
-          );
-        }, 100);
-      });
-    } else {
-      // Iframe already exists, send initialization message immediately
-      setTimeout(() => {
-        iframe.contentWindow.postMessage(
-          {
-            type: "WIDGET_INITIALIZE",
-            config: config,
-          },
-          "*"
-        );
-      }, 100);
-    }
-
-    // Show widget first
-    iframe.style.display = "block";
-
-    // Hide the widget button when widget is open
-    if (button) {
-      button.style.display = "none";
-    }
+    // TODO: Implement direct React app mounting
+    console.log("Show widget", config);
   }
 
   // Hide widget
   function hideWidget() {
-    var iframe = document.getElementById("eka-widget-iframe");
-    var button = document.querySelector(".eka-widget-button");
-
-    if (iframe) {
-      // Notify React app that widget is closing
-      iframe.contentWindow.postMessage(
-        {
-          type: "WIDGET_CLOSING",
-        },
-        "*"
-      );
-
-      iframe.style.display = "none";
-    }
-
-    // Show the widget button when widget is closed
-    if (button) {
-      button.style.display = "flex";
-    }
+    // TODO: Implement direct React app unmounting
+    console.log("Hide widget");
   }
-
-  // Listen for messages from React app
-  window.addEventListener("message", function (event) {
-    if (event.data.type === "WIDGET_CLOSE_REQUESTED") {
-      hideWidget();
-    }
-  });
 
   // Initialize widget
   function initWidget(config) {
