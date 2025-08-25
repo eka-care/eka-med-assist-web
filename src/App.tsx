@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 // import { ChatWidget } from "./molecules/chat-widget";
 import startSession from "./api/post-start-session";
-import { config } from "./configs/constants";
+// import { config } from "./configs/constants";
 import { ChatWidget } from "./molecules/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
 
@@ -89,15 +89,15 @@ function App() {
     }
   };
 
-  useEffect(() => {
-    // Only auto-open in development or when not in iframe
-    console.log("evvironment", config.ENVIRONMENT);
-    if (config.ENVIRONMENT === "production") {
-      console.log("Not in development, not opening widget");
-    } else {
-      handleOpenWidget();
-    }
-  }, []);
+  // useEffect(() => {
+  //   // Only auto-open in development or when not in iframe
+  //   console.log("evvironment", config.ENVIRONMENT);
+  //   if (config.ENVIRONMENT === "production") {
+  //     console.log("Not in development, not opening widget");
+  //   } else {
+  //     handleOpenWidget();
+  //   }
+  // }, []);
 
 
   const handleCloseWidget = () => {

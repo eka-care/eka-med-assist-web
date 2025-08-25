@@ -27,6 +27,7 @@ export default defineConfig({
         // Global variable name
         globals: {},
       },
+      plugins: [],
     },
     // Bundle all dependencies
     ssr: false,
@@ -37,6 +38,10 @@ export default defineConfig({
     cssCodeSplit: false,
     // Bundle size optimization
     chunkSizeWarningLimit: 1000,
+  },
+  define: {
+    "process.env.NODE_ENV": JSON.stringify("production"),
+    "process.env": {},
   },
   resolve: {
     alias: {

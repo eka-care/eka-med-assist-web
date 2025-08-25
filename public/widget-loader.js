@@ -6,7 +6,7 @@
     theme: "doctor-light",
     position: "bottom-right",
     widgetName: "Med Assist",
-    widgetUrl: "https://your-cdn-domain.com/widget.html", // This will be your CDN URL
+    widgetUrl: "https://med-assist-agent.eka.care/apollo/widget.html", // This will be your CDN URL
   };
 
   // Create isolated CSS
@@ -14,12 +14,28 @@
     var style = document.createElement("style");
     style.id = "eka-widget-styles";
     style.textContent = `
+      /* CSS Reset and Isolation */
+      .eka-widget-container,
+      .eka-widget-container *,
+      .eka-widget-container *::before,
+      .eka-widget-container *::after {
+        box-sizing: border-box !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif !important;
+        line-height: 1.5 !important;
+        color: inherit !important;
+      }
+
       .eka-widget-container {
         position: fixed;
         z-index: 999999;
         font-family: system-ui, sans-serif;
         box-sizing: border-box;
         pointer-events: auto;
+        /* Additional isolation */
+        all: initial;
+        font-family: system-ui, sans-serif !important;
       }
       
       .eka-widget-container * {
