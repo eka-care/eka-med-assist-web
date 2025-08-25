@@ -49,7 +49,6 @@ export function MessageBubble({
   onPillClick,
   multiData,
   onMultiClick,
-  audioData,
 }: MessageBubbleProps) {
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
@@ -110,9 +109,10 @@ export function MessageBubble({
             className={`text-sm leading-relaxed px-3 py-2 rounded-lg ${
               isBot
                 ? "text-[var(--color-foreground)] bg-[var(--color-card)]"
-                : "text-[var(--color-primary-foreground)] bg-[var(--color-primary)]"
+                : "text-[var(--color-black-800)] bg-blue-200"
             }`}>
-            {message}
+            {/* Only show message content if it's not empty or if it's a bot message */}
+            {(message || isBot) && message}
             {isBot && progressMessage && (
               <span className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
                 {progressMessage}
@@ -126,18 +126,16 @@ export function MessageBubble({
                 🔄 Regenerating...
               </span>
             )}
-            {/* Display audio data for user messages */}
-            {!isBot && audioData && (
-              <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
-                <div className="text-xs text-[var(--color-muted-foreground)]">
-                  🎵 Audio Message ({Math.round(audioData.duration / 1000)}s)
-                </div>
-                <div className="text-xs text-[var(--color-muted-foreground)] mt-1">
-                  Format: {audioData.format}
-                </div>
-              </div>
-            )}
           </div>
+
+          {/* Display audio data for user messages */}
+          {/* {!isBot && audioData && (
+            <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
+              <div className="text-sm text-[var(--color-primary)]">
+                🎤 Voice message sent
+              </div>
+            </div>
+          )} */}
 
           {/* Display pills for bot messages */}
           {isBot &&

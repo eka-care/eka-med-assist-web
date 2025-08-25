@@ -6,3 +6,14 @@
     font-family: system-ui, sans-serif;
   }
 }
+
+/* Scope all widget styles to the eka-widget-root container for CSS isolation */
+.eka-widget-root {
+  /* Ensure isolation from parent page styles */
+  contain: layout style;
+}
+
+/* Ensure widget styles are properly scoped */
+.eka-widget-root * {
+  box-sizing: border-box;
+}

@@ -5,6 +5,8 @@
   var defaultConfig = {
     theme: "doctor-light",
     position: "bottom-right",
+    scriptUrl: "./widget.js", // Relative to current directory
+    cssUrl: "./assets/widget.css", // CSS bundle in assets folder
   };
 
   // Create isolated CSS
@@ -28,54 +30,52 @@
         position: fixed;
         bottom: 20px;
         right: 20px;
-        width: 60px;
-        height: 60px;
+        width: 56px;
+        height: 56px;
         border-radius: 50%;
-        background: #007bff;
+        background: white;
         color: white;
         border: none;
         cursor: pointer;
-        font-size: 20px;
-        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
         z-index: 999999;
         display: flex;
         align-items: center;
         justify-content: center;
         transition: all 0.3s ease;
+        padding: 0;
+        overflow: hidden;
       }
       
       .eka-widget-button:hover {
-        transform: scale(1.1);
-        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
+        transform: scale(1.05);
+        box-shadow: 0 6px 25px rgba(0, 0, 0, 0.2);
       }
       
-      .eka-widget-iframe {
-        border: none;
-        border-radius: 12px;
-        box-shadow: 0 8px 32px rgba(0, 0, 0, 0.12);
-        background: white;
-        z-index: 999998;
-        position: fixed;
-        bottom: 100px;
-        right: 20px;
-        width: 400px;
-        height: 600px;
-        display: none;
+      .eka-widget-button:active {
+        transform: scale(0.98);
       }
       
-      .eka-widget-overlay {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        z-index: 999997;
-        display: none;
-      }
-      
-      .eka-widget-overlay.active {
+      .eka-widget-button svg {
+        width: 28px;
+        height: 28px;
         display: block;
+      }
+      
+
+      /* Mobile responsive */
+      @media (max-width: 768px) {
+        .eka-widget-button {
+          bottom: 15px;
+          right: 15px;
+          width: 50px;
+          height: 50px;
+        }
+        
+        .eka-widget-button svg {
+          width: 24px;
+          height: 24px;
+        }
       }
     `;
     document.head.appendChild(style);
@@ -85,181 +85,224 @@
   function createWidgetButton(config) {
     var button = document.createElement("button");
     button.className = "eka-widget-button";
-    button.innerHTML = "��";
+
+    // Create the SVG icon
+    var svgIcon = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+    svgIcon.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+    svgIcon.setAttribute("width", "28");
+    svgIcon.setAttribute("height", "28");
+    svgIcon.setAttribute("viewBox", "0 0 28 28");
+    svgIcon.setAttribute("fill", "none");
+
+    // Blue circle
+    var blueCircle = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle"
+    );
+    blueCircle.setAttribute("cx", "16");
+    blueCircle.setAttribute("cy", "16");
+    blueCircle.setAttribute("r", "12");
+    blueCircle.setAttribute("fill", "#215FFF");
+
+    // Foreign object for backdrop filter
+    var foreignObject = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "foreignObject"
+    );
+    foreignObject.setAttribute("x", "-2.53846");
+    foreignObject.setAttribute("y", "-2.53846");
+    foreignObject.setAttribute("width", "21.0769");
+    foreignObject.setAttribute("height", "21.0769");
+
+    var div = document.createElement("div");
+    div.style.cssText =
+      "backdrop-filter:blur(1.27px);clip-path:url(#bgblur_0_550_2_clip_path);height:100%;width:100%";
+
+    foreignObject.appendChild(div);
+
+    // Purple circle
+    var purpleCircle = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle"
+    );
+    purpleCircle.setAttribute("data-figma-bg-blur-radius", "2.53846");
+    purpleCircle.setAttribute("cx", "8");
+    purpleCircle.setAttribute("cy", "8");
+    purpleCircle.setAttribute("r", "8");
+    purpleCircle.setAttribute("fill", "#B45EDC");
+    purpleCircle.setAttribute("fill-opacity", "0.6");
+
+    // Definitions
+    var defs = document.createElementNS("http://www.w3.org/2000/svg", "defs");
+    var clipPath = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "clipPath"
+    );
+    clipPath.setAttribute("id", "bgblur_0_550_2_clip_path");
+    clipPath.setAttribute("transform", "translate(2.53846 2.53846)");
+
+    var clipCircle = document.createElementNS(
+      "http://www.w3.org/2000/svg",
+      "circle"
+    );
+    clipCircle.setAttribute("cx", "8");
+    clipCircle.setAttribute("cy", "8");
+    clipCircle.setAttribute("r", "8");
+
+    clipPath.appendChild(clipCircle);
+    defs.appendChild(clipPath);
+
+    // Assemble SVG
+    svgIcon.appendChild(blueCircle);
+    svgIcon.appendChild(foreignObject);
+    svgIcon.appendChild(purpleCircle);
+    svgIcon.appendChild(defs);
+
+    button.appendChild(svgIcon);
     button.title = "Eka Medical Assistant";
 
     button.addEventListener("click", function () {
+      widgetState.config = config;
       toggleWidget(config);
     });
 
     return button;
   }
 
-  // Create widget iframe
-  function createWidgetIframe(config) {
-    var iframe = document.createElement("iframe");
-    iframe.className = "eka-widget-iframe";
-    iframe.src = config.widgetUrl || "./index.html";
-    iframe.id = "eka-widget-iframe";
 
-    return iframe;
+  // Widget state
+  var widgetState = {
+    isLoaded: false,
+    isVisible: false,
+    instance: null,
+    config: null,
+  };
+
+  // Load React app bundle
+  function loadReactApp(config, callback) {
+    if (widgetState.isLoaded) {
+      callback();
+      return;
+    }
+
+    // Load CSS first
+    if (config.cssUrl) {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = config.cssUrl;
+      document.head.appendChild(link);
+    }
+
+    // Load the JavaScript bundle
+    var script = document.createElement("script");
+    script.src = config.scriptUrl;
+    script.onload = function() {
+      console.log("Eka Medical Assistant bundle loaded successfully");
+      widgetState.isLoaded = true;
+      callback();
+    };
+    script.onerror = function() {
+      console.error("Failed to load Eka Medical Assistant bundle from:", config.scriptUrl);
+    };
+    document.head.appendChild(script);
   }
 
-  // Create overlay
-  function createOverlay() {
-    var overlay = document.createElement("div");
-    overlay.className = "eka-widget-overlay";
-    overlay.id = "eka-widget-overlay";
+  // Mount the React widget
+  function mountWidget(config) {
+    // Check if the widget API is available
+    if (!window.EkaMedAssistWidget || !window.EkaMedAssistWidget.init) {
+      console.error("EkaMedAssistWidget not available. Make sure the bundle is loaded.");
+      return;
+    }
 
-    overlay.addEventListener("click", function () {
-      hideWidget();
+    // Initialize the React widget
+    widgetState.instance = window.EkaMedAssistWidget.init({
+      theme: config.theme,
+      onMinimize: function() {
+        hideWidget();
+        showButton();
+      },
+      onClose: function() {
+        hideWidget();
+        showButton();
+      }
     });
 
-    return overlay;
+    widgetState.isVisible = true;
+    hideButton();
+    console.log("Widget mounted successfully");
   }
 
   // Toggle widget visibility
   function toggleWidget(config) {
-    var iframe = document.getElementById("eka-widget-iframe");
-    var button = document.querySelector(".eka-widget-button");
-    // var overlay = document.getElementById("eka-widget-overlay");
-
-    if (iframe && iframe.style.display !== "none") {
+    if (!widgetState.isLoaded) {
+      // First time - load the React app
+      loadReactApp(config, function() {
+        mountWidget(config);
+      });
+    } else if (widgetState.isVisible) {
       hideWidget();
     } else {
       showWidget(config);
     }
   }
 
-  // Add session management
-  var currentSession = null;
-
-  // Enhanced showWidget function
+  // Show widget
   function showWidget(config) {
-    var iframe = document.getElementById("eka-widget-iframe");
-    var button = document.querySelector(".eka-widget-button");
-    // var overlay = document.getElementById("eka-widget-overlay");
-
-    if (!iframe) {
-      iframe = createWidgetIframe(config);
-      document.body.appendChild(iframe);
-    }
-
-    // Start session before showing widget
-    startSessionAndShowWidget(config, iframe);
-
-    // Show widget
-    iframe.style.display = "block";
-    
-    // Hide the widget button when widget is open
-    if (button) {
-      button.style.display = "none";
-    }
-    
-    //overlay.classList.add("active");
-  }
-
-  // New function to handle session and widget display
-  async function startSessionAndShowWidget(config, iframe) {
-    try {
-      const defaultJWTPayload = {
-        aud: "androiddoc",
-        "b-id": "77088166996724",
-        cc: {
-          "doc-id": "173658822122884",
-          esc: 1,
-          "is-d": true,
-        },
-        dob: "1990-07-03",
-        "doc-id": "173658822122884",
-        exp: 1754298198,
-        fn: "Neha",
-        gen: "F",
-        iat: 1754294598,
-        idp: "mob",
-        "is-d": true,
-        iss: "emr.eka.care",
-        ln: "Jagadeesh",
-        mn: "true",
-        oid: "173658822122884",
-        pri: true,
-        r: "IN",
-        uuid: "fc452885-83e5-466c-b45c-53e743ff2428",
-      };
-
-      // Call your API here
-      const response = await fetch(
-        "https://matrix.dev.eka.care/med-assist/session",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "jwt-payload": JSON.stringify(defaultJWTPayload),
-          },
+    if (!widgetState.isLoaded) {
+      loadReactApp(config, function() {
+        mountWidget(config);
+      });
+    } else if (!widgetState.isVisible) {
+      if (!widgetState.instance) {
+        mountWidget(config);
+      } else {
+        // Re-show existing instance
+        var container = document.getElementById(widgetState.instance.containerId);
+        if (container) {
+          container.style.display = "block";
         }
-      );
-
-      if (!response.ok)
-        throw new Error(`HTTP error! status: ${response.status}`);
-
-      const sessionData = await response.json();
-      currentSession = sessionData;
-
-      // Send session data to React app via postMessage
-      iframe.contentWindow.postMessage(
-        {
-          type: "SESSION_STARTED",
-          session: sessionData,
-        },
-        "*"
-      );
-
-      // Show widget
-      iframe.style.display = "block";
-    } catch (error) {
-      console.error("Failed to start session:", error);
-      // Handle error - maybe show error message
+      }
+      widgetState.isVisible = true;
+      hideButton();
     }
   }
 
   // Hide widget
   function hideWidget() {
-    var iframe = document.getElementById("eka-widget-iframe");
-    var button = document.querySelector(".eka-widget-button");
-    // var overlay = document.getElementById("eka-widget-overlay");
-
-    if (iframe) {
-      // Notify React app that widget is closing
-      iframe.contentWindow.postMessage(
-        {
-          type: "WIDGET_CLOSING",
-        },
-        "*"
-      );
-
-      iframe.style.display = "none";
-      currentSession = null; // Clear session
+    if (widgetState.instance && widgetState.isVisible) {
+      // Destroy the React instance completely
+      if (widgetState.instance.destroy) {
+        widgetState.instance.destroy();
+        widgetState.instance = null;
+      }
+      widgetState.isVisible = false;
+      showButton();
     }
-
-    // Show the widget button when widget is closed
-    if (button) {
-      button.style.display = "flex";
-    }
-
-    // if (overlay) {
-    //   overlay.classList.remove("active");
-    // }
   }
 
-  // Listen for messages from React app
-  window.addEventListener("message", function (event) {
-    if (event.data.type === "WIDGET_CLOSE_REQUESTED") {
-      hideWidget();
+  // Show button
+  function showButton() {
+    if (window.EkaMedAssist._button) {
+      window.EkaMedAssist._button.style.display = "flex";
     }
-  });
+  }
+
+  // Hide button
+  function hideButton() {
+    if (window.EkaMedAssist._button) {
+      window.EkaMedAssist._button.style.display = "none";
+    }
+  }
 
   // Initialize widget
   function initWidget(config) {
+    // Prevent double initialization
+    if (window.EkaMedAssist && window.EkaMedAssist._initialized) {
+      console.warn("Eka Medical Assistant Widget already initialized");
+      return;
+    }
+
     config = Object.assign({}, defaultConfig, config);
 
     // Create isolated CSS
@@ -269,18 +312,44 @@
     var button = createWidgetButton(config);
     document.body.appendChild(button);
 
-    // Create overlay
-    // var overlay = createOverlay();
-    // document.body.appendChild(overlay);
+    // Mark as initialized
+    if (window.EkaMedAssist) {
+      window.EkaMedAssist._initialized = true;
+      window.EkaMedAssist._button = button;
+    }
 
-    console.log("Eka Medical Assistant Widget loader initialized");
+    console.log(
+      "Eka Medical Assistant Widget loader initialized with config:",
+      config
+    );
   }
 
   // Global API
   window.EkaMedAssist = {
-    init: initWidget,
+    init: function(config) {
+      initWidget(config);
+    },
     show: showWidget,
     hide: hideWidget,
     toggle: toggleWidget,
+    config: defaultConfig,
+    _initialized: false,
+    _button: null,
   };
+
+  // Auto-initialize on DOM ready with default config
+  function autoInit() {
+    if (!window.EkaMedAssist._initialized) {
+      initWidget(defaultConfig);
+    }
+  }
+
+  // Check if DOM is ready
+  if (document.readyState === "loading") {
+    // DOM is still loading, wait for it
+    document.addEventListener("DOMContentLoaded", autoInit);
+  } else {
+    // DOM is already ready, initialize immediately
+    autoInit();
+  }
 })();

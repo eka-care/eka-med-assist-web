@@ -6,28 +6,29 @@ import path from "path";
 // This app always runs as a widget, so build it as a library
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    'process.env': {},
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  },
   build: {
     outDir: "dist",
-    // lib: {
-    //   entry: path.resolve(__dirname, "src/main.tsx"),
-    //   name: "ApolloWidget",
-    //   fileName: "widget",
-    //   formats: ["iife"],
-    // },
+    lib: {
+      entry: path.resolve(__dirname, "src/main.tsx"),
+      name: "EkaMedAssistWidget",
+      fileName: "widget",
+      formats: ["iife"],
+    },
     rollupOptions: {
       // Bundle everything together - no external dependencies
-      // external: [],
+      external: [],
       output: {
         format: "iife",
-        entryFileNames: "assets/[name].js",
+        name: "EkaMedAssistWidget",
+        entryFileNames: "widget.js",
         chunkFileNames: "assets/[name].js",
         assetFileNames: "assets/[name].[ext]",
         // Ensure all dependencies are bundled
         manualChunks: undefined,
-        // Global variable name
-        name: "EkaWidgetApp",
-        // Ensure all dependencies are bundled
-        globals: {},
       },
     },
     // Bundle all dependencies
@@ -35,7 +36,7 @@ export default defineConfig({
     target: "es2015",
     minify: "esbuild",
     sourcemap: false,
-    // Ensure CSS is extracted
+    // Ensure CSS is extracted and bundled
     cssCodeSplit: false,
     // Bundle size optimization
     chunkSizeWarningLimit: 1000,
@@ -63,11 +64,6 @@ export default defineConfig({
         "./packages/ui/base/src/shadcn-ui/components/ui"
       ),
     },
-  },
-  define: {
-    "process.env.NODE_ENV": JSON.stringify(
-      process.env.NODE_ENV || "production"
-    ),
   },
   optimizeDeps: {
     include: ["react", "react-dom", "zustand"],
