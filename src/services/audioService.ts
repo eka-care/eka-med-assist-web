@@ -55,6 +55,13 @@ export class AudioService {
    */
   async initialize(): Promise<void> {
     try {
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices) {
+        throw new Error(
+          "Media devices API is not available. This usually means the page is not served over HTTPS or there are browser restrictions."
+        );
+      }
+
       // Check if MediaRecorder is supported
       if (!window.MediaRecorder) {
         throw new Error("MediaRecorder is not supported in this browser");
@@ -110,6 +117,13 @@ export class AudioService {
       this.audioDataCallback = onAudioData;
       this.errorCallback = onError || null;
       this.statusCallback = onStatus || null;
+
+      // Check if mediaDevices is available
+      if (!navigator.mediaDevices) {
+        throw new Error(
+          "Media devices API is not available. This usually means the page is not served over HTTPS or there are browser restrictions."
+        );
+      }
 
       // Get user media
       this.mediaStream = await navigator.mediaDevices.getUserMedia({

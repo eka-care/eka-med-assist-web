@@ -105,10 +105,6 @@ export function MessageInput({
     }
   }, [recordingDuration, isRecording]);
 
-  useEffect(() => {
-    console.log("file uploads", uploadedFiles);
-  }, [uploadedFiles]);
-
   const checkMicrophonePermission = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
