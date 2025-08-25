@@ -79,6 +79,7 @@ export function ChatWidget({
   const setError = useSessionStore((state) => state.setError);
   const clearError = useSessionStore((state) => state.clearError);
   const clearSession = useSessionStore((state) => state.clearSession);
+  const isStreaming = useSessionStore((state) => state.isStreaming);
   // Create socket configuration when session data is available
   const socketConfig: WebSocketConfig | null =
     sessionId && sessionToken
@@ -98,23 +99,14 @@ export function ChatWidget({
     sendAudioData,
     sendPillMessage,
     regenerateResponse,
-    isStreaming,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
       // Handle bot response messages
-      console.log(
-        "onTextMessage called with:",
-        botMessage,
-        "isStreaming:",
-        isStreaming
-      );
-
       setMessages((prev) => {
         // Check if there's already a bot message at the end
         const lastMessage = prev[prev.length - 1];
         console.log("lastMessage", lastMessage);
-        console.log("isStreaming", isStreaming);
 
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
@@ -795,7 +787,6 @@ export function ChatWidget({
             onAudioStream={handleAudioStream}
             onFileUpload={handleFileUpload}
             disabled={!isConnectionEstablished}
-            isStreaming={isStreaming}
             setError={setError}
           />
         </div>

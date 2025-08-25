@@ -25,15 +25,12 @@ export function useWebSocket(
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [isStreaming, setIsStreaming] = useState(false);
+  // const [isStreaming, setIsStreaming] = useState(false);
   const isAudioStreaming = useRef(false);
-  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const { isConnectionEstablished, setConnectionEstablished } =
+  // const [pendingFiles, setPendingFiles] = useState<File[]>([]);
+  const { isConnectionEstablished, setConnectionEstablished ,setIsStreaming, isStreaming} =
     useMedAssistStore();
-
-  useEffect(() => {
-    console.log("pendingFiles", pendingFiles);
-  }, [pendingFiles]);
+ 
 
   useEffect(() => {
     if (!config) {
@@ -81,7 +78,7 @@ export function useWebSocket(
           service
             .uploadFilesToPresignedUrl(message.data?.url || "")
             .then(() => {
-              setPendingFiles([]);
+              // setPendingFiles([]);
               console.log("Files uploaded successfully");
             })
             .catch((error) => {
@@ -347,7 +344,7 @@ export function useWebSocket(
   // Set files for upload when presigned URL is received
   const setFilesForUpload = (files: File[]) => {
     console.log("setFilesForUpload called with:", files);
-    setPendingFiles(files);
+    // setPendingFiles(files);
     if (wsRef.current) {
       wsRef.current.setFilesForUpload(files);
     }
@@ -356,7 +353,7 @@ export function useWebSocket(
 
   // Clear pending files
   const clearPendingFiles = () => {
-    setPendingFiles([]);
+    // setPendingFiles([]);
     if (wsRef.current) {
       wsRef.current.clearPendingFiles();
     }
@@ -399,7 +396,6 @@ export function useWebSocket(
   return {
     // State
     error,
-    isStreaming,
     isAudioStreaming: isAudioStreaming.current,
     isConnected: isConnected(),
     connectionState: getConnectionState(),

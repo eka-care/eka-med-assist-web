@@ -16,7 +16,6 @@ interface MessageInputProps {
   onAudioStream?: (audioData: AudioData) => void;
   placeholder?: string;
   disabled?: boolean;
-  isStreaming?: boolean;
   setError: (error: string) => void;
 }
 
@@ -30,7 +29,6 @@ export function MessageInput({
   onAudioStream,
   placeholder = "Message Apollo Assist...",
   disabled = false,
-  isStreaming = false,
   setError,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
@@ -49,7 +47,8 @@ export function MessageInput({
   const isConnectionEstablished = useSessionStore(
     (state) => state.isConnectionEstablished
   );
-
+  const isStreaming = useSessionStore((state) => state.isStreaming);
+  const error = useSessionStore((state) => state.error);
   // AudioService hook - full MP3 audio with auto-pause
   const {
     isRecording,
@@ -62,10 +61,11 @@ export function MessageInput({
 
   // Reset sending state when streaming starts or stops
   useEffect(() => {
-    if (isStreaming) {
+    console.log("isStreaming", isStreaming);
+    if (isStreaming || error) {
       setIsSending(false); // Reset sending state when streaming starts
     }
-  }, [isStreaming]);
+  }, [isStreaming, error]);
 
   useEffect(() => {
     if (audioServiceError) {
@@ -156,8 +156,7 @@ export function MessageInput({
   }, [message, uploadedFiles]);
 
   // Check if input should be disabled (either disabled prop, streaming, or sending)
-  const isInputDisabled =
-    disabled || isStreaming || !isConnectionEstablished || isSending;
+  const isInputDisabled = !isConnectionEstablished || disabled || isStreaming || isSending  || ((!!error && !(error.length>0) )&& isConnectionEstablished) ;//enable if a valid error comes
 
   // Start recording with AudioService
   const startRecording = async () => {

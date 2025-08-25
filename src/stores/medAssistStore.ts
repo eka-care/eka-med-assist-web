@@ -6,6 +6,7 @@ const storeInitialState = {
   sessionId: "",
   sessionToken: "",
   isConnectionEstablished: false,
+  isStreaming: false,
   error: null,
   isTimeoutError: false,
 };
@@ -22,6 +23,9 @@ const useMedAssistStore = create<TMedAssistStore>()(
       isConnectionEstablished: false,
       setConnectionEstablished: (established: boolean) =>
         set({ isConnectionEstablished: established }),
+
+      isStreaming: false,
+      setIsStreaming: (streaming) => set({ isStreaming: streaming }),
 
       // Error handling
       error: null,

@@ -8,6 +8,9 @@ export type TMedAssistStore = {
   isConnectionEstablished: boolean;
   setConnectionEstablished: (established: boolean) => void;
 
+  isStreaming: boolean;
+  setIsStreaming: (streaming: boolean) => void;
+
   // Error handling
   error: string | null;
   setError: (error: string | null) => void;
