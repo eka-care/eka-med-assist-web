@@ -5,7 +5,8 @@
   var defaultConfig = {
     theme: "doctor-light",
     position: "bottom-right",
-    widgetUrl: "https://your-cdn-domain.com/widget.html", // This will be your CDN URL
+    scriptUrl: "./widget.js", // Relative to current directory
+    cssUrl: "./assets/widget.css", // CSS bundle in assets folder
   };
 
   // Create isolated CSS
@@ -161,6 +162,7 @@
     button.title = "Eka Medical Assistant";
 
     button.addEventListener("click", function () {
+      widgetState.config = config;
       toggleWidget(config);
     });
 
@@ -168,22 +170,129 @@
   }
 
 
+  // Widget state
+  var widgetState = {
+    isLoaded: false,
+    isVisible: false,
+    instance: null,
+    config: null,
+  };
+
+  // Load React app bundle
+  function loadReactApp(config, callback) {
+    if (widgetState.isLoaded) {
+      callback();
+      return;
+    }
+
+    // Load CSS first
+    if (config.cssUrl) {
+      var link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = config.cssUrl;
+      document.head.appendChild(link);
+    }
+
+    // Load the JavaScript bundle
+    var script = document.createElement("script");
+    script.src = config.scriptUrl;
+    script.onload = function() {
+      console.log("Eka Medical Assistant bundle loaded successfully");
+      widgetState.isLoaded = true;
+      callback();
+    };
+    script.onerror = function() {
+      console.error("Failed to load Eka Medical Assistant bundle from:", config.scriptUrl);
+    };
+    document.head.appendChild(script);
+  }
+
+  // Mount the React widget
+  function mountWidget(config) {
+    // Check if the widget API is available
+    if (!window.EkaMedAssistWidget || !window.EkaMedAssistWidget.init) {
+      console.error("EkaMedAssistWidget not available. Make sure the bundle is loaded.");
+      return;
+    }
+
+    // Initialize the React widget
+    widgetState.instance = window.EkaMedAssistWidget.init({
+      theme: config.theme,
+      onMinimize: function() {
+        hideWidget();
+        showButton();
+      },
+      onClose: function() {
+        hideWidget();
+        showButton();
+      }
+    });
+
+    widgetState.isVisible = true;
+    hideButton();
+    console.log("Widget mounted successfully");
+  }
+
   // Toggle widget visibility
   function toggleWidget(config) {
-    // TODO: Implement direct React app mounting
-    console.log("Toggle widget clicked", config);
+    if (!widgetState.isLoaded) {
+      // First time - load the React app
+      loadReactApp(config, function() {
+        mountWidget(config);
+      });
+    } else if (widgetState.isVisible) {
+      hideWidget();
+    } else {
+      showWidget(config);
+    }
   }
 
   // Show widget
   function showWidget(config) {
-    // TODO: Implement direct React app mounting
-    console.log("Show widget", config);
+    if (!widgetState.isLoaded) {
+      loadReactApp(config, function() {
+        mountWidget(config);
+      });
+    } else if (!widgetState.isVisible) {
+      if (!widgetState.instance) {
+        mountWidget(config);
+      } else {
+        // Re-show existing instance
+        var container = document.getElementById(widgetState.instance.containerId);
+        if (container) {
+          container.style.display = "block";
+        }
+      }
+      widgetState.isVisible = true;
+      hideButton();
+    }
   }
 
   // Hide widget
   function hideWidget() {
-    // TODO: Implement direct React app unmounting
-    console.log("Hide widget");
+    if (widgetState.instance && widgetState.isVisible) {
+      // Destroy the React instance completely
+      if (widgetState.instance.destroy) {
+        widgetState.instance.destroy();
+        widgetState.instance = null;
+      }
+      widgetState.isVisible = false;
+      showButton();
+    }
+  }
+
+  // Show button
+  function showButton() {
+    if (window.EkaMedAssist._button) {
+      window.EkaMedAssist._button.style.display = "flex";
+    }
+  }
+
+  // Hide button
+  function hideButton() {
+    if (window.EkaMedAssist._button) {
+      window.EkaMedAssist._button.style.display = "none";
+    }
   }
 
   // Initialize widget

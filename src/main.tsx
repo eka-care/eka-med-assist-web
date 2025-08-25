@@ -1,29 +1,31 @@
-import { createRoot } from "react-dom/client";
-import "./index.css";
-import App from "./App.tsx";
 import { ThemeProvider } from "@ui/index";
+import { createRoot } from "react-dom/client";
+import App from "./App.tsx";
+import "./index.css";
 
 // For standalone development - create widget if root element exists
 if (document.getElementById("root")) {
-  createRoot(document.getElementById("root")!).render(
-    <ThemeProvider defaultTheme="doctor-light">
-      <App />
-    </ThemeProvider>
-  );
+    console.log("Rendering App in standalone mode");
+    createRoot(document.getElementById("root")!).render(
+        <ThemeProvider defaultTheme="doctor-light">
+            <App />
+        </ThemeProvider>
+    );
 }
 
 // Widget initialization function for external use
 function initializeEkaWidget(config: any = {}) {
-  console.log("Initializing Eka Medical Assistant Widget with config:", config);
+    console.log("Initializing Eka Medical Assistant Widget with config:", config);
 
-  // Create a unique container ID
-  const containerId =
-    "eka-widget-container-" + Math.random().toString(36).substr(2, 9);
+    // Create a unique container ID
+    const containerId =
+        "eka-widget-container-" + Math.random().toString(36).slice(2, 11);
 
-  // Create container element
-  const container = document.createElement("div");
-  container.id = containerId;
-  container.style.cssText = `
+    // Create container element with isolation classes
+    const container = document.createElement("div");
+    container.id = containerId;
+    container.className = "eka-widget-root"; // Add class for CSS isolation
+    container.style.cssText = `
     position: fixed;
     top: 0;
     left: 0;
@@ -32,46 +34,47 @@ function initializeEkaWidget(config: any = {}) {
     pointer-events: auto;
     z-index: 999999;
     font-family: system-ui, sans-serif;
+    isolation: isolate;
   `;
 
-  // Add to document body
-  document.body.appendChild(container);
+    // Add to document body
+    document.body.appendChild(container);
 
-  // Create React root
-  const root = createRoot(container);
+    // Create React root
+    const root = createRoot(container);
 
-  // Render the widget with theme provider
-  root.render(
-    <ThemeProvider defaultTheme={config.theme || "doctor-light"}>
-      <App />
-    </ThemeProvider>
-  );
+    // Pass callbacks to App component
+    const appConfig = {
+        ...config,
+        onMinimize: config.onMinimize,
+        onClose: config.onClose,
+        isProduction: true, // Flag to indicate widget mode
+    };
 
-  console.log("Eka Medical Assistant Widget rendered successfully!");
+    // Render the widget with theme provider
+    root.render(
+        <ThemeProvider defaultTheme={config.theme || "doctor-light"}>
+            <App config={appConfig} />
+        </ThemeProvider>
+    );
 
-  // Return cleanup function
-  return {
-    destroy: () => {
-      root.unmount();
-      if (document.body.contains(container)) {
-        document.body.removeChild(container);
-      }
-    },
-    containerId,
-    container,
-  };
+    console.log("Eka Medical Assistant Widget rendered successfully!");
+
+    // Return cleanup function
+    return {
+        destroy: () => {
+            root.unmount();
+            if (document.body.contains(container)) {
+                document.body.removeChild(container);
+            }
+        },
+        containerId,
+        container,
+    };
 }
 
-// Make widget globally available
-if (typeof window !== "undefined") {
-  (window as any).EkaMedAssistWidget = {
-    init: initializeEkaWidget,
-  };
-  console.log("EkaMedAssistWidget exposed globally");
-}
-
-// Export for library builds
-export { initializeEkaWidget as init };
+// Export the init function as default for IIFE build
+// Vite will wrap this in var EkaMedAssistWidget = ...
 export default {
-  init: initializeEkaWidget,
+    init: initializeEkaWidget,
 };

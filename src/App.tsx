@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
-// import { ChatWidget } from "./molecules/chat-widget";
 import startSession from "./api/post-start-session";
-import { config } from "./configs/constants";
 import { ChatWidget } from "./molecules/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
 
-function App() {
+interface AppProps {
+    config?: {
+        theme?: string;
+        onMinimize?: () => void;
+        onClose?: () => void;
+        isProduction?: boolean;
+    };
+}
+
+function App({ config }: AppProps = {}) {
     const [isWidgetOpen, setIsWidgetOpen] = useState(false);
     const [isExpanded, setIsExpanded] = useState(false);
     const [isMobile, setIsMobile] = useState(false);
@@ -23,57 +30,76 @@ function App() {
         return () => window.removeEventListener("resize", checkMobile);
     }, []);
 
+    useEffect(() => {
+        setIsWidgetOpen(true);
+    }, []);
 
-    //DEV=================================================================================
     const handleOpenWidget = async () => {
-        console.log("Starting new session...");
+        console.log("handleOpenWidget called");
+
+        // Check if session already exists
+        const currentSessionId = useSessionStore.getState().sessionId;
+        const currentSessionToken = useSessionStore.getState().sessionToken;
+
+        console.log("Current session state:", {
+            sessionId: currentSessionId,
+            sessionToken: currentSessionToken
+        });
+
+        if (currentSessionId && currentSessionToken) {
+            setIsWidgetOpen(true);
+            return;
+        }
+
         setIsLoading(true);
 
         try {
-            // We need to handle if there is an open session already
+            console.log("Calling startSession API...");
             const { session_id, session_token } = await startSession();
+            console.log("Session API response:", { session_id, session_token });
+
             if (!session_id || !session_token) {
-                throw new Error("Failed to start a new session");
+                throw new Error("Failed to start a new session - missing session_id or session_token");
             }
 
+            console.log("Setting session in store...");
             setSessionId(session_id);
             setSessionToken(session_token);
-            setIsWidgetOpen(true); // Make sure widget is set as open
-            console.log("Session started successfully, widget opened");
+            setIsWidgetOpen(true);
+            console.log("Session started successfully, widget opened with session:", session_id);
         } catch (error) {
             console.error("Failed to start a new session:", error);
             // TODO: Show error to the user
-            // setIsWidgetOpen(false); // Keep widget closed on error
         } finally {
             setIsLoading(false);
             setIsWidgetOpen(true);
         }
     };
 
-    useEffect(() => {
-        // Only auto-open in development or when not in iframe
-        console.log("evvironment", config.ENVIRONMENT);
-        if (
-            config.ENVIRONMENT === "production"
-        ) {
-            console.log("Not in development, not opening widget");
-        } else {
-            handleOpenWidget();
-        }
-    }, []);
-
-    console.log("isWidgetOpen", isWidgetOpen);
+    // console.log("isWidgetOpen", isWidgetOpen);
 
     const handleCloseWidget = () => {
-        setIsWidgetOpen(false);
-        setIsExpanded(false);
+        // If we have an onClose callback from the widget loader, call it
+        // The loader will handle hiding the widget and showing the button
+        if (config?.onClose) {
+            config.onClose();
+        } else {
+            // Fallback for standalone mode
+            setIsWidgetOpen(false);
+            setIsExpanded(false);
+        }
     };
 
     const handleExpandWidget = () => {
-        setIsExpanded(!isExpanded);
+        const newExpandedState = !isExpanded;
+        setIsExpanded(newExpandedState);
+        // If minimizing, call the onMinimize callback
+        if (!newExpandedState && config?.onMinimize) {
+            config.onMinimize();
+        }
     };
 
-    // Show loading state while initializing
+    // Show loading state while initializing, false by default
     if (isLoading) {
         return (
             <div className="flex items-center justify-center h-screen">

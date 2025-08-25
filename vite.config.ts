@@ -6,6 +6,10 @@ import path from "path";
 // This app always runs as a widget, so build it as a library
 export default defineConfig({
   plugins: [react(), tailwindcss()],
+  define: {
+    'process.env': {},
+    'process.env.NODE_ENV': JSON.stringify('production'),
+  },
   build: {
     outDir: "dist",
     lib: {
@@ -19,13 +23,12 @@ export default defineConfig({
       external: [],
       output: {
         format: "iife",
+        name: "EkaMedAssistWidget",
         entryFileNames: "widget.js",
         chunkFileNames: "assets/[name].js",
         assetFileNames: "assets/[name].[ext]",
         // Ensure all dependencies are bundled
         manualChunks: undefined,
-        // Global variable name
-        globals: {},
       },
     },
     // Bundle all dependencies
