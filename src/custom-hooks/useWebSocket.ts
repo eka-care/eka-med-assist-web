@@ -28,9 +28,12 @@ export function useWebSocket(
   // const [isStreaming, setIsStreaming] = useState(false);
   const isAudioStreaming = useRef(false);
   // const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const { isConnectionEstablished, setConnectionEstablished ,setIsStreaming, isStreaming} =
-    useMedAssistStore();
- 
+  const {
+    isConnectionEstablished,
+    setConnectionEstablished,
+    setIsStreaming,
+    isStreaming,
+  } = useMedAssistStore();
 
   useEffect(() => {
     if (!config) {

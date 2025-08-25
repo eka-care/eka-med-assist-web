@@ -439,23 +439,6 @@ export function MessageInput({
     console.log("handleFileChange called");
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-
-      // // Check file size limit
-      // const oversizedFiles = files.filter((file) => file.size > MAX_FILE_SIZE);
-
-      // if (oversizedFiles.length > 0) {
-      //   const fileDetails = oversizedFiles
-      //     .map((f) => `${f.name} (${formatFileSize(f.size)})`)
-      //     .join(", ");
-      //   setError(
-      //     `File(s) too large: ${fileDetails}. Maximum file size is ${formatFileSize(
-      //       MAX_FILE_SIZE
-      //     )}.`
-      //   );
-      //   e.target.value = ""; // Reset input
-      //   return;
-      // }
-
       setUploadedFiles((prev) => [...prev, ...files]);
       e.target.value = ""; // Reset input
     }
@@ -505,7 +488,6 @@ export function MessageInput({
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
         onChange={handleFileChange}
         className="hidden"
-        // Add max file size attribute for better UX (though we also validate in JS)
         data-max-size={MAX_FILE_SIZE.toString()}
       />
 
