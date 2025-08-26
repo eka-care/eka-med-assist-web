@@ -21,6 +21,7 @@ interface Message {
   pillData?: PillAction;
   multiData?: PillAction;
   audioData?: AudioData; // Add audio data support
+  isResponded?: boolean; // Track if this bot message has been responded to
 }
 
 interface ChatWidgetProps {
@@ -79,6 +80,7 @@ export function ChatWidget({
   const setError = useSessionStore((state) => state.setError);
   const clearError = useSessionStore((state) => state.clearError);
   const clearSession = useSessionStore((state) => state.clearSession);
+  const isStreaming = useSessionStore((state) => state.isStreaming);
   // Create socket configuration when session data is available
   const socketConfig: WebSocketConfig | null =
     sessionId && sessionToken
@@ -98,23 +100,14 @@ export function ChatWidget({
     sendAudioData,
     sendPillMessage,
     regenerateResponse,
-    isStreaming,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
       // Handle bot response messages
-      console.log(
-        "onTextMessage called with:",
-        botMessage,
-        "isStreaming:",
-        isStreaming
-      );
-
       setMessages((prev) => {
         // Check if there's already a bot message at the end
         const lastMessage = prev[prev.length - 1];
         console.log("lastMessage", lastMessage);
-        console.log("isStreaming", isStreaming);
 
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
@@ -328,6 +321,25 @@ export function ChatWidget({
     // Clear progress message when sending new message
     setProgressMessage(null);
 
+    // Mark the bot message as responded if it has pills or multiselect
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      // Find the last bot message and mark it as responded if it has interactive elements
+      for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        if (
+          updatedMessages[i].isBot &&
+          (updatedMessages[i].pillData || updatedMessages[i].multiData)
+        ) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            isResponded: true,
+          };
+          break;
+        }
+      }
+      return updatedMessages;
+    });
+
     const newMessage: Message = {
       id: Date.now().toString(),
       content,
@@ -356,6 +368,25 @@ export function ChatWidget({
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
     console.log("Final audio stream received:", audioData);
+
+    // Mark the bot message as responded if it has pills or multiselect
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      // Find the last bot message and mark it as responded if it has interactive elements
+      for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        if (
+          updatedMessages[i].isBot &&
+          (updatedMessages[i].pillData || updatedMessages[i].multiData)
+        ) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            isResponded: true,
+          };
+          break;
+        }
+      }
+      return updatedMessages;
+    });
 
     // Create user message with audio data
     const newMessage: Message = {
@@ -395,6 +426,25 @@ export function ChatWidget({
 
     // Clear any errors when uploading files
     clearError();
+
+    // Mark the bot message as responded if it has pills or multiselect
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      // Find the last bot message and mark it as responded if it has interactive elements
+      for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        if (
+          updatedMessages[i].isBot &&
+          (updatedMessages[i].pillData || updatedMessages[i].multiData)
+        ) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            isResponded: true,
+          };
+          break;
+        }
+      }
+      return updatedMessages;
+    });
 
     const fileArray = Array.from(files);
 
@@ -440,6 +490,25 @@ export function ChatWidget({
 
     // Clear progress message when using quick action
     setProgressMessage(null);
+
+    // Mark the bot message as responded if it has pills or multiselect
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      // Find the last bot message and mark it as responded if it has interactive elements
+      for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        if (
+          updatedMessages[i].isBot &&
+          (updatedMessages[i].pillData || updatedMessages[i].multiData)
+        ) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            isResponded: true,
+          };
+          break;
+        }
+      }
+      return updatedMessages;
+    });
 
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
@@ -581,10 +650,26 @@ export function ChatWidget({
     // Clear progress message when using pill
     setProgressMessage(null);
 
+    // Mark the bot message as responded
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      // Find the last bot message and mark it as responded
+      for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        if (updatedMessages[i].isBot) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            isResponded: true,
+          };
+          break;
+        }
+      }
+      return updatedMessages;
+    });
+
     // Add user message showing the pill selection
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: `✅ Selected: ${pillText}`, // Cleaner text with checkmark
+      content: `${pillText}`, // Cleaner text with checkmark
       isBot: false,
       originalUserMessage: pillText,
     };
@@ -712,6 +797,7 @@ export function ChatWidget({
                   multiData={message.multiData}
                   onMultiClick={handlePillClick}
                   audioData={message.audioData} // Pass audio data to MessageBubble
+                  isResponded={message.isResponded}
                 />
               ))}
             </div>
@@ -795,7 +881,6 @@ export function ChatWidget({
             onAudioStream={handleAudioStream}
             onFileUpload={handleFileUpload}
             disabled={!isConnectionEstablished}
-            isStreaming={isStreaming}
             setError={setError}
           />
         </div>

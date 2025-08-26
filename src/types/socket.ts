@@ -55,11 +55,13 @@ export interface BaseMessage {
 }
 export interface PingRequest extends BaseMessage {
   ev: typeof SocketEvent.PING;
+  id: number;
 }
 // Client to Server: Chat message
 export interface ChatRequest extends BaseMessage {
   ev: typeof SocketEvent.CHAT;
   ct: typeof ContentType.TEXT | typeof ContentType.FILE;
+  id: number;
   data?: { url?: string; text?: string; tool_use_id?: string }; // message content or S3 URL
 }
 
@@ -68,12 +70,14 @@ export interface ChatRequest extends BaseMessage {
 export interface AudioStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
   ct: typeof ContentType.AUDIO;
+  id: number;
   data: { audio: string; format: string }; // audio data as Uint8Array for real-time streaming
 }
 // Client to Server: Audio end of stream
 export interface AudioEndOfStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.END_OF_STREAM;
   ct: typeof ContentType.AUDIO;
+  id: number;
   // data: string; // final audio chunk as Uint8Array
 }
 

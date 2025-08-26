@@ -6,6 +6,18 @@ import formatTime from "@/utils/formatTime";
 import useSessionStore from "@/stores/medAssistStore";
 import type { AudioData } from "@/services/audioService";
 
+// Constants
+const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
+
+// Helper function to format file size
+const formatFileSize = (bytes: number): string => {
+  if (bytes === 0) return "0 Bytes";
+  const k = 1024;
+  const sizes = ["Bytes", "KB", "MB", "GB"];
+  const i = Math.floor(Math.log(bytes) / Math.log(k));
+  return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + " " + sizes[i];
+};
+
 interface MessageInputProps {
   onSendMessage: (message: string) => void;
   onFinalAudioStream: (audioData: AudioData) => void;
@@ -16,7 +28,6 @@ interface MessageInputProps {
   onAudioStream?: (audioData: AudioData) => void;
   placeholder?: string;
   disabled?: boolean;
-  isStreaming?: boolean;
   setError: (error: string) => void;
 }
 
@@ -30,7 +41,6 @@ export function MessageInput({
   onAudioStream,
   placeholder = "Message Apollo Assist...",
   disabled = false,
-  isStreaming = false,
   setError,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
@@ -49,7 +59,8 @@ export function MessageInput({
   const isConnectionEstablished = useSessionStore(
     (state) => state.isConnectionEstablished
   );
-
+  const isStreaming = useSessionStore((state) => state.isStreaming);
+  const error = useSessionStore((state) => state.error);
   // AudioService hook - full MP3 audio with auto-pause
   const {
     isRecording,
@@ -62,10 +73,11 @@ export function MessageInput({
 
   // Reset sending state when streaming starts or stops
   useEffect(() => {
-    if (isStreaming) {
+    console.log("isStreaming", isStreaming);
+    if (isStreaming || error) {
       setIsSending(false); // Reset sending state when streaming starts
     }
-  }, [isStreaming]);
+  }, [isStreaming, error]);
 
   useEffect(() => {
     if (audioServiceError) {
@@ -151,13 +163,20 @@ export function MessageInput({
   };
 
   // Check if there's any content to send
-  const hasContent = useMemo(() => {
-    return message.trim() || uploadedFiles.length > 0;
-  }, [message, uploadedFiles]);
+  // const hasContent = useMemo(() => {
+  //   return message.trim() || uploadedFiles.length > 0;
+  // }, [message, uploadedFiles]);
 
+  const hasContent = useMemo(() => {
+    return message.trim();
+  }, [message]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)
   const isInputDisabled =
-    disabled || isStreaming || !isConnectionEstablished || isSending;
+    !isConnectionEstablished ||
+    disabled ||
+    isStreaming ||
+    isSending ||
+    (!!error && !(error.length > 0) && isConnectionEstablished); //enable if a valid error comes
 
   // Start recording with AudioService
   const startRecording = async () => {
@@ -275,14 +294,56 @@ export function MessageInput({
     }
   };
 
+  // const handleSend = async () => {
+  //   console.log("called handle send", isStreaming);
+
+  //   if (
+  //     (message.trim() || uploadedFiles.length > 0 || isAudioStreaming) &&
+  //     !disabled &&
+  //     !isSending
+  //   ) {
+  //     try {
+  //       setIsSending(true); // Disable send button immediately
+
+  //       // Send text message
+  //       if (message.trim()) {
+  //         onSendMessage(message.trim());
+  //       }
+
+  //       // Send files if any
+  //       if (uploadedFiles.length > 0) {
+  //         const fileList = new DataTransfer();
+  //         uploadedFiles.forEach((file) => fileList.items.add(file));
+  //         onFileUpload(fileList.files);
+  //       }
+
+  //       // Send audio if any
+  //       if (isAudioStreaming) {
+  //         console.log("called sendRecording in message-input-copy-v2");
+  //         await sendRecording();
+  //       }
+
+  //       // Clear inputs
+  //       setMessage("");
+  //       setUploadedFiles([]);
+  //       setShowEndButton(false);
+  //       setIsListening(false);
+  //     } catch (error) {
+  //       console.error("Error in handleSend:", error);
+  //       setError("Failed to send message. Please try again.");
+  //     } finally {
+  //       // Note: We don't set isSending to false here because:
+  //       // 1. For text messages: The button will be re-enabled when streaming starts
+  //       // 2. For audio/files: The button is re-enabled in sendRecording
+  //       // This prevents double-clicking and provides better UX
+  //     }
+  //   }
+  // };
+
   const handleSend = async () => {
     console.log("called handle send", isStreaming);
 
-    if (
-      (message.trim() || uploadedFiles.length > 0 || isAudioStreaming) &&
-      !disabled &&
-      !isSending
-    ) {
+    if ((message.trim() || isAudioStreaming) && !disabled && !isSending) {
       try {
         setIsSending(true); // Disable send button immediately
 
@@ -291,12 +352,12 @@ export function MessageInput({
           onSendMessage(message.trim());
         }
 
-        // Send files if any
-        if (uploadedFiles.length > 0) {
-          const fileList = new DataTransfer();
-          uploadedFiles.forEach((file) => fileList.items.add(file));
-          onFileUpload(fileList.files);
-        }
+        // // Send files if any
+        // if (uploadedFiles.length > 0) {
+        //   const fileList = new DataTransfer();
+        //   uploadedFiles.forEach((file) => fileList.items.add(file));
+        //   onFileUpload(fileList.files);
+        // }
 
         // Send audio if any
         if (isAudioStreaming) {
@@ -306,7 +367,7 @@ export function MessageInput({
 
         // Clear inputs
         setMessage("");
-        setUploadedFiles([]);
+        // setUploadedFiles([]);
         setShowEndButton(false);
         setIsListening(false);
       } catch (error) {
@@ -320,7 +381,6 @@ export function MessageInput({
       }
     }
   };
-
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -376,12 +436,38 @@ export function MessageInput({
   };
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    console.log("handleFileChange called");
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
       setUploadedFiles((prev) => [...prev, ...files]);
       e.target.value = ""; // Reset input
     }
   };
+
+  useEffect(() => {
+    console.log("start of useEffect file upload", uploadedFiles);
+    // Send files if any
+    if (uploadedFiles.length > 0) {
+      const totalFileSize =uploadedFiles.reduce((acc, file) => acc + file.size, 0);
+      if (totalFileSize > MAX_FILE_SIZE) {
+        setError(
+          `File(s) too large. Maximum file size is ${formatFileSize(
+            MAX_FILE_SIZE
+          )}.`
+        );
+        setUploadedFiles([]);
+        setIsSending(false);
+        return;
+      }
+      setIsSending(true);
+      const fileList = new DataTransfer();
+      uploadedFiles.forEach((file) => fileList.items.add(file));
+      onFileUpload(fileList.files);
+      setUploadedFiles([]);
+      setIsSending(false);
+    }
+    console.log("end of handleFileChange");
+  }, [uploadedFiles]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -402,6 +488,7 @@ export function MessageInput({
         accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
         onChange={handleFileChange}
         className="hidden"
+        data-max-size={MAX_FILE_SIZE.toString()}
       />
 
       {isListening || isRecording ? (
@@ -479,10 +566,13 @@ export function MessageInput({
             {uploadedFiles.map((file, index) => (
               <div
                 key={index}
-                className={`flex items-center gap-1 bg-[var(--color-accent)] text-[var(--color-primary)] px-2 py-1 rounded-md text-xs max-w-32 ${
+                className={`flex items-center gap-1 bg-[var(--color-accent)] text-[var(--color-primary)] px-2 py-1 rounded-md text-xs max-w-40 ${
                   isSending ? "opacity-50" : ""
                 }`}>
                 <span className="truncate">{file.name}</span>
+                <span className="text-[var(--color-primary)]/70 text-xs">
+                  ({formatFileSize(file.size)})
+                </span>
                 <button
                   onClick={() =>
                     setUploadedFiles((prev) =>
