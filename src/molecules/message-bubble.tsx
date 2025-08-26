@@ -31,6 +31,7 @@ interface MessageBubbleProps {
   onMultiClick?: (multiText: string, tool_use_id: string) => void; // Add multi click handler
   audioData?: any; // Add audio data support
   isResponded?: boolean; // Track if this bot message has been responded to
+  files?: File[]; // Add files prop for file previews
 }
 
 export function MessageBubble({
@@ -52,6 +53,7 @@ export function MessageBubble({
   multiData,
   onMultiClick,
   isResponded = false,
+  files,
 }: MessageBubbleProps) {
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
@@ -143,7 +145,13 @@ export function MessageBubble({
               </div>
             </div>
           )} */}
-
+          {files && files.length > 0 && (
+            <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
+              <div className="text-sm text-[var(--color-primary)]">
+                📎 {files.length} files uploaded
+              </div>
+            </div>
+          )}
           {/* Display pills for bot messages */}
           {isBot &&
             pillAction &&

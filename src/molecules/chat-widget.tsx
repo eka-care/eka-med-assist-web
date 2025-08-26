@@ -417,7 +417,7 @@ export function ChatWidget({
     }
   };
 
-  const handleFileUpload = async (files: FileList) => {
+  const handleFileUpload = async (files: FileList, message?: string) => {
     // Block file upload if currently streaming
     if (isStreaming) {
       console.log("Cannot upload file while streaming");
@@ -450,7 +450,7 @@ export function ChatWidget({
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: `📎 ${
+      content: message || `📎 ${
         fileArray.length > 1 ? `${fileArray.length} files` : "File"
       } uploaded`, // Cleaner text
       isBot: false,
@@ -463,7 +463,7 @@ export function ChatWidget({
       // Send file upload request via WebSocket
       if (isConnectionEstablished) {
         // Set files for upload when presigned URL is received
-        setFilesForUpload(fileArray);
+        setFilesForUpload(fileArray, message);
         await sendFileUploadRequest();
         console.log("File upload request sent successfully");
       } else {
@@ -798,6 +798,7 @@ export function ChatWidget({
                   onMultiClick={handlePillClick}
                   audioData={message.audioData} // Pass audio data to MessageBubble
                   isResponded={message.isResponded}
+                  files={message.files}
                 />
               ))}
             </div>

@@ -346,11 +346,11 @@ export function useWebSocket(
   };
 
   // Set files for upload when presigned URL is received
-  const setFilesForUpload = (files: File[]) => {
+  const setFilesForUpload = (files: File[], message?: string) => {
     console.log("setFilesForUpload called with:", files);
     // setPendingFiles(files);
     if (wsRef.current) {
-      wsRef.current.setFilesForUpload(files);
+      wsRef.current.setFilesForUpload(files, message);
     }
     console.log(`Set ${files.length} files for upload`);
   };
