@@ -29,6 +29,7 @@ interface MessageBubbleProps {
   multiData?: PillAction; // Add multi data prop
   onMultiClick?: (multiText: string, tool_use_id: string) => void; // Add multi click handler
   audioData?: any; // Add audio data support
+  isResponded?: boolean; // Track if this bot message has been responded to
 }
 
 export function MessageBubble({
@@ -49,6 +50,7 @@ export function MessageBubble({
   onPillClick,
   multiData,
   onMultiClick,
+  isResponded = false,
 }: MessageBubbleProps) {
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
@@ -144,7 +146,7 @@ export function MessageBubble({
             pillAction.choices.length > 0 && (
               <div className="mt-3">
                 <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
-                  Select an option:
+                  {isResponded ? "Option selected:" : "Select an option:"}
                 </div>
                 <div className="flex flex-col gap-2">
                   {pillAction.choices.map((choice, index) => (
@@ -152,11 +154,16 @@ export function MessageBubble({
                       key={`${pillAction.tool_use_id}-${index}`}
                       variant="outline"
                       size="sm"
-                      className="justify-start text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-9 rounded-lg w-full"
+                      className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-full ${
+                        isResponded
+                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                          : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
+                      }`}
                       onClick={() =>
+                        !isResponded &&
                         onPillClick?.(choice, pillAction.tool_use_id)
                       }
-                      disabled={isQuickActionsDisabled}>
+                      disabled={isQuickActionsDisabled || isResponded}>
                       {choice}
                     </Button>
                   ))}
@@ -170,7 +177,9 @@ export function MessageBubble({
             multiData.choices.length > 0 && (
               <div className="mt-3">
                 <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
-                  Select multiple options:
+                  {isResponded
+                    ? "Options selected:"
+                    : "Select multiple options:"}
                 </div>
                 <MultiSelectGroup
                   options={multiData.choices.map((choice, index) => ({
@@ -179,20 +188,28 @@ export function MessageBubble({
                     value: choice,
                   }))}
                   selectedValues={selectedMultiValues}
-                  onSelectionChange={handleMultiSelect}
+                  onSelectionChange={
+                    isResponded
+                      ? () => {
+                          console.log("already responded");
+                        }
+                      : handleMultiSelect
+                  }
                   additionalOption={multiData.additionalOption}
                   required={false}
                 />
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="mt-2 text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-8 rounded-lg"
-                  onClick={handleMultiSubmit}
-                  disabled={
-                    isQuickActionsDisabled || selectedMultiValues.length === 0
-                  }>
-                  Confirm
-                </Button>
+                {!isResponded && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="mt-2 text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-8 rounded-lg"
+                    onClick={handleMultiSubmit}
+                    disabled={
+                      isQuickActionsDisabled || selectedMultiValues.length === 0
+                    }>
+                    Confirm
+                  </Button>
+                )}
               </div>
             )}
           {showActions && (
