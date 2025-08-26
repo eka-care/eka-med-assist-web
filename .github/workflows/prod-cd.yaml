@@ -30,12 +30,12 @@ jobs:
       - name: Install Submodule Dependencies
         run: |
               cd packages/ui/base
-              yarn install
+              yarn install --frozen-lockfile
               yarn build 
 
       - name: Build project
         run: | 
-              yarn install 
+              yarn install --frozen-lockfile
               yarn build
         
       - name: iam role for the github runner
