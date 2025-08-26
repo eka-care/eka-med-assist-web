@@ -1,4 +1,4 @@
 [submodule "packages/ui/base"]
 	path = packages/ui/base
-	url = git@github.com:eka-care/eka-web-design-components.git
-	branch = geethanjali/fix/build-compatability
+	url = https://github.com/eka-care/eka-web-design-components.git
+	branch = main
