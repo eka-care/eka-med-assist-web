@@ -813,7 +813,7 @@ export function ChatWidget({
               ) : (
                 <div className="text-orange-600 bg-orange-50">
                   <span> Connecting to WebSocket server...</span>
-                  <button
+                  {/* <button
                     onClick={() => {
                       if (wsService) {
                         wsService.reconnect("connection error retry");
@@ -821,7 +821,7 @@ export function ChatWidget({
                     }}
                     className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
                     Retry
-                  </button>
+                  </button> */}
                 </div>
               )}
             </div>
