@@ -113,6 +113,7 @@ export function useWebSocket(
             onMultiMessage({
               choices: message.data.choices,
               tool_use_id: message.data.tool_use_id,
+              additionalOption: message.data.additional_option,
             });
           }
         }
