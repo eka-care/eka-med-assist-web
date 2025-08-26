@@ -27,11 +27,16 @@ jobs:
         id: get_version
         run: echo VERSION=$(echo $GITHUB_REF | cut -d / -f 3) >> $GITHUB_OUTPUT
         
-      - name: Install dependencies
-        run: yarn install
+      - name: Install Submodule Dependencies
+        run: |
+              cd packages/ui/base
+              yarn install
+              yarn build 
 
       - name: Build project
-        run: yarn build
+        run: | 
+              yarn install 
+              yarn build
         
       - name: iam role for the github runner
         uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
