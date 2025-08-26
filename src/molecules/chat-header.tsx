@@ -94,30 +94,30 @@ export function ChatHeader({
                   }}>
                   Start New Session
                 </button>
-                <button
+                {/* <button
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => {
                     console.log("Clear Session clicked");
                     setIsDropdownOpen(false);
                   }}>
                   Clear Session
-                </button>
-                <button
+                </button> */}
+                {/* <button
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => {
                     console.log("Export Chat clicked");
                     setIsDropdownOpen(false);
                   }}>
                   Export Chat
-                </button>
-                <button
+                </button> */}
+                {/* <button
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
                   onClick={() => {
                     console.log("Settings clicked");
                     setIsDropdownOpen(false);
                   }}>
                   Settings
-                </button>
+                </button> */}
               </div>
             </div>
           )}
