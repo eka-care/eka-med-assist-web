@@ -11,6 +11,7 @@ import type {
   ConnectionStateType,
   EndOfStreamMessage,
   ErrorMessage,
+  PingRequest,
   PongMessage,
   ServerMessage,
   StreamResponseMessage,
@@ -19,6 +20,12 @@ import type {
 } from "../types/socket";
 import { ConnectionState, ContentType, SocketEvent } from "../types/socket";
 import type { AudioData } from "./audioService";
+import {
+  zipFiles,
+  shouldZipFiles,
+  getUploadFileName,
+  blobToFile,
+} from "@/utils/fileUtils";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 const BASE_URL = `${config.WEBSOCKET_URL}/ws/med-assist/session`;
@@ -35,6 +42,7 @@ export class WebSocketService {
   private connectionTimeout: TimeoutHandle | null = null;
   private currentStreamMessage: ChatMessage | null = null;
   private pendingFiles: File[] = [];
+  private pendingMessage: string | null = null;
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -382,7 +390,7 @@ export class WebSocketService {
       ev: SocketEvent.CHAT,
       ct: ContentType.TEXT,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
       data: { text: message },
     };
 
@@ -408,7 +416,7 @@ export class WebSocketService {
       ev: SocketEvent.CHAT,
       ct: ContentType.FILE,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
     };
 
     this.sendMessage(message);
@@ -422,22 +430,31 @@ export class WebSocketService {
       throw new Error("WebSocket is not connected");
     }
 
+    const text = this.pendingMessage;
     const message: ChatRequest = {
       ev: SocketEvent.CHAT,
       ct: ContentType.FILE,
       ts: Date.now(),
-      id: Date.now(),
-      data: { url: s3Url },
+      _id: Date.now().toString(),
+      data: {
+        url: s3Url,
+        ...(text && text.trim() && { text: text.trim() }),
+      },
     };
 
     this.sendMessage(message);
+    this.clearPendingFiles();
   }
 
   /**
    * Set files for upload when presigned URL is received
    */
-  public setFilesForUpload(files: File[]): void {
+  public setFilesForUpload(files: File[], message?: string): void {
     this.pendingFiles = files;
+    if (message?.trim()) {
+      this.pendingMessage = message;
+    }
+
     console.log(`Set ${files.length} files for upload`);
   }
 
@@ -446,6 +463,7 @@ export class WebSocketService {
    */
   public clearPendingFiles(): void {
     this.pendingFiles = [];
+    this.pendingMessage = "";
     console.log("Cleared pending files");
   }
 
@@ -572,7 +590,7 @@ export class WebSocketService {
       ev: SocketEvent.CHAT,
       ct: ContentType.TEXT,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
       data: { text: originalUserMessage },
     };
 
@@ -590,30 +608,55 @@ export class WebSocketService {
         `Uploading ${this.pendingFiles.length} files to presigned URL ${presignedUrl}`
       );
 
-      for (const file of this.pendingFiles) {
+      let fileToUpload: File;
+      let contentType: string;
+
+      if (shouldZipFiles(this.pendingFiles)) {
+        // Zip multiple files into a single file
+        console.log("Multiple files detected, zipping before upload...");
+        const zipBlob = await zipFiles(this.pendingFiles);
+        const zipFileName = getUploadFileName(this.pendingFiles);
+        fileToUpload = blobToFile(zipBlob, zipFileName);
+        contentType = "application/zip";
+
         console.log(
-          `Uploading ${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB)`
+          `Zipped ${this.pendingFiles.length} files into ${zipFileName} (${(
+            fileToUpload.size /
+            1024 /
+            1024
+          ).toFixed(2)} MB)`
         );
-
-        const response = await fetch(presignedUrl, {
-          method: "PUT",
-          body: file,
-          headers: {
-            "Content-Type": file.type,
-          },
-        });
-
-        if (!response.ok) {
-          throw new Error(
-            `Failed to upload ${file.name}: ${response.status} ${response.statusText}`
-          );
-        }
-
-        console.log(`Successfully uploaded ${file.name}`, response);
+      } else {
+        // Single file, upload as is
+        fileToUpload = this.pendingFiles[0];
+        contentType = fileToUpload.type;
+        console.log(
+          `Uploading single file: ${fileToUpload.name} (${(
+            fileToUpload.size /
+            1024 /
+            1024
+          ).toFixed(2)} MB)`
+        );
       }
 
+      // Upload the file (either zipped or single)
+      const response = await fetch(presignedUrl, {
+        method: "PUT",
+        body: fileToUpload,
+        headers: {
+          "Content-Type": contentType,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to upload ${fileToUpload.name}: ${response.status} ${response.statusText}`
+        );
+      }
+
+      console.log(`Successfully uploaded ${fileToUpload.name}`, response);
       console.log(
-        "All files uploaded successfully, calling sendFileUploadComplete"
+        "File upload completed successfully, calling sendFileUploadComplete"
       );
 
       // Call sendFileUploadComplete with the presigned URL
@@ -635,7 +678,7 @@ export class WebSocketService {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
       data: { audio: "start", format: "audio/mp4" },
     };
     this.sendMessage(message);
@@ -653,7 +696,7 @@ export class WebSocketService {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
       data: {
         audio: audioData.audio, // Base64 encoded audio
         format: audioData.format, // MIME type
@@ -676,7 +719,7 @@ export class WebSocketService {
       ev: SocketEvent.STREAM,
       ct: ContentType.AUDIO,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
       data: {
         audio: audioData.audio, // Base64 encoded audio
         format: audioData.format, // MIME type
@@ -698,7 +741,7 @@ export class WebSocketService {
     const message: AudioEndOfStreamRequest = {
       ev: SocketEvent.END_OF_STREAM,
       ct: ContentType.AUDIO,
-      id: Date.now(),
+      _id: Date.now().toString(),
       ts: Date.now(),
     };
 
@@ -716,7 +759,7 @@ export class WebSocketService {
       ev: SocketEvent.CHAT,
       ct: ContentType.TEXT,
       ts: Date.now(),
-      id: Date.now(),
+      _id: Date.now().toString(),
       data: { text: pillMessage, tool_use_id: tool_use_id },
     };
     this.sendMessage(message);
@@ -727,9 +770,10 @@ export class WebSocketService {
    */
   public sendPing(): void {
     if (this.isConnected()) {
-      const message = {
+      const message: PingRequest = {
         ev: SocketEvent.PING,
         ts: Date.now(),
+        _id: Date.now().toString(),
       };
       this.sendMessage(message);
     }
