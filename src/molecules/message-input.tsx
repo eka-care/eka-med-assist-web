@@ -55,6 +55,7 @@ export function MessageInput({
   );
   const [isSending, setIsSending] = useState(false); // New state for send button loading
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const isConnectionEstablished = useSessionStore(
     (state) => state.isConnectionEstablished
@@ -71,11 +72,31 @@ export function MessageInput({
     reinitialize,
   } = useAudioService();
 
+  // Cleanup on unmount
+  useEffect(() => {
+    return () => {
+      if (intervalRef.current) {
+        clearInterval(intervalRef.current);
+      }
+      // The useAudioService hook manages its own cleanup
+    };
+  }, []);
+
   // Reset sending state when streaming starts or stops
   useEffect(() => {
     console.log("isStreaming", isStreaming);
     if (isStreaming || error) {
       setIsSending(false); // Reset sending state when streaming starts
+    }
+    if (!isStreaming && !disabled && isConnectionEstablished && messageInputRef.current) {
+      console.log("Attempting to focus input...");
+      // Small delay to ensure DOM is ready
+      const timer = setTimeout(() => {
+        console.log("Focusing input now");
+        messageInputRef.current?.focus();
+      }, 100);
+      
+      return () => clearTimeout(timer);
     }
   }, [isStreaming, error]);
 
@@ -448,17 +469,25 @@ export function MessageInput({
     console.log("start of useEffect file upload", uploadedFiles);
     // Send files if any
     if (uploadedFiles.length > 0) {
-      const totalFileSize =uploadedFiles.reduce((acc, file) => acc + file.size, 0);
+      // Check total size of all files (they will be zipped if multiple)
+      const totalFileSize = uploadedFiles.reduce(
+        (acc, file) => acc + file.size,
+        0
+      );
+
       if (totalFileSize > MAX_FILE_SIZE) {
         setError(
-          `File(s) too large. Maximum file size is ${formatFileSize(
+          `Total file size (${formatFileSize(
+            totalFileSize
+          )}) exceeds the ${formatFileSize(
             MAX_FILE_SIZE
-          )}.`
+          )} limit. Please select smaller files.`
         );
         setUploadedFiles([]);
         setIsSending(false);
         return;
       }
+
       setIsSending(true);
       const fileList = new DataTransfer();
       uploadedFiles.forEach((file) => fileList.items.add(file));
@@ -539,6 +568,7 @@ export function MessageInput({
         ) : (
           <div className="relative w-full">
             <Input
+              ref={messageInputRef}
               value={message}
               onChange={(e) => {
                 setMessage(e.target.value);
@@ -547,6 +577,7 @@ export function MessageInput({
               onKeyPress={handleKeyPress}
               // onFocus={onFocus}
               // onBlur={onBlur}
+              autoFocus={!disabled && isConnectionEstablished && !isStreaming}
               placeholder={
                 isStreaming
                   ? "Please wait for response..."
@@ -563,6 +594,11 @@ export function MessageInput({
         {/* File Preview */}
         {uploadedFiles.length > 0 && (
           <div className="absolute -top-8 left-0 right-0 flex flex-wrap gap-1">
+            {uploadedFiles.length > 1 && (
+              <div className="w-full text-xs text-[var(--color-primary)]/70 mb-1">
+                Multiple files will be zipped into a single file for upload
+              </div>
+            )}
             {uploadedFiles.map((file, index) => (
               <div
                 key={index}
