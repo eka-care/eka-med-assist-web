@@ -7,6 +7,7 @@ import {
 import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
 import { PillAction, QuickActions } from "./quick-actions";
 import { useState, useEffect } from "react";
+import ReactMarkdown from "react-markdown";
 
 interface MessageBubbleProps {
   message: string;
@@ -114,11 +115,15 @@ export function MessageBubble({
                 : "text-[var(--color-black-800)] bg-blue-200"
             }`}>
             {/* Only show message content if it's not empty or if it's a bot message */}
-            {(message || isBot) && message}
+            {(message || isBot) && (
+              <div className="markdown-content">
+                <ReactMarkdown>{message}</ReactMarkdown>
+              </div>
+            )}
             {isBot && progressMessage && (
-              <span className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
-                {progressMessage}
-              </span>
+              <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+                <ReactMarkdown>{progressMessage}</ReactMarkdown>
+              </div>
             )}
             {isBot && isStreaming && !progressMessage && (
               <span className="animate-pulse">...</span>
