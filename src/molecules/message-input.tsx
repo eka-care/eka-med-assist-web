@@ -84,7 +84,7 @@ export function MessageInput({
 
   // Reset sending state when streaming starts or stops
   useEffect(() => {
-    console.log("isStreaming", isStreaming);
+    console.log("isStreaming from input", isStreaming);
     if (isStreaming || error) {
       setIsSending(false); // Reset sending state when streaming starts
     }
@@ -384,7 +384,7 @@ export function MessageInput({
         console.error("Error in handleSend:", error);
         setError("Failed to send message. Please try again.");
       } finally {
-        setIsSending(false);
+        // setIsSending(false);
         // Note: We don't set isSending to false here because:
         // 1. For text messages: The button will be re-enabled when streaming starts
         // 2. For audio/files: The button is re-enabled in sendRecording
