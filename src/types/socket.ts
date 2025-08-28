@@ -188,6 +188,30 @@ export enum ConnectionState {
   ERROR = "error",
 }
 
+export enum SOCKET_ERROR_CODES {
+  SESSION_INACTIVE = "session_not_found",
+  SESSION_EXPIRED = "session_expired",
+  INVALID_EVENT = "invalid_event",
+  INVALID_CONTENT_TYPE = "invalid_content",
+  PARSING_ERROR = "parsing", // for all LLM related error
+  FILE_UPLOAD_INPROGRESS = "file_upload_inprogress",
+  TIMEOUT = "timeout",
+  SERVER_ERROR = "server_error",
+}
+
+export enum ERROR_MESSAGES {
+  SESSION_INACTIVE = "We couldn’t find your session. Please try again.",
+  SESSION_EXPIRED = "Your session has expired. Please log in again.",
+  INVALID_EVENT = "Something went wrong with the request. Please retry.",
+  INVALID_CONTENT_TYPE = "Unsupported file or data format.",
+  PARSING_ERROR = "We had trouble processing your request. Please try again.",
+  FILE_UPLOAD_INPROGRESS = "A file is still uploading. Please wait.",
+  TIMEOUT = "The request took too long. Please try again.",
+  SERVER_ERROR = "Something went wrong on our side. Please try again later.",
+  OFFLINE = "You’re offline. Please check your internet connection.",
+  CONNECTION_LOST = "Connection lost. Trying to reconnect...",
+}
+
 export type ConnectionStateType =
   (typeof ConnectionState)[keyof typeof ConnectionState];
 

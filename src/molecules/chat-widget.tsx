@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
 import useSessionStore from "@/stores/medAssistStore";
-import type { WebSocketConfig } from "@/types/socket";
+import { ERROR_MESSAGES, type WebSocketConfig } from "@/types/socket";
 import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { Card } from "@ui/index";
 import { ChatHeader } from "./chat-header";
@@ -33,6 +33,7 @@ interface ChatWidgetProps {
   isExpanded?: boolean;
   isMobile?: boolean;
   isLoading?: boolean;
+  isOnline?: boolean;
 }
 
 export function ChatWidget({
@@ -44,6 +45,7 @@ export function ChatWidget({
   isExpanded = false,
   isMobile = false,
   isLoading = false,
+  isOnline = true,
 }: ChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -293,7 +295,15 @@ export function ChatWidget({
       console.log("Cannot send voice while streaming");
       return;
     }
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
 
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     // Clear any errors when starting audio streaming
     clearError();
 
@@ -315,6 +325,15 @@ export function ChatWidget({
       return;
     }
 
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
+
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     // Clear any errors when sending a message
     clearError();
 
@@ -350,14 +369,8 @@ export function ChatWidget({
     setMessages((prev) => [...prev, newMessage]);
 
     try {
-      if (isConnectionEstablished) {
-        await sendChatMessage(content);
-        console.log("Message sent successfully");
-      } else {
-        console.log("WebSocket not connected, cannot send message");
-        setError("Connection lost. Please wait for reconnection.");
-        throw new Error("WebSocket not connected");
-      }
+      await sendChatMessage(content);
+      console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
       setError("Failed to send message. Please try again.");
@@ -368,7 +381,15 @@ export function ChatWidget({
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
     console.log("Final audio stream received:", audioData);
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
 
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     // Mark the bot message as responded if it has pills or multiselect
     setMessages((prev) => {
       const updatedMessages = [...prev];
@@ -399,17 +420,11 @@ export function ChatWidget({
     setMessages((prev) => [...prev, newMessage]);
 
     try {
-      if (isConnectionEstablished) {
-        // Send the full audio data
-        await sendAudioData(audioData);
-        // Send end of stream signal
-        await sendAudioEndOfStream();
-        console.log("Audio sent successfully");
-      } else {
-        console.log("WebSocket not connected, cannot stream audio");
-        setError("Connection lost. Please wait for reconnection.");
-        throw new Error("WebSocket not connected");
-      }
+      // Send the full audio data
+      await sendAudioData(audioData);
+      // Send end of stream signal
+      await sendAudioEndOfStream();
+      console.log("Audio sent successfully");
     } catch (error) {
       console.error("Failed to send audio:", error);
       setError("Failed to send audio message. Please try again.");
@@ -424,6 +439,15 @@ export function ChatWidget({
       return;
     }
 
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
+
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     // Clear any errors when uploading files
     clearError();
 
@@ -450,9 +474,11 @@ export function ChatWidget({
 
     const newMessage: Message = {
       id: Date.now().toString(),
-      content: message || `📎 ${
-        fileArray.length > 1 ? `${fileArray.length} files` : "File"
-      } uploaded`, // Cleaner text
+      content:
+        message ||
+        `📎 ${
+          fileArray.length > 1 ? `${fileArray.length} files` : "File"
+        } uploaded`, // Cleaner text
       isBot: false,
       files: fileArray,
     };
@@ -460,17 +486,10 @@ export function ChatWidget({
     setMessages((prev) => [...prev, newMessage]);
 
     try {
-      // Send file upload request via WebSocket
-      if (isConnectionEstablished) {
-        // Set files for upload when presigned URL is received
-        setFilesForUpload(fileArray, message);
-        await sendFileUploadRequest();
-        console.log("File upload request sent successfully");
-      } else {
-        console.log("WebSocket not connected, cannot upload file");
-        setError("Connection lost. Please wait for reconnection.");
-        throw new Error("WebSocket not connected");
-      }
+      // Set files for upload when presigned URL is received
+      setFilesForUpload(fileArray, message);
+      await sendFileUploadRequest();
+      console.log("File upload request sent successfully");
     } catch (error) {
       console.error("Failed to upload file:", error);
       setError("Failed to upload file. Please try again.");
@@ -485,6 +504,15 @@ export function ChatWidget({
       return;
     }
 
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
+
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     // Clear any errors when using quick actions
     clearError();
 
@@ -530,6 +558,15 @@ export function ChatWidget({
 
   const handleRegenerate = async (messageId: string) => {
     // Find the message to regenerate
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
+
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     const messageIndex = messages.findIndex((msg) => msg.id === messageId);
     if (messageIndex === -1) {
       console.error("Message not found for regeneration");
@@ -589,36 +626,18 @@ export function ChatWidget({
 
     try {
       // Send regenerate request
-      if (isConnectionEstablished) {
-        await regenerateResponse(userMessage.originalUserMessage);
-        // For now, just clear the regenerating state since regenerateResponse is not available
-        console.log(
-          "Regenerate requested for:",
-          userMessage.originalUserMessage
-        );
-        setMessages((prev) => {
-          const updatedMessages = [...prev];
-          updatedMessages[messageIndex] = {
-            ...updatedMessages[messageIndex],
-            isRegenerating: false,
-            content: "Regeneration not implemented in V2 yet",
-          };
-          return updatedMessages;
-        });
-      } else {
-        console.log("WebSocket not connected, cannot regenerate");
-        setError("Connection lost. Please wait for reconnection.");
-        // Reset the message if connection failed
-        setMessages((prev) => {
-          const updatedMessages = [...prev];
-          updatedMessages[messageIndex] = {
-            ...updatedMessages[messageIndex],
-            isRegenerating: false,
-            content: message.content, // Restore original content
-          };
-          return updatedMessages;
-        });
-      }
+      await regenerateResponse(userMessage.originalUserMessage);
+      // For now, just clear the regenerating state since regenerateResponse is not available
+      console.log("Regenerate requested for:", userMessage.originalUserMessage);
+      setMessages((prev) => {
+        const updatedMessages = [...prev];
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          isRegenerating: false,
+          content: "Regeneration not implemented in V2 yet",
+        };
+        return updatedMessages;
+      });
     } catch (error) {
       console.error("Failed to regenerate:", error);
       setError("Failed to regenerate response. Please try again.");
@@ -644,6 +663,15 @@ export function ChatWidget({
       return;
     }
 
+    if (!isOnline) {
+      setError(ERROR_MESSAGES.OFFLINE);
+      return;
+    }
+
+    if (!isConnectionEstablished) {
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return;
+    }
     // Clear any errors when using pills
     clearError();
 
@@ -729,7 +757,7 @@ export function ChatWidget({
         isExpanded={isExpanded}
         isMobile={isMobile}
         onStartSession={handleStartNewSession}
-        isConnected={isConnectionEstablished}
+        isConnected={isConnectionEstablished && isOnline}
       />
 
       {/* Loading State */}
@@ -771,7 +799,7 @@ export function ChatWidget({
                   handleQuickAction={handleQuickAction}
                   quickActions={quickActions}
                   isQuickActionsDisabled={
-                    !isConnectionEstablished || isStreaming
+                    !isConnectionEstablished || isStreaming || !isOnline
                   }
                   isStreaming={
                     message.isBot &&
@@ -881,7 +909,7 @@ export function ChatWidget({
             onFinalAudioStream={handleFinalAudioStream}
             onAudioStream={handleAudioStream}
             onFileUpload={handleFileUpload}
-            disabled={!isConnectionEstablished}
+            disabled={!isConnectionEstablished || !isOnline}
             setError={setError}
           />
         </div>

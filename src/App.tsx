@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import startSession from "./api/post-start-session";
 import { ChatWidget } from "./molecules/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
+import { useNetworkStatus } from "./custom-hooks/useNetworkStatus";
+import { Toaster, toast } from "@ui/index";
 
 interface AppProps {
   config?: {
@@ -17,6 +19,7 @@ function App({ config }: AppProps = {}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const { isOnline } = useNetworkStatus();
   const setSessionId = useSessionStore((state) => state.setSessionId);
   const setSessionToken = useSessionStore((state) => state.setSessionToken);
 
@@ -35,6 +38,17 @@ function App({ config }: AppProps = {}) {
   }, []);
 
   const handleOpenWidget = async (newSession: boolean = false) => {
+    // Check if user is online before proceeding
+    if (!isOnline) {
+      console.warn("Cannot start session: user is offline");
+      // Show toast notification for offline state
+      toast.error("Cannot start session", {
+        description: "You are currently offline. Please check your internet connection.",
+        duration: 4000,
+      });
+      return;
+    }
+
     // Check if session already exists
     const currentSessionId = useSessionStore.getState().sessionId;
     const currentSessionToken = useSessionStore.getState().sessionToken;
@@ -131,10 +145,14 @@ function App({ config }: AppProps = {}) {
               isMobile={isMobile}
               onStartSession={handleOpenWidget}
               isLoading={isLoading}
+              isOnline={isOnline}
             />
           )}
         </div>
       </>
+
+      {/* Toast Notifications */}
+      <Toaster position="top-right" />
     </div>
   );
 }

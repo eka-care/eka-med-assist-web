@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef } from "react";
 import useMedAssistStore from "../stores/medAssistStore";
 import {
   ContentType,
@@ -6,6 +6,9 @@ import {
   type WebSocketConfig,
   type EndOfStreamMessage,
   type StreamResponseMessage,
+  ErrorMessage,
+  ERROR_MESSAGES,
+  SOCKET_ERROR_CODES,
 } from "../types/socket";
 import {
   WEBSOCKET_CUSTOM_EVENTS,
@@ -24,7 +27,7 @@ export function useWebSocket(
   //   onAudioData?: (audioData: AudioData) => void
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
-  const [error, setError] = useState<string | null>(null);
+  const setError = useMedAssistStore((state) => state.setError);
   // const [isStreaming, setIsStreaming] = useState(false);
   const isAudioStreaming = useRef(false);
   // const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -165,26 +168,38 @@ export function useWebSocket(
       }
     );
 
-    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: Error) => {
+    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: ErrorMessage) => {
       console.error("WebSocket error:", error);
 
-      // Check if this is a timeout error
-      const isTimeoutError = error.message.includes("Request timed out");
-
-      if (isTimeoutError) {
-        // Handle timeout error specifically
-        setError("Request timed out. Please try again.");
-        // Update the store to indicate this is a timeout error
-        useMedAssistStore.getState().setTimeoutError(true);
-        useMedAssistStore
-          .getState()
-          .setError("Request timed out. Please try again.");
-      } else {
-        // Handle other errors
-        setError(error.message);
-        useMedAssistStore.getState().setError(error.message);
-        useMedAssistStore.getState().setTimeoutError(false);
+      switch (error.code) {
+        case SOCKET_ERROR_CODES.TIMEOUT:
+          setError(ERROR_MESSAGES.TIMEOUT);
+          break;
+        case SOCKET_ERROR_CODES.SESSION_INACTIVE:
+          setError(ERROR_MESSAGES.SESSION_INACTIVE);
+          break;
+        case SOCKET_ERROR_CODES.SESSION_EXPIRED:
+          setError(ERROR_MESSAGES.SESSION_EXPIRED);
+          break;
+        case SOCKET_ERROR_CODES.INVALID_EVENT:
+          setError(ERROR_MESSAGES.INVALID_EVENT);
+          break;
+        case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE:
+          setError(ERROR_MESSAGES.INVALID_CONTENT_TYPE);
+          break;
+        case SOCKET_ERROR_CODES.PARSING_ERROR:
+          setError(ERROR_MESSAGES.PARSING_ERROR);
+          break;
+        case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS:
+          setError(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS);
+          break;
+        case SOCKET_ERROR_CODES.SERVER_ERROR:
+          setError(ERROR_MESSAGES.SERVER_ERROR);
+          break;
+        default:
+          setError(error.msg);
       }
+      // Check if this is a timeout error
     });
 
     // Handle progress messages
@@ -229,7 +244,7 @@ export function useWebSocket(
       })
       .catch((error) => {
         console.error("Failed to connect to WebSocket:", error);
-        setError(error.message);
+        setError(ERROR_MESSAGES.CONNECTION_LOST);
         setConnectionEstablished(false);
       });
 
@@ -256,7 +271,7 @@ export function useWebSocket(
       }
     } else {
       console.error("WebSocket not connected");
-      setError("WebSocket not connected");
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
     }
   };
 
@@ -296,7 +311,7 @@ export function useWebSocket(
       }
     } else {
       console.error("WebSocket not connected");
-      setError("WebSocket not connected");
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
     }
   };
 
@@ -314,7 +329,7 @@ export function useWebSocket(
       }
     } else {
       console.error("WebSocket not connected");
-      setError("WebSocket not connected");
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
     }
   };
 
@@ -399,7 +414,6 @@ export function useWebSocket(
 
   return {
     // State
-    error,
     isAudioStreaming: isAudioStreaming.current,
     isConnected: isConnected(),
     connectionState: getConnectionState(),
