@@ -5,8 +5,8 @@
     var defaultConfig = {
         theme: "doctor-light",
         position: "bottom-right",
-        scriptUrl: "https://med-assist-agent.eka.care/apollo/widget-761717.js", // Relative to current directory
-        cssUrl: "https://med-assist-agent.eka.care/apollo/widget-15751.css", // CSS bundle in assets folder
+        scriptUrl: "https://med-assist-agent.eka.care/apollo/widget-100001.js", // Relative to current directory
+        cssUrl: "https://med-assist-agent.eka.care/apollo/widget-100001.css", // CSS bundle in assets folder
     };
 
     // Create isolated CSS
