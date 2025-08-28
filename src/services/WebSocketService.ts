@@ -18,7 +18,7 @@ import type {
   SyncMessage,
   WebSocketConfig,
 } from "../types/socket";
-import { ConnectionState, ContentType, SocketEvent } from "../types/socket";
+import { ConnectionState, ContentType, ERROR_MESSAGES, SOCKET_ERROR_CODES, SocketEvent } from "../types/socket";
 import type { AudioData } from "./audioService";
 import {
   zipFiles,
@@ -337,9 +337,38 @@ export class WebSocketService {
    */
   private handleErrorMessage(message: ErrorMessage): void {
     console.error("Error message received:", message);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(message.msg));
+    switch (message.code) {
+      case SOCKET_ERROR_CODES.TIMEOUT:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.TIMEOUT));
+        break;
+      case SOCKET_ERROR_CODES.SESSION_INACTIVE:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.SESSION_INACTIVE));
+        break;
+      case SOCKET_ERROR_CODES.SESSION_EXPIRED:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.SESSION_EXPIRED));
+        break;
+      case SOCKET_ERROR_CODES.INVALID_EVENT:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.INVALID_EVENT));
+        break;
+      case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.INVALID_CONTENT_TYPE));
+        break;
+      case SOCKET_ERROR_CODES.PARSING_ERROR:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.PARSING_ERROR));
+        break;
+      case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS));
+        break;
+      case SOCKET_ERROR_CODES.SERVER_ERROR:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.SERVER_ERROR));
+        break;
+      default:
+        console.error("Unknown error code:", message.code);
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(ERROR_MESSAGES.SERVER_ERROR));
+    }
   }
 
+  
   /**
    * Handle connection close
    */

@@ -6,9 +6,7 @@ import {
   type WebSocketConfig,
   type EndOfStreamMessage,
   type StreamResponseMessage,
-  ErrorMessage,
   ERROR_MESSAGES,
-  SOCKET_ERROR_CODES,
 } from "../types/socket";
 import {
   WEBSOCKET_CUSTOM_EVENTS,
@@ -168,38 +166,9 @@ export function useWebSocket(
       }
     );
 
-    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: ErrorMessage) => {
+    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: Error) => {
       console.error("WebSocket error:", error);
-
-      switch (error.code) {
-        case SOCKET_ERROR_CODES.TIMEOUT:
-          setError(ERROR_MESSAGES.TIMEOUT);
-          break;
-        case SOCKET_ERROR_CODES.SESSION_INACTIVE:
-          setError(ERROR_MESSAGES.SESSION_INACTIVE);
-          break;
-        case SOCKET_ERROR_CODES.SESSION_EXPIRED:
-          setError(ERROR_MESSAGES.SESSION_EXPIRED);
-          break;
-        case SOCKET_ERROR_CODES.INVALID_EVENT:
-          setError(ERROR_MESSAGES.INVALID_EVENT);
-          break;
-        case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE:
-          setError(ERROR_MESSAGES.INVALID_CONTENT_TYPE);
-          break;
-        case SOCKET_ERROR_CODES.PARSING_ERROR:
-          setError(ERROR_MESSAGES.PARSING_ERROR);
-          break;
-        case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS:
-          setError(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS);
-          break;
-        case SOCKET_ERROR_CODES.SERVER_ERROR:
-          setError(ERROR_MESSAGES.SERVER_ERROR);
-          break;
-        default:
-          setError(error.msg);
-      }
-      // Check if this is a timeout error
+      setError(error.message);//Already handled in WebSocketService
     });
 
     // Handle progress messages
