@@ -98,7 +98,7 @@ export function MessageBubble({
     }
   };
   return (
-    <div className="px-4 py-3">
+    <div className="px-4 py-2">
       <div
         className={`flex gap-2 items-start justify-center ${
           !isBot ? "justify-end" : ""
@@ -111,17 +111,18 @@ export function MessageBubble({
 
         <div className={`${isBot ? "flex-1" : "max-w-[80%]"}`}>
           <div
-            className={`text-sm leading-relaxed px-3 py-2 rounded-lg ${
+            className={`text-sm leading-relaxed px-3 rounded-lg ${
               isBot
                 ? "text-[var(--color-foreground)] bg-[var(--color-card)]"
                 : "text-[var(--color-black-800)] bg-blue-200"
             }`}>
             {/* Only show message content if it's not empty or if it's a bot message */}
-            {(message || isBot) && (
+            {message && isBot && (
               <div className="markdown-content">
                 <ReactMarkdown>{message}</ReactMarkdown>
               </div>
             )}
+            {message && !isBot && <div className="text-sm p-4">{message}</div>}
             {isBot && progressMessage && (
               <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
                 <ReactMarkdown>{progressMessage}</ReactMarkdown>
@@ -157,17 +158,17 @@ export function MessageBubble({
             pillAction &&
             pillAction.tool_use_id &&
             pillAction.choices.length > 0 && (
-              <div className="mt-3">
+              <div>
                 <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
                   {isResponded ? "Option selected:" : "Select an option:"}
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-row gap-2 flex-wrap">
                   {pillAction.choices.map((choice, index) => (
                     <Button
                       key={`${pillAction.tool_use_id}-${index}`}
                       variant="outline"
                       size="sm"
-                      className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-full ${
+                      className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit ${
                         isResponded
                           ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                           : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"

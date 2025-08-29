@@ -5,6 +5,7 @@ import { useAudioService } from "@/custom-hooks/useAudioService";
 import formatTime from "@/utils/formatTime";
 import useSessionStore from "@/stores/medAssistStore";
 import type { AudioData } from "@/services/audioService";
+import { ErrorMessageUI } from "@/types/socket";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -28,7 +29,7 @@ interface MessageInputProps {
   onAudioStream?: (audioData: AudioData) => void;
   placeholder?: string;
   disabled?: boolean;
-  setError: (error: string) => void;
+  setError: (error: ErrorMessageUI) => void;
 }
 
 export function MessageInput({
@@ -84,7 +85,7 @@ export function MessageInput({
 
   // Reset sending state when streaming starts or stops
   useEffect(() => {
-    console.log("isStreaming", isStreaming);
+    console.log("isStreaming from input", isStreaming);
     if (isStreaming || error) {
       setIsSending(false); // Reset sending state when streaming starts
     }
@@ -111,7 +112,6 @@ export function MessageInput({
       setIsListening(false);
       setShowEndButton(false);
       setAudioError(audioServiceError.message);
-      setError(audioServiceError.message);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
       }
@@ -120,6 +120,8 @@ export function MessageInput({
 
   // Handle audio reinitialization when widget reopens
   useEffect(() => {
+    console.log("hi");
+
     // Clear audio errors when widget reopens
     if (!disabled && !isStreaming) {
       setAudioError(null);
@@ -159,19 +161,19 @@ export function MessageInput({
           const errorMsg =
             "Microphone access is blocked. You'll need to manually enable it in your browser settings.";
           console.log("Setting error:", errorMsg);
-          setError(errorMsg);
+          setError({ title: "Microphone access is blocked.", description:"Enable it in your browser settings." });
         } else {
           const errorMsg =
             "Microphone access denied. Please allow microphone permissions when prompted.";
           console.log("Setting error:", errorMsg);
-          setError(errorMsg);
+          setError({ title: "Microphone access is denied.", description:" Please allow microphone permissions when prompted." });
         }
       } else {
         console.error("Error checking microphone permission:", error);
         const errorMsg =
           "Unable to access microphone. Please check your device and try again.";
         console.log("Setting error:", errorMsg);
-        setError(errorMsg);
+        setError({ title: "Unable to access microphone.", description:" Please check your device and try again." });
       }
     }
   };
@@ -197,12 +199,13 @@ export function MessageInput({
   //   return message.trim();
   // }, [message]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)
+  console.log("error", error);
   const isInputDisabled =
     !isConnectionEstablished ||
     disabled ||
     isStreaming ||
     isSending ||
-    (!!error && !(error.length > 0) && isConnectionEstablished); //enable if a valid error comes
+    (!!error && !error.title.length && isConnectionEstablished); //enable if a valid error comes
 
   // Start recording with AudioService
   const startRecording = async () => {
@@ -303,7 +306,7 @@ export function MessageInput({
       }
     } catch (error) {
       console.error("Error sending recording:", error);
-      setError("Failed to send audio message. Please try again.");
+      setError({ title: "Failed to send audio message. Please try again." });
       // Fallback: create empty audio data
       const emptyAudioData: AudioData = {
         audio: "",
@@ -316,7 +319,6 @@ export function MessageInput({
       console.log(
         "finally called in sendRecording and re-enabling send button"
       );
-      //setIsSending(false); // Re-enable send button
     }
   };
 
@@ -338,11 +340,6 @@ export function MessageInput({
 
         // Send files if any
         if (uploadedFiles.length > 0) {
-          // const fileList = new DataTransfer();
-          // uploadedFiles.forEach((file) => fileList.items.add(file));
-          // onFileUpload(fileList.files, message.trim());
-
-          //////////////////
           //     // Check total size of all files (they will be zipped if multiple)
           const totalFileSize = uploadedFiles.reduce(
             (acc, file) => acc + file.size,
@@ -350,15 +347,15 @@ export function MessageInput({
           );
 
           if (totalFileSize > MAX_FILE_SIZE) {
-            setError(
-              `Total file size (${formatFileSize(
+            setError({
+              title: `Total file size (${formatFileSize(
                 totalFileSize
               )}) exceeds the ${formatFileSize(
                 MAX_FILE_SIZE
-              )} limit. Please select smaller files.`
-            );
+              )} limit. Please select smaller files.`,
+            });
             setUploadedFiles([]);
-            setIsSending(false);
+            // setIsSending(false);
             return;
           }
 
@@ -366,7 +363,7 @@ export function MessageInput({
           uploadedFiles.forEach((file) => fileList.items.add(file));
           onFileUpload(fileList.files, message.trim());
           setUploadedFiles([]);
-          setIsSending(false);
+          // setIsSending(false);
         }
 
         // Send audio if any
@@ -382,9 +379,9 @@ export function MessageInput({
         setIsListening(false);
       } catch (error) {
         console.error("Error in handleSend:", error);
-        setError("Failed to send message. Please try again.");
+        setError({ title: "Failed to send message. Please try again." });
       } finally {
-        setIsSending(false);
+        // setIsSending(false);
         // Note: We don't set isSending to false here because:
         // 1. For text messages: The button will be re-enabled when streaming starts
         // 2. For audio/files: The button is re-enabled in sendRecording
@@ -470,14 +467,16 @@ export function MessageInput({
               setIsListening(true);
               await startRecording();
             } else {
-              setError("Failed to initialize audio service. Please try again.");
+              setError({
+                title: "Failed to initialize audio service. Please try again.",
+              });
             }
           } catch (reinitError) {
             console.error("Failed to reinitialize AudioService:", reinitError);
-            setError("Audio service unavailable. Please try again.");
+            setError({ title: "Audio service unavailable. Please try again." });
           }
         } else {
-          setError("Failed to start recording. Please try again.");
+          setError({ title: "Failed to start recording. Please try again." });
         }
       }
     } else if (isRecording) {
@@ -498,7 +497,6 @@ export function MessageInput({
     }
   };
 
-
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -510,7 +508,7 @@ export function MessageInput({
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-4 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4">
+    <div className="flex items-center gap-2 px-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4">
       <input
         ref={fileInputRef}
         type="file"
@@ -587,7 +585,7 @@ export function MessageInput({
                   : placeholder
               }
               disabled={isInputDisabled}
-              className="border-0 shadow-none focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm"
+              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm"
             />
           </div>
         )}

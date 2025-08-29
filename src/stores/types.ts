@@ -1,3 +1,5 @@
+import { ErrorMessageUI } from "@/types/socket";
+
 export type TMedAssistStore = {
   sessionId: string;
   setSessionId: (sessionId: string) => void;
@@ -11,9 +13,15 @@ export type TMedAssistStore = {
   isStreaming: boolean;
   setIsStreaming: (streaming: boolean) => void;
 
+  startNewConnection: boolean;
+  setStartNewConnection: (startNewConnection: boolean) => void;
+
+  showRetryButton: boolean;
+  setShowRetryButton: (showRetry: boolean) => void;
+
   // Error handling
-  error: string | null;
-  setError: (error: string | null) => void;
+  error: ErrorMessageUI | null;
+  setError: (error: ErrorMessageUI| null) => void;
   clearError: () => void;
   isTimeoutError: boolean;
   setTimeoutError: (isTimeout: boolean) => void;

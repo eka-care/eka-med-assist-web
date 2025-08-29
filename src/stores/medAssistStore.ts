@@ -9,6 +9,8 @@ const storeInitialState = {
   isStreaming: false,
   error: null,
   isTimeoutError: false,
+  startNewConnection: false,
+  showRetryButton: false,
 };
 
 const useMedAssistStore = create<TMedAssistStore>()(
@@ -27,10 +29,24 @@ const useMedAssistStore = create<TMedAssistStore>()(
       isStreaming: false,
       setIsStreaming: (streaming) => set({ isStreaming: streaming }),
 
+      startNewConnection: false,
+      setStartNewConnection: (startNewConnection) =>
+        set({ startNewConnection }),
+
       // Error handling
       error: null,
-      setError: (error: string | null) => set({ error }),
-      clearError: () => set({ error: null, isTimeoutError: false }),
+      setError: (error) => set({ error: error }),
+      clearError: () =>
+        set({
+          error: null,
+          isTimeoutError: false,
+          showRetryButton: false,
+          startNewConnection: false,
+        }),
+
+      showRetryButton: false,
+      setShowRetryButton: (showRetry) => set({ showRetryButton: showRetry }),
+
       isTimeoutError: false,
       setTimeoutError: (isTimeout: boolean) =>
         set({ isTimeoutError: isTimeout }),

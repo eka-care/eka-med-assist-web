@@ -1,5 +1,8 @@
 import { config } from "@/configs/constants";
-import { WEBSOCKET_SERVER_EVENTS } from "@/configs/enums";
+import {
+  WEBSOCKET_CUSTOM_EVENTS,
+  WEBSOCKET_SERVER_EVENTS,
+} from "@/configs/enums";
 import type {
   AudioEndOfStreamRequest,
   AudioStreamRequest,
@@ -18,7 +21,13 @@ import type {
   SyncMessage,
   WebSocketConfig,
 } from "../types/socket";
-import { ConnectionState, ContentType, SocketEvent } from "../types/socket";
+import {
+  ConnectionState,
+  ContentType,
+  ERROR_MESSAGES,
+  SOCKET_ERROR_CODES,
+  SocketEvent,
+} from "../types/socket";
 import type { AudioData } from "./audioService";
 import {
   zipFiles,
@@ -26,6 +35,7 @@ import {
   getUploadFileName,
   blobToFile,
 } from "@/utils/fileUtils";
+import { getSessionDetails } from "@/api/get-session-details";
 
 type TimeoutHandle = ReturnType<typeof setTimeout>;
 const BASE_URL = `${config.WEBSOCKET_URL}/ws/med-assist/session`;
@@ -34,7 +44,9 @@ export class WebSocketService {
   public config: WebSocketConfig;
   private connectionState: ConnectionStateType = ConnectionState.DISCONNECTED;
   private reconnectAttempts: number = 0;
-  private maxReconnectAttempts: number = 5;
+  private maxConnectionAttempts: number = 5;
+  private maxReconnectAttempts: number = 2;
+  private connectionAttempts: number = 0;
   private reconnectDelay: number = 1000;
   private eventCallbacks: Map<string, Set<Function>> = new Map();
   private isReconnecting: boolean = false;
@@ -49,15 +61,17 @@ export class WebSocketService {
       sessionId: config.sessionId,
       auth: config.auth,
       options: {
-        reconnectAttempts: 5,
+        connectAttempts: 5,
+        reconnectAttempts: 2,
         reconnectDelay: 1000,
         pingInterval: 30000, // 30 seconds
-        connectionTimeout: 60000,
+        connectionTimeout: 5000,
         ...config.options,
       },
     };
-
-    this.maxReconnectAttempts = this.config.options?.reconnectAttempts || 5;
+    //TODO change config to connection attempts
+    this.maxReconnectAttempts = this.config.options?.reconnectAttempts || 2;
+    this.maxConnectionAttempts = this.config.options?.connectAttempts || 5;
     this.reconnectDelay = this.config.options?.reconnectDelay || 1000;
   }
 
@@ -71,7 +85,9 @@ export class WebSocketService {
         this.isReconnecting ||
         this.connectionState === ConnectionState.CONNECTING
       ) {
-        console.log("Connection already in progress, skipping");
+        console.log(
+          "Connection already in progress, skipping from connect function"
+        );
         return;
       }
 
@@ -80,19 +96,22 @@ export class WebSocketService {
         return;
       }
 
-      if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-        console.log("Reconnect attempts exceeded");
+      if (this.connectionAttempts >= this.maxConnectionAttempts) {
+        console.log("connection attempts exceeded", this.connectionAttempts);
         this.updateConnectionState(ConnectionState.ERROR);
         this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.ERROR,
-          new Error("Reconnect attempts exceeded")
+          WEBSOCKET_CUSTOM_EVENTS.MAX_CONNECTION_ATTEMPTS_EXCEEDED,
+          new Error("connection attempts exceeded")
         );
         return;
       }
 
       this.updateConnectionState(ConnectionState.CONNECTING);
       this.isReconnecting = true;
-      this.reconnectAttempts++;
+      if (this.connectionAttempts == 2) {
+        await this.checkSessionDetails();
+      }
+      this.connectionAttempts++;
 
       // Connect to WebSocket with session ID in URL and token as query param
       const wsUrl = `${BASE_URL}/${
@@ -114,15 +133,29 @@ export class WebSocketService {
       // Set connection timeout
       this.connectionTimeout = setTimeout(() => {
         if (this.connectionState === ConnectionState.CONNECTING) {
-          console.log("Connection timeout");
-          this.cleanup();
+          console.log(
+            "Connection timeout",
+            this.reconnectAttempts,
+            this.maxReconnectAttempts
+          );
+          this.isReconnecting = false;
           this.updateConnectionState(ConnectionState.ERROR);
+          //when connection timeout came after two retries, throw reconnect error andtell user to start a new session
+          if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+            this.triggerEvent(
+              WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
+              new Error("Connection timeout after two retries")
+            );
+            return;
+          }
+          this.cleanup();
+
           this.triggerEvent(
-            WEBSOCKET_SERVER_EVENTS.ERROR,
+            WEBSOCKET_CUSTOM_EVENTS.CONNECTION_TIMEOUT_ERROR,
             new Error("Connection timeout")
           );
         }
-      }, this.config.options?.connectionTimeout || 60000);
+      }, this.config.options?.connectionTimeout || 5000);
 
       // Wait for connection to be established
       await new Promise<void>((resolve, reject) => {
@@ -134,10 +167,13 @@ export class WebSocketService {
         const onOpen = () => {
           console.log("WebSocket connected successfully");
           this.isReconnecting = false;
-          this.reconnectAttempts = 0;
+          this.connectionAttempts = 0;
           this.updateConnectionState(ConnectionState.CONNECTED);
           this.startPingInterval();
-          this.triggerEvent("connection_state_change", true);
+          this.triggerEvent(
+            WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
+            true
+          );
           resolve();
         };
 
@@ -156,13 +192,42 @@ export class WebSocketService {
       this.isReconnecting = false;
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
-        WEBSOCKET_SERVER_EVENTS.ERROR,
+        WEBSOCKET_CUSTOM_EVENTS.CONNECTION_ERROR,
         error instanceof Error ? error : new Error("Connection failed")
       );
       throw error;
     }
   }
 
+  private async checkSessionDetails(): Promise<void> {
+    try {
+      this.isReconnecting = false;
+      //call api to get session details
+      const sessionDetails = await getSessionDetails(this.config.sessionId);
+      console.log("sessionDetails response", sessionDetails);
+      if (sessionDetails.status === "active") {
+        this.isReconnecting = true;
+        //if active continue reconnecting
+      } else {
+        this.isReconnecting = false;
+        this.updateConnectionState(ConnectionState.ERROR);
+        this.triggerEvent(
+          WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
+          false
+        );
+        this.triggerEvent(
+          WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
+          new Error(ERROR_MESSAGES.SESSION_INACTIVE.title)
+        );
+        this.cleanup();
+        return;
+      }
+    } catch (error) {
+      //if api call fails, continue reconnecting
+      console.error("Error checking session details:", error);
+      this.isReconnecting = true;
+    }
+  }
   /**
    * Set up WebSocket event handlers
    */
@@ -337,11 +402,39 @@ export class WebSocketService {
    */
   private handleErrorMessage(message: ErrorMessage): void {
     console.error("Error message received:", message);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, new Error(message.msg));
+    switch (message.code) {
+      case SOCKET_ERROR_CODES.TIMEOUT:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.SESSION_INACTIVE:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.SESSION_EXPIRED:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.INVALID_EVENT:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.PARSING_ERROR:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      case SOCKET_ERROR_CODES.SERVER_ERROR:
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        break;
+      default:
+        console.error("Unknown error code:", message.code);
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+    }
   }
 
   /**
-   * Handle connection close
+   * Handle connection close, usually this error comes
    */
   private handleConnectionClose(event: CloseEvent): void {
     this.cleanup();
@@ -355,25 +448,28 @@ export class WebSocketService {
   }
 
   /**
-   * Attempt to reconnect
+   * Attempt to reconnect --- internal reconnect function with delay
    */
   private attemptReconnect(): void {
-    if (
-      this.isReconnecting ||
-      this.reconnectAttempts >= this.maxReconnectAttempts
-    ) {
+    if (this.isReconnecting) {
+      console.log(
+        "Reconnection already in progress, skipping from attemptReconnect function"
+      );
       return;
     }
 
     console.log(
-      `Attempting to reconnect (${this.reconnectAttempts + 1}/${
-        this.maxReconnectAttempts
+      `Attempting to reconnect (${this.connectionAttempts + 1}/${
+        this.maxConnectionAttempts
       })`
     );
 
     setTimeout(() => {
       this.connect().catch((error) => {
-        console.error("Reconnection failed:", error);
+        console.error(
+          "Reconnection failed from attemptReconnect function:",
+          error
+        );
       });
     }, this.reconnectDelay);
   }
@@ -474,27 +570,35 @@ export class WebSocketService {
     this.currentStreamMessage = null;
     console.log("Cleared streaming state");
   }
+  //reconnect function specific for external retry
 
   public async reconnect(
-    reason?: string,
-    resetAttempts: boolean = false
+    resetAttempts: boolean,
+    reason?: string
   ): Promise<void> {
-    if (this.isReconnecting) {
+    if (!resetAttempts && this.isReconnecting) {
       console.log("Reconnection already in progress, skipping");
       return;
     }
+    if (resetAttempts) {
+      this.isReconnecting = false;
+      this.connectionAttempts = 0;
+    }
 
+    if (this.reconnectAttempts === this.maxReconnectAttempts) {
+      this.updateConnectionState(ConnectionState.ERROR);
+      this.triggerEvent(
+        WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
+        new Error("Maximum reconnection attempts exceeded")
+      );
+      return;
+    }
+    this.reconnectAttempts++;
     console.log(
       `Initiating reconnection${reason ? ` due to: ${reason}` : ""}...`
     );
 
-    this.isReconnecting = true;
     this.updateConnectionState(ConnectionState.RECONNECTING);
-
-    // Reset reconnection attempts if requested (e.g., for timeout errors)
-    if (resetAttempts) {
-      this.reconnectAttempts = 0;
-    }
 
     try {
       // Close existing connection if any
@@ -503,8 +607,6 @@ export class WebSocketService {
 
       // Attempt to reconnect
       await this.connect();
-
-      console.log("Reconnection successful");
 
       // // Trigger reconnection success event
       // this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
@@ -523,55 +625,55 @@ export class WebSocketService {
     this.isReconnecting = false;
 
     console.error("Reconnection error:", error);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, error);
+    this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.CONNECTION_ERROR, error);
 
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+    if (this.reconnectAttempts === this.maxReconnectAttempts) {
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
-        WEBSOCKET_SERVER_EVENTS.ERROR,
+        WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
         new Error("Maximum reconnection attempts exceeded")
       );
     } else {
       // Schedule next reconnection attempt
-      this.attemptReconnection();
+      this.attemptReconnect();
     }
   }
 
-  private attemptReconnection(): void {
-    if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-      this.updateConnectionState(ConnectionState.ERROR);
-      this.triggerEvent(
-        WEBSOCKET_SERVER_EVENTS.ERROR,
-        new Error("Reconnect failed")
-      );
-      return;
-    }
+  // private attemptReconnection(): void {
+  //   if (this.reconnectAttempts >= this.maxReconnectAttempts) {
+  //     this.updateConnectionState(ConnectionState.ERROR);
+  //     this.triggerEvent(
+  //       WEBSOCKET_SERVER_EVENTS.ERROR,
+  //       new Error("Reconnect failed")
+  //     );
+  //     return;
+  //   }
 
-    // Prevent multiple simultaneous reconnection attempts
-    if (this.isReconnecting) {
-      console.log("Reconnection already in progress, skipping");
-      return;
-    }
+  //   // Prevent multiple simultaneous reconnection attempts
+  //   if (this.isReconnecting) {
+  //     console.log("Reconnection already in progress, skipping from attemptReconnection function");
+  //     return;
+  //   }
 
-    const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
-    console.log(
-      `Scheduling reconnection attempt ${
-        this.reconnectAttempts + 1
-      } in ${delay}ms`
-    );
+  //   const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
+  //   console.log(
+  //     `Scheduling reconnection attempt ${
+  //       this.reconnectAttempts + 1
+  //     } in ${delay}ms`
+  //   );
 
-    setTimeout(() => {
-      if (!this.isConnected() && !this.isReconnecting) {
-        console.log(
-          `Attempting reconnection ${this.reconnectAttempts + 1}/${
-            this.maxReconnectAttempts
-          }`
-        );
-        // Use the unified reconnect function
-        this.reconnect(`automatic attempt ${this.reconnectAttempts + 1}`);
-      }
-    }, delay);
-  }
+  //   setTimeout(() => {
+  //     if (!this.isConnected() && !this.isReconnecting) {
+  //       console.log(
+  //         `Attempting reconnection ${this.reconnectAttempts + 1}/${
+  //           this.maxReconnectAttempts
+  //         }`
+  //       );
+  //       // Use the unified reconnect function
+  //       this.reconnect(`automatic attempt ${this.reconnectAttempts + 1}`);
+  //     }
+  //   }, delay);
+  // }
 
   /**
    * Regenerate response for a specific chat
@@ -859,6 +961,7 @@ export class WebSocketService {
 
     if (this.ws) {
       this.ws.close(1000, "Manual disconnect");
+      this.cleanup();
     }
   }
 

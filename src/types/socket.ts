@@ -188,6 +188,71 @@ export enum ConnectionState {
   ERROR = "error",
 }
 
+export enum SOCKET_ERROR_CODES {
+  SESSION_INACTIVE = "session_not_found",
+  SESSION_EXPIRED = "session_expired",
+  INVALID_EVENT = "invalid_event",
+  INVALID_CONTENT_TYPE = "invalid_content",
+  PARSING_ERROR = "parsing", // for all LLM related error
+  FILE_UPLOAD_INPROGRESS = "file_upload_inprogress",
+  TIMEOUT = "timeout",
+  SERVER_ERROR = "server_error",
+}
+
+// UI Error Message interface
+export interface ErrorMessageUI {
+  title: string;
+  description?: string;
+}
+
+// Error messages for UI with title and description
+export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
+  SESSION_INACTIVE: {
+    title: "We couldn't find your session. Please start a new session.",
+    description: "We couldn't find your session. Please start a new session.",
+  },
+  SESSION_EXPIRED: {
+    title: "Session Expired",
+    description: "Your session has expired. Please log in again.",
+  },
+  INVALID_EVENT: {
+    title: "Invalid Request",
+    description: "Something went wrong with the request. Please retry.",
+  },
+  INVALID_CONTENT_TYPE: {
+    title: "Unsupported Format",
+    description: "Unsupported file or data format.",
+  },
+  PARSING_ERROR: {
+    title: "Processing Error",
+    description: "We had trouble processing your request. Please try again.",
+  },
+  FILE_UPLOAD_INPROGRESS: {
+    title: "Another File Upload is in progress",
+    description: "A file is still uploading. Please wait.",
+  },
+  TIMEOUT: {
+    title: "Request Timeout",
+    description: "The request took too long. Please try again.",
+  },
+  SERVER_ERROR: {
+    title: "Server Error",
+    description: "Something went wrong on our side. Please try again later.",
+  },
+  OFFLINE: {
+    title: "No Internet Connection",
+    description: "You're offline. Please check your internet connection.",
+  },
+  CONNECTION_LOST: {
+    title: "Trying to reconnect...",
+    description: "Please wait while we try to reconnect",
+  },
+  CONNECTION_ATTEMPTS_EXCEEDED: {
+    title: "Failed to connect",
+    description: "Please check your connection and try again",
+  },
+} as const;
+
 export type ConnectionStateType =
   (typeof ConnectionState)[keyof typeof ConnectionState];
 
@@ -198,6 +263,7 @@ export interface WebSocketConfig {
     token: string;
   };
   options?: {
+    connectAttempts?: number;
     reconnectAttempts?: number;
     reconnectDelay?: number;
     pingInterval?: number;
