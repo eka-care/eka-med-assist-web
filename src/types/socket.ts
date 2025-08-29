@@ -208,8 +208,8 @@ export interface ErrorMessageUI {
 // Error messages for UI with title and description
 export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
   SESSION_INACTIVE: {
-    title: "We couldn't find your session. Please start a new session.",
-    description: "We couldn't find your session. Please start a new session.",
+    title: "We couldn't find your session.",
+    description: " Please start a new session.",
   },
   SESSION_EXPIRED: {
     title: "Session Expired",

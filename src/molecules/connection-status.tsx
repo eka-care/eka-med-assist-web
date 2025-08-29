@@ -1,6 +1,6 @@
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
 import { ErrorMessageUI } from "@/types/socket";
-import { X } from "lucide-react";
+// import { X } from "lucide-react";
 
 interface ConnectionStatusProps {
   className?: string;
@@ -29,29 +29,26 @@ export function ConnectionStatus({
     return (
       <div
         className={`mx-4 mb-3 px-2 py-1 bg-[#FFFBEB] border border-[#FEE39B] rounded-lg ${className}`}>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-3">
           {/* Warning Icon */}
-
+          <div className="w-4 h-4 bg-[#F7B500] rounded-full flex items-center justify-center flex-shrink-0">
+            <span className="text-white text-sm font-bold">!</span>
+          </div>
           {/* Error Message */}
           <div className="flex-1">
-            <div className="w-5 h-5 bg-[#F7B500] rounded-full flex items-center justify-center flex-shrink-0">
-              <span className="text-white text-sm font-bold">!</span>
-            </div>
             <div className="text-[#333333] font-semibold text-sm">
               {error?.title ? error.title : "Something went wrong"}
             </div>
-            <div className="text-[#666666] text-xs mt-1">
-              Start a new session
-            </div>
+            <div className="text-[#666666] text-xs mt-1">Start a new session.</div>
           </div>
 
           {/* Close Button */}
-          <button
+          {/* <button
             onClick={clearError}
             className="p-1 text-[#666666] hover:text-[#333333] hover:bg-[#FEE39B] rounded transition-colors flex-shrink-0"
             aria-label="Close error message">
             <X size={16} />
-          </button>
+          </button> */}
 
           {/* Start New Session Button */}
           <button
@@ -60,7 +57,7 @@ export function ConnectionStatus({
                 onStartNewSession();
               }
             }}
-            className="p-2 bg-[#3B71F7] text-white text-sm font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
+            className="p-2 bg-[#3B71F7] text-white text-xs font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -73,7 +70,7 @@ export function ConnectionStatus({
                 d="M12 4v16m8-8H4"
               />
             </svg>
-            Start New Session
+            <span className="text-xs font-semibold">Start new chat</span>
           </button>
         </div>
       </div>
@@ -104,12 +101,12 @@ export function ConnectionStatus({
           </div>
 
           {/* Close Button */}
-          <button
+          {/* <button
             onClick={clearError}
             className="p-1 text-[#666666] hover:text-[#333333] hover:bg-[#FEE39B] rounded transition-colors flex-shrink-0"
             aria-label="Close error message">
             <X size={16} />
-          </button>
+          </button> */}
 
           {/* Retry Button */}
           <button
@@ -167,12 +164,12 @@ export function ConnectionStatus({
         </div>
 
         {/* Close Button */}
-        <button
+        {/* <button
           onClick={clearError}
           className="p-1 text-[#666666] hover:text-[#333333] hover:bg-[#FDD835] rounded transition-colors flex-shrink-0"
           aria-label="Close error message">
           <X size={16} />
-        </button>
+        </button> */}
 
         {/* Loading Spinner */}
         {!isConnected && (

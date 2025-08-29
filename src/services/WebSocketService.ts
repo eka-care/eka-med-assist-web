@@ -205,7 +205,7 @@ export class WebSocketService {
       //call api to get session details
       const sessionDetails = await getSessionDetails(this.config.sessionId);
       console.log("sessionDetails response", sessionDetails);
-      if (sessionDetails.status === "active") {
+      if (sessionDetails.status === "active" || sessionDetails?.msg === "Session Active") {
         this.isReconnecting = true;
         //if active continue reconnecting
       } else {
