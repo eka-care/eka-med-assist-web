@@ -2,6 +2,7 @@ import { ThemeProvider } from "@ui/index";
 import { createRoot } from "react-dom/client";
 import App from "./App.tsx";
 import "./index.css";
+import ErrorBoundary from "./components/ErrorBoundary.tsx";
 
 // For standalone development - create widget if root element exists
 if (document.getElementById("root")) {
@@ -53,9 +54,11 @@ function initializeEkaWidget(config: any = {}) {
 
     // Render the widget with theme provider
     root.render(
-        <ThemeProvider defaultTheme={config.theme || "doctor-light"}>
-            <App config={appConfig} />
-        </ThemeProvider>
+        <ErrorBoundary>
+            <ThemeProvider defaultTheme={config.theme || "doctor-light"}>
+                <App config={appConfig} />
+            </ThemeProvider>
+        </ErrorBoundary>
     );
 
     console.log("Eka Medical Assistant Widget rendered successfully!");
