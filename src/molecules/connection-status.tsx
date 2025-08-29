@@ -42,23 +42,28 @@ export function ConnectionStatus({
   // }
 
   useEffect(() => {
-    console.log("showRetryButton", showRetryButton,"startNewConnection",startNewConnection);
-  }, [showRetryButton,startNewConnection]);
+    console.log(
+      "showRetryButton",
+      showRetryButton,
+      "startNewConnection",
+      startNewConnection
+    );
+  }, [showRetryButton, startNewConnection]);
   // Show new session error message if showSetNewSession is true
   if (startNewConnection) {
     return (
       <div
-        className={`mx-4 mb-3 p-2 bg-[#FFFBEB] border border-[#FEE39B] rounded-lg ${className}`}>
-        <div className="flex items-center gap-3">
+        className={`mx-4 mb-3 px-2 py-1 bg-[#FFFBEB] border border-[#FEE39B] rounded-lg ${className}`}>
+        <div className="flex items-center gap-1">
           {/* Warning Icon */}
-          <div className="w-5 h-5 bg-[#F7B500] rounded-full flex items-center justify-center flex-shrink-0">
-            <span className="text-white text-sm font-bold">!</span>
-          </div>
 
           {/* Error Message */}
           <div className="flex-1">
+            <div className="w-5 h-5 bg-[#F7B500] rounded-full flex items-center justify-center flex-shrink-0">
+              <span className="text-white text-sm font-bold">!</span>
+            </div>
             <div className="text-[#333333] font-semibold text-sm">
-              Something went wrong
+              {error?.title ? error.title : "Something went wrong"}
             </div>
             <div className="text-[#666666] text-xs mt-1">
               Start a new session
@@ -72,7 +77,7 @@ export function ConnectionStatus({
                 onStartNewSession();
               }
             }}
-            className="px-4 py-2 bg-[#3B71F7] text-white text-sm font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
+            className="p-2 bg-[#3B71F7] text-white text-sm font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -106,10 +111,12 @@ export function ConnectionStatus({
           {/* Error Message */}
           <div className="flex-1">
             <div className="text-[#333333] font-semibold text-sm">
-              Failed to connect
+              {error?.title ? error.title : "Failed to connect"}
             </div>
             <div className="text-[#666666] text-xs mt-1">
-              Please check your connection and try again
+              {error?.description
+                ? error.description
+                : "Please check your connection and try again"}
             </div>
           </div>
 
@@ -154,7 +161,9 @@ export function ConnectionStatus({
         {/* Loading Message */}
         <div className="flex-1">
           <div className="text-[#333333] font-semibold text-sm">
-            {!isOnline ? "No internet connection" : error?.title || "Something went wrong"}
+            {!isOnline
+              ? "No internet connection"
+              : error?.title || "Something went wrong"}
             {/* {!isOnline ? "No internet connection" : "Trying to reconnect..."} */}
           </div>
           <div className="text-[#666666] text-xs mt-1">

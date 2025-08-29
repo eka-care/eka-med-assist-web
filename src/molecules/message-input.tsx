@@ -161,7 +161,7 @@ export function MessageInput({
           const errorMsg =
             "Microphone access is blocked. You'll need to manually enable it in your browser settings.";
           console.log("Setting error:", errorMsg);
-          setError({ title: "Microphone access is blocked.", description:" You'll need to manually enable it in your browser settings." });
+          setError({ title: "Microphone access is blocked.", description:"Enable it in your browser settings." });
         } else {
           const errorMsg =
             "Microphone access denied. Please allow microphone permissions when prompted.";
@@ -508,7 +508,7 @@ export function MessageInput({
   }, []);
 
   return (
-    <div className="flex items-center gap-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4">
+    <div className="flex items-center gap-2 px-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4">
       <input
         ref={fileInputRef}
         type="file"
@@ -585,7 +585,7 @@ export function MessageInput({
                   : placeholder
               }
               disabled={isInputDisabled}
-              className="border-0 shadow-none focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm"
+              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm"
             />
           </div>
         )}

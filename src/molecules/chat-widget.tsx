@@ -11,6 +11,7 @@ import { MessageBubble } from "./message-bubble";
 import { MessageInput } from "./message-input";
 import { PillAction } from "./quick-actions";
 import { ConnectionStatus } from "./connection-status";
+import { DocAssistIcon } from "@ui/index";
 
 interface Message {
   id: string;
@@ -57,6 +58,7 @@ export function ChatWidget({
     },
   ]);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
+  const [isWaitingForResponse, setIsWaitingForResponse] = useState<boolean>(false);
   const {
     isConnectionEstablished,
     showRetryButton,
@@ -109,6 +111,9 @@ export function ChatWidget({
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
+      // Clear waiting state when we receive a bot response
+      setIsWaitingForResponse(false);
+      
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
@@ -176,11 +181,17 @@ export function ChatWidget({
       });
     },
     (progressMsg: string) => {
+      // Clear waiting state when we receive progress messages
+      setIsWaitingForResponse(false);
+      
       // Handle progress messages
       console.log("Progress message received:", progressMsg);
       setProgressMessage(progressMsg);
     },
     (pillData: PillAction) => {
+      // Clear waiting state when we receive pill data
+      setIsWaitingForResponse(false);
+      
       // Handle pill messages - merge with existing bot message
       console.log("Pill message received:", pillData);
 
@@ -218,6 +229,9 @@ export function ChatWidget({
       });
     },
     (multiData: PillAction) => {
+      // Clear waiting state when we receive multi data
+      setIsWaitingForResponse(false);
+      
       // Handle multi messages - merge with existing bot message
       console.log("Multi message received:", multiData);
       setDisableInput(true);
@@ -268,6 +282,7 @@ export function ChatWidget({
       setDisableInput(false);
     } else {
       setDisableInput(true);
+      setIsWaitingForResponse(false); // Clear waiting state when connection is lost
     }
   }, [isConnectionEstablished, isOnline]);
 
@@ -292,12 +307,20 @@ export function ChatWidget({
     scrollToBottom();
   }, [messages, isStreaming]);
 
-  // Clear progress message when streaming starts or ends
+  // Clear progress message and waiting state when streaming starts or ends
   useEffect(() => {
     if (isStreaming) {
       setProgressMessage(null);
+      setIsWaitingForResponse(false); // Clear waiting state when streaming starts
     }
   }, [isStreaming]);
+
+  // Clear waiting state when there are errors
+  useEffect(() => {
+    if (error) {
+      setIsWaitingForResponse(false);
+    }
+  }, [error]);
 
   const showErrorMessage = useMemo(() => {
     return (
@@ -324,11 +347,13 @@ export function ChatWidget({
     }
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     // Clear any errors when starting audio streaming
@@ -354,11 +379,13 @@ export function ChatWidget({
 
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     // Clear any errors when sending a message
@@ -395,12 +422,16 @@ export function ChatWidget({
 
     setMessages((prev) => [...prev, newMessage]);
 
+    // Set waiting state immediately when message is sent
+    setIsWaitingForResponse(true);
+
     try {
       await sendChatMessage(content);
       console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
       setError({ title: "Failed to send message. Please try again." });
+      setIsWaitingForResponse(false); // Clear waiting state on error
       throw error; // Re-throw to let MessageInput handle the error state
     }
   };
@@ -410,11 +441,13 @@ export function ChatWidget({
     console.log("Final audio stream received:", audioData);
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     // Mark the bot message as responded if it has pills or multiselect
@@ -447,6 +480,9 @@ export function ChatWidget({
     setMessages((prev) => [...prev, newMessage]);
 
     try {
+      // Set waiting state immediately when audio is sent
+      setIsWaitingForResponse(true);
+      
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
@@ -455,6 +491,7 @@ export function ChatWidget({
     } catch (error) {
       console.error("Failed to send audio:", error);
       setError({ title: "Failed to send audio message. Please try again." });
+      setIsWaitingForResponse(false); // Clear waiting state on error
       throw error;
     }
   };
@@ -468,11 +505,13 @@ export function ChatWidget({
 
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     // Clear any errors when uploading files
@@ -513,6 +552,9 @@ export function ChatWidget({
     setMessages((prev) => [...prev, newMessage]);
 
     try {
+      // Set waiting state immediately when file upload request is sent
+      setIsWaitingForResponse(true);
+      
       // Set files for upload when presigned URL is received
       setFilesForUpload(fileArray, message);
       await sendFileUploadRequest();
@@ -520,6 +562,7 @@ export function ChatWidget({
     } catch (error) {
       console.error("Failed to upload file:", error);
       setError({ title: "Failed to upload file. Please try again." });
+      setIsWaitingForResponse(false); // Clear waiting state on error
       throw error;
     }
   };
@@ -533,11 +576,13 @@ export function ChatWidget({
 
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     // Clear any errors when using quick actions
@@ -580,6 +625,7 @@ export function ChatWidget({
     if (action === "clear") {
       setMessages([messages[0]]);
       clearError(); // Clear any errors when clearing chat
+      setIsWaitingForResponse(false); // Clear waiting state when clearing chat
     }
   };
 
@@ -587,11 +633,13 @@ export function ChatWidget({
     // Find the message to regenerate
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     const messageIndex = messages.findIndex((msg) => msg.id === messageId);
@@ -692,11 +740,13 @@ export function ChatWidget({
 
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
+      setIsWaitingForResponse(false);
       return;
     }
 
     if (!isConnectionEstablished) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setIsWaitingForResponse(false);
       return;
     }
     // Clear any errors when using pills
@@ -732,6 +782,9 @@ export function ChatWidget({
     setMessages((prev) => [...prev, newMessage]);
 
     try {
+      // Set waiting state immediately when pill is clicked
+      setIsWaitingForResponse(true);
+      
       // Send pill message via WebSocket
       await sendPillMessage(pillText, tool_use_id);
       if (disableInput) {
@@ -741,6 +794,7 @@ export function ChatWidget({
       console.log("Pill message would be sent:", pillText, tool_use_id);
     } catch (error) {
       console.error("Failed to send pill message:", error);
+      setIsWaitingForResponse(false); // Clear waiting state on error
       // setError({ title: "Failed to send selection. Please try again." });
       throw error;
     }
@@ -750,6 +804,7 @@ export function ChatWidget({
     try {
       setMessages([messages[0]]);
       clearSession();
+      setIsWaitingForResponse(false); // Clear waiting state when starting new session
       onStartSession?.(true);
     } catch (error) {
       console.error("Failed to start new session:", error);
@@ -773,10 +828,10 @@ export function ChatWidget({
 
   // Mobile full-screen styles
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] flex flex-col h-screen w-screen"
+    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border flex flex-col h-screen w-screen"
     : isExpanded
-    ? "fixed inset-4 z-50 bg-[var(--color-card)] rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
-    : `w-full max-w-sm bg-[var(--color-card)] shadow-lg rounded-lg py-2 pb-4 ${className}`;
+    ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
+    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-2 pb-4 ${className}`;
 
   const chatHeight = isMobile
     ? "flex-1 min-h-0"
@@ -859,6 +914,22 @@ export function ChatWidget({
                   files={message.files}
                 />
               ))}
+              
+              {/* Show loading indicator when waiting for response */}
+              {isWaitingForResponse && !isStreaming && (
+                <div className="px-4 py-2">
+                  <div className="flex gap-2 items-start justify-center">
+                    <div className="flex-shrink-0 mt-1">
+                      <DocAssistIcon size={24} />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
+                        <span className="animate-pulse">...</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 

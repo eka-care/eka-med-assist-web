@@ -47,7 +47,7 @@ export function useWebSocket(
   useEffect(() => {
     console.log("hi use web socket");
     if (!config || !config.sessionId || !config.auth?.token) {
-      console.log("No config provided",config);
+      console.log("No config provided", config);
       setConnectionEstablished(false);
       return;
     }
@@ -154,6 +154,18 @@ export function useWebSocket(
       }
     );
 
+    // Listen to the accumulated streaming text instead of individual fragments
+    wsRef.current?.on("stream_chunk", (accumulatedText: string) => {
+      if (!isStreaming) {
+        setIsStreaming(true);
+      }
+      console.log("Stream chunk (accumulated) received:", accumulatedText);
+      if (onTextMessage) {
+        // Call the callback with the accumulated text
+        onTextMessage(accumulatedText);
+      }
+    });
+
     wsRef.current?.on(
       WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
       (message: EndOfStreamMessage) => {
@@ -169,46 +181,46 @@ export function useWebSocket(
     //handle error differenty ,send entire errorMessage instance
     wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: ErrorMessage) => {
       console.error("WebSocket error:", error);
-      switch(error.code){
-        case SOCKET_ERROR_CODES.SESSION_INACTIVE:{
+      switch (error.code) {
+        case SOCKET_ERROR_CODES.SESSION_INACTIVE: {
           setShowRetryButton(false);
           setStartNewConnection(true);
-          setError(ERROR_MESSAGES.SESSION_INACTIVE)
+          setError(ERROR_MESSAGES.SESSION_INACTIVE);
           break;
         }
-        case SOCKET_ERROR_CODES.SESSION_EXPIRED:{
+        case SOCKET_ERROR_CODES.SESSION_EXPIRED: {
           setShowRetryButton(false);
           setStartNewConnection(true);
-          setError(ERROR_MESSAGES.SESSION_EXPIRED)
+          setError(ERROR_MESSAGES.SESSION_EXPIRED);
           break;
         }
-        case SOCKET_ERROR_CODES.INVALID_EVENT:{
+        case SOCKET_ERROR_CODES.INVALID_EVENT: {
           // setShowRetryButton(true);
-          setError(ERROR_MESSAGES.INVALID_EVENT)
+          setError(ERROR_MESSAGES.INVALID_EVENT);
           break;
         }
-        case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE:{
+        case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE: {
           // setShowRetryButton(true);
-          setError(ERROR_MESSAGES.INVALID_CONTENT_TYPE)
+          setError(ERROR_MESSAGES.INVALID_CONTENT_TYPE);
           break;
         }
-        case SOCKET_ERROR_CODES.PARSING_ERROR:{
+        case SOCKET_ERROR_CODES.PARSING_ERROR: {
           setShowRetryButton(true);
-          setError(ERROR_MESSAGES.PARSING_ERROR)
+          setError(ERROR_MESSAGES.PARSING_ERROR);
           break;
         }
-        case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS:{
+        case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS: {
           // setShowRetryButton(true);
           //TODO: handle this case
-          setError(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS)
+          setError(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS);
           break;
         }
-        case SOCKET_ERROR_CODES.SERVER_ERROR:{
+        case SOCKET_ERROR_CODES.SERVER_ERROR: {
           // setShowRetryButton(true);
-          setError(ERROR_MESSAGES.SERVER_ERROR)
+          setError(ERROR_MESSAGES.SERVER_ERROR);
           break;
         }
-        default:{
+        default: {
           setError({ title: error.msg });
           break;
         }
@@ -260,7 +272,7 @@ export function useWebSocket(
         // If connection attempts exceeded → set showRetry = true
         setShowRetryButton(true);
         console.log("setting error to CONNECTION_ATTEMPTS_EXCEEDED");
-        setError(ERROR_MESSAGES.CONNECTION_ATTEMPTS_EXCEEDED)
+        setError(ERROR_MESSAGES.CONNECTION_ATTEMPTS_EXCEEDED);
       }
     );
 
