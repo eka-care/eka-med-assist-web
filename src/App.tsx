@@ -3,7 +3,6 @@ import startSession from "./api/post-start-session";
 import { ChatWidget } from "./molecules/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
 import { useNetworkStatus } from "./custom-hooks/useNetworkStatus";
-import { Toaster, toast } from "@ui/index";
 
 interface AppProps {
   config?: {
@@ -41,11 +40,6 @@ function App({ config }: AppProps = {}) {
     // Check if user is online before proceeding
     if (!isOnline) {
       console.warn("Cannot start session: user is offline");
-      // Show toast notification for offline state
-      toast.error("Cannot start session", {
-        description: "You are currently offline. Please check your internet connection.",
-        duration: 4000,
-      });
       return;
     }
 
@@ -107,8 +101,11 @@ function App({ config }: AppProps = {}) {
   };
 
   const handleExpandWidget = () => {
+    //TODO: fix minimize
     const newExpandedState = !isExpanded;
     setIsExpanded(newExpandedState);
+    console.log("calling onMinimize",newExpandedState, config?.onMinimize);
+
     // If minimizing, call the onMinimize callback
     if (!newExpandedState && config?.onMinimize) {
       config.onMinimize();
@@ -150,9 +147,6 @@ function App({ config }: AppProps = {}) {
           )}
         </div>
       </>
-
-      {/* Toast Notifications */}
-      <Toaster position="top-right" />
     </div>
   );
 }

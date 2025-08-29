@@ -1,15 +1,16 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
-import useSessionStore from "@/stores/medAssistStore";
-import { ERROR_MESSAGES, type WebSocketConfig } from "@/types/socket";
+import useMedAssistStore from "@/stores/medAssistStore";
+import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
 import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { Card } from "@ui/index";
 import { ChatHeader } from "./chat-header";
 import { MessageBubble } from "./message-bubble";
 import { MessageInput } from "./message-input";
 import { PillAction } from "./quick-actions";
+import { ConnectionStatus } from "./connection-status";
 
 interface Message {
   id: string;
@@ -56,12 +57,22 @@ export function ChatWidget({
     },
   ]);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
-  const sessionId = useSessionStore((state) => state.sessionId);
-  const sessionToken = useSessionStore((state) => state.sessionToken);
-  const isConnectionEstablished = useSessionStore(
-    (state) => state.isConnectionEstablished
-  );
+  const {
+    isConnectionEstablished,
+    showRetryButton,
+    startNewConnection,
+    error,
+    clearError,
+    setError,
+    isStreaming,
+    sessionId,
+    sessionToken,
+    clearSession,
+  } = useMedAssistStore();
 
+  const [disableInput, setDisableInput] = useState<boolean>(
+    !isConnectionEstablished || !isOnline
+  );
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
     console.log("ChatWidget mounted - checking session", {
@@ -76,13 +87,6 @@ export function ChatWidget({
     }
   }, []); // Only run on mount
 
-  // Error handling from store
-  const error = useSessionStore((state) => state.error);
-  const isTimeoutError = useSessionStore((state) => state.isTimeoutError);
-  const setError = useSessionStore((state) => state.setError);
-  const clearError = useSessionStore((state) => state.clearError);
-  const clearSession = useSessionStore((state) => state.clearSession);
-  const isStreaming = useSessionStore((state) => state.isStreaming);
   // Create socket configuration when session data is available
   const socketConfig: WebSocketConfig | null =
     sessionId && sessionToken
@@ -182,6 +186,7 @@ export function ChatWidget({
 
       setMessages((prev) => {
         // Find the last bot message to attach pills to it
+        setDisableInput(true);
         let lastBotMessageIndex = -1;
         for (let i = prev.length - 1; i >= 0; i--) {
           if (prev[i].isBot) {
@@ -215,6 +220,7 @@ export function ChatWidget({
     (multiData: PillAction) => {
       // Handle multi messages - merge with existing bot message
       console.log("Multi message received:", multiData);
+      setDisableInput(true);
       setMessages((prev) => {
         // Find the last bot message to attach pills to it
         let lastBotMessageIndex = -1;
@@ -256,10 +262,14 @@ export function ChatWidget({
   ]);
 
   useEffect(() => {
-    if (wsService && isConnectionEstablished) {
-      console.log("WebSocket connection ready for chat");
+    console.log("hi chat widget");
+
+    if (isConnectionEstablished && isOnline) {
+      setDisableInput(false);
+    } else {
+      setDisableInput(true);
     }
-  }, [wsService, isConnectionEstablished]);
+  }, [isConnectionEstablished, isOnline]);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -278,6 +288,7 @@ export function ChatWidget({
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
+    console.log("hi from messages and isStreaming", messages, isStreaming);
     scrollToBottom();
   }, [messages, isStreaming]);
 
@@ -287,6 +298,22 @@ export function ChatWidget({
       setProgressMessage(null);
     }
   }, [isStreaming]);
+
+  const showErrorMessage = useMemo(() => {
+    return (
+      isConnectionEstablished &&
+      isOnline &&
+      !error &&
+      !showRetryButton &&
+      !startNewConnection
+    );
+  }, [
+    isConnectionEstablished,
+    isOnline,
+    error,
+    showRetryButton,
+    startNewConnection,
+  ]);
 
   // CHANGED: Now handles AudioData instead of Blob
   const handleAudioStream = (audioData: AudioData) => {
@@ -373,7 +400,7 @@ export function ChatWidget({
       console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
-      setError("Failed to send message. Please try again.");
+      setError({ title: "Failed to send message. Please try again." });
       throw error; // Re-throw to let MessageInput handle the error state
     }
   };
@@ -427,7 +454,7 @@ export function ChatWidget({
       console.log("Audio sent successfully");
     } catch (error) {
       console.error("Failed to send audio:", error);
-      setError("Failed to send audio message. Please try again.");
+      setError({ title: "Failed to send audio message. Please try again." });
       throw error;
     }
   };
@@ -492,7 +519,7 @@ export function ChatWidget({
       console.log("File upload request sent successfully");
     } catch (error) {
       console.error("Failed to upload file:", error);
-      setError("Failed to upload file. Please try again.");
+      setError({ title: "Failed to upload file. Please try again." });
       throw error;
     }
   };
@@ -640,7 +667,7 @@ export function ChatWidget({
       });
     } catch (error) {
       console.error("Failed to regenerate:", error);
-      setError("Failed to regenerate response. Please try again.");
+      // setError({ title: "Failed to regenerate response. Please try again." });
       // Reset the message on error
       setMessages((prev) => {
         const updatedMessages = [...prev];
@@ -706,18 +733,15 @@ export function ChatWidget({
 
     try {
       // Send pill message via WebSocket
-      if (isConnectionEstablished) {
-        await sendPillMessage(pillText, tool_use_id);
-        // For now, just log since sendPillMessage is not available in V2
-        console.log("Pill message would be sent:", pillText, tool_use_id);
-      } else {
-        console.log("WebSocket not connected, cannot send pill message");
-        setError("Connection lost. Please wait for reconnection.");
-        throw new Error("WebSocket not connected");
+      await sendPillMessage(pillText, tool_use_id);
+      if (disableInput) {
+        setDisableInput(false);
       }
+      // For now, just log since sendPillMessage is not available in V2
+      console.log("Pill message would be sent:", pillText, tool_use_id);
     } catch (error) {
       console.error("Failed to send pill message:", error);
-      setError("Failed to send selection. Please try again.");
+      // setError({ title: "Failed to send selection. Please try again." });
       throw error;
     }
   };
@@ -729,9 +753,22 @@ export function ChatWidget({
       onStartSession?.(true);
     } catch (error) {
       console.error("Failed to start new session:", error);
-      setError("Failed to start new session. Please try again.");
+      // setError({ title: "Failed to start new session. Please try again." });
       throw error;
     }
+  };
+
+  const handleRetry = () => {
+    if (!isConnectionEstablished) {
+      if (wsService) {
+        clearError();
+        wsService.reconnect(true, "manual reconnect");
+      }
+    }
+    // If socket throws an error (e.g., parsing / code-related error) → show Retry
+    // On handleRetry: Call a regenerate function (to be added later)
+    // For now, just clear the error and retry button
+    clearError();
   };
 
   // Mobile full-screen styles
@@ -782,7 +819,7 @@ export function ChatWidget({
         <div className={`${chatHeight} flex flex-col overflow-hidden`}>
           <div
             ref={scrollAreaRef}
-            className="flex-1 min-h-0 overflow-y-auto px-4"
+            className="flex-1 min-h-0 overflow-y-auto"
             style={{
               scrollBehavior: "smooth",
               scrollbarWidth: "thin",
@@ -814,13 +851,6 @@ export function ChatWidget({
                   isRegenerating={message.isRegenerating}
                   pillAction={message.pillData}
                   onPillClick={handlePillClick}
-                  showRetry={isTimeoutError}
-                  onRetry={() => {
-                    if (wsService) {
-                      clearError();
-                      wsService.reconnect("quick action retry after timeout");
-                    }
-                  }}
                   onRegenerate={handleRegenerate}
                   multiData={message.multiData}
                   onMultiClick={handlePillClick}
@@ -833,75 +863,15 @@ export function ChatWidget({
           </div>
 
           {/* Connection Status */}
-          {!isConnectionEstablished && (
-            <div className="px-4 py-2 text-center text-sm">
-              {!sessionId || !sessionToken ? (
-                <div className="text-orange-600 bg-orange-50">
-                  Waiting for session...
-                </div>
-              ) : (
-                <div className="text-orange-600 bg-orange-50">
-                  <span> Connecting to WebSocket server...</span>
-                  {/* <button
-                    onClick={() => {
-                      if (wsService) {
-                        wsService.reconnect("connection error retry");
-                      }
-                    }}
-                    className="px-2 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
-                    Retry
-                  </button> */}
-                </div>
-              )}
-            </div>
-          )}
-
-          {/* Simple Error Display */}
-          {error && (
-            <div className="mx-4 mb-3 p-3 bg-red-50 border border-red-200 rounded-md">
-              <div className="flex items-center gap-2 text-red-700">
-                <svg
-                  className="w-4 h-4 text-red-600"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L3.732 16.5c-.77.833.192 2.5 1.732 2.5z"
-                  />
-                </svg>
-                <span className="text-sm">{error}</span>
-                {isTimeoutError ? (
-                  <div className="ml-auto flex gap-2">
-                    <button
-                      onClick={() => {
-                        if (wsService) {
-                          clearError();
-                          // The service will automatically handle ping test and reconnection
-                          // Just trigger a manual reconnection attempt
-                          wsService.reconnect("manual retry after timeout");
-                        }
-                      }}
-                      className="px-3 py-1 bg-red-600 text-white text-xs rounded hover:bg-red-700">
-                      Retry
-                    </button>
-                    <button
-                      onClick={clearError}
-                      className="text-red-500 hover:text-red-700">
-                      ×
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={clearError}
-                    className="ml-auto text-red-500 hover:text-red-700">
-                    ×
-                  </button>
-                )}
-              </div>
-            </div>
+          {!showErrorMessage && (
+            <ConnectionStatus
+              onRetry={handleRetry}
+              onStartNewSession={handleStartNewSession}
+              showRetryButton={showRetryButton}
+              startNewConnection={startNewConnection}
+              clearError={clearError}
+              error={error}
+            />
           )}
 
           <MessageInput
@@ -909,7 +879,7 @@ export function ChatWidget({
             onFinalAudioStream={handleFinalAudioStream}
             onAudioStream={handleAudioStream}
             onFileUpload={handleFileUpload}
-            disabled={!isConnectionEstablished || !isOnline}
+            disabled={disableInput}
             setError={setError}
           />
         </div>

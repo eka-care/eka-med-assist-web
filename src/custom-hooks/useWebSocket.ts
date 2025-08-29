@@ -7,7 +7,9 @@ import {
   type EndOfStreamMessage,
   type StreamResponseMessage,
   ERROR_MESSAGES,
-} from "../types/socket";
+  ErrorMessage,
+  SOCKET_ERROR_CODES,
+} from "@/types/socket";
 import {
   WEBSOCKET_CUSTOM_EVENTS,
   WEBSOCKET_SERVER_EVENTS,
@@ -26,6 +28,12 @@ export function useWebSocket(
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
   const setError = useMedAssistStore((state) => state.setError);
+  const setShowRetryButton = useMedAssistStore(
+    (state) => state.setShowRetryButton
+  );
+  const setStartNewConnection = useMedAssistStore(
+    (state) => state.setStartNewConnection
+  );
   // const [isStreaming, setIsStreaming] = useState(false);
   const isAudioStreaming = useRef(false);
   // const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -37,8 +45,9 @@ export function useWebSocket(
   } = useMedAssistStore();
 
   useEffect(() => {
-    if (!config) {
-      console.log("No config provided");
+    console.log("hi use web socket");
+    if (!config || !config.sessionId || !config.auth?.token) {
+      console.log("No config provided",config);
       setConnectionEstablished(false);
       return;
     }
@@ -57,6 +66,10 @@ export function useWebSocket(
       (connected: boolean) => {
         console.log("WebSocket connection:", connected);
         setConnectionEstablished(connected);
+        if (connected) {
+          setShowRetryButton(false);
+          setStartNewConnection(false);
+        }
       }
     );
 
@@ -120,19 +133,6 @@ export function useWebSocket(
         }
       }
     );
-    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.SERVER_RESTART, (data: any) => {
-      console.log("SERVER_RESTART received:", data);
-      if (wsRef.current) {
-        wsRef.current.reconnect("server restart");
-      }
-    });
-
-    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.ABNORMAL_CLOSURE, (data: any) => {
-      console.log("ABNORMAL_CLOSURE received:", data);
-      if (wsRef.current) {
-        wsRef.current.reconnect("abnormal closure");
-      }
-    });
 
     wsRef.current?.on(
       WEBSOCKET_SERVER_EVENTS.STREAM,
@@ -166,10 +166,64 @@ export function useWebSocket(
       }
     );
 
-    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: Error) => {
+    //handle error differenty ,send entire errorMessage instance
+    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.ERROR, (error: ErrorMessage) => {
       console.error("WebSocket error:", error);
-      setError(error.message);//Already handled in WebSocketService
+      switch(error.code){
+        case SOCKET_ERROR_CODES.SESSION_INACTIVE:{
+          setShowRetryButton(false);
+          setStartNewConnection(true);
+          setError(ERROR_MESSAGES.SESSION_INACTIVE)
+          break;
+        }
+        case SOCKET_ERROR_CODES.SESSION_EXPIRED:{
+          setShowRetryButton(false);
+          setStartNewConnection(true);
+          setError(ERROR_MESSAGES.SESSION_EXPIRED)
+          break;
+        }
+        case SOCKET_ERROR_CODES.INVALID_EVENT:{
+          // setShowRetryButton(true);
+          setError(ERROR_MESSAGES.INVALID_EVENT)
+          break;
+        }
+        case SOCKET_ERROR_CODES.INVALID_CONTENT_TYPE:{
+          // setShowRetryButton(true);
+          setError(ERROR_MESSAGES.INVALID_CONTENT_TYPE)
+          break;
+        }
+        case SOCKET_ERROR_CODES.PARSING_ERROR:{
+          setShowRetryButton(true);
+          setError(ERROR_MESSAGES.PARSING_ERROR)
+          break;
+        }
+        case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS:{
+          // setShowRetryButton(true);
+          //TODO: handle this case
+          setError(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS)
+          break;
+        }
+        case SOCKET_ERROR_CODES.SERVER_ERROR:{
+          // setShowRetryButton(true);
+          setError(ERROR_MESSAGES.SERVER_ERROR)
+          break;
+        }
+        default:{
+          setError({ title: error.msg });
+          break;
+        }
+      }
     });
+
+    wsRef.current?.on(
+      WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
+      (error: Error) => {
+        console.error("Session inactive:", error);
+        setShowRetryButton(false);
+        setStartNewConnection(true);
+        setError(ERROR_MESSAGES.SESSION_INACTIVE); //Already handled in WebSocketService
+      }
+    );
 
     // Handle progress messages
     wsRef.current?.on("progress_message", (progressMessage: string) => {
@@ -199,12 +253,37 @@ export function useWebSocket(
       }
     });
 
-    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.RECONNECT, (data: any) => {
-      console.log("RECONNECT received:", data);
-      if (wsRef.current) {
-        wsRef.current.reconnect("manual reconnect");
+    wsRef.current?.on(
+      WEBSOCKET_CUSTOM_EVENTS.MAX_CONNECTION_ATTEMPTS_EXCEEDED,
+      (data: any) => {
+        console.log("MAX_CONNECTION_ATTEMPTS_EXCEEDED received:", data);
+        // If connection attempts exceeded → set showRetry = true
+        setShowRetryButton(true);
+        console.log("setting error to CONNECTION_ATTEMPTS_EXCEEDED");
+        setError(ERROR_MESSAGES.CONNECTION_ATTEMPTS_EXCEEDED)
       }
-    });
+    );
+
+    wsRef.current?.on(
+      WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
+      (data: any) => {
+        console.log("MAX_RECONNECTION_ATTEMPTS_EXCEEDED received:", data);
+        // If max reconnection attempts exceeded → show new session error
+        setShowRetryButton(false);
+        setStartNewConnection(true);
+      }
+    );
+
+    wsRef.current?.on(
+      WEBSOCKET_CUSTOM_EVENTS.CONNECTION_TIMEOUT_ERROR,
+      (data: any) => {
+        console.log("CONNECTION_TIMEOUT_ERROR received:", data);
+        // If connection timeout error → show retry button
+        setShowRetryButton(true);
+        setError(ERROR_MESSAGES.CONNECTION_LOST);
+      }
+    );
+
     // Connect to WebSocket
     service
       .connect()
@@ -225,7 +304,7 @@ export function useWebSocket(
       }
       setConnectionEstablished(false);
     };
-  }, [config?.sessionId, config?.auth.token, setConnectionEstablished]);
+  }, [config?.sessionId, config?.auth?.token, setConnectionEstablished]);
 
   // Send text message
   const sendTextMessage = (message: string) => {
@@ -235,7 +314,9 @@ export function useWebSocket(
       } catch (error) {
         console.error("Failed to send text message:", error);
         setError(
-          error instanceof Error ? error.message : "Failed to send message"
+          error instanceof Error
+            ? { title: error.message }
+            : { title: "Failed to send message" }
         );
       }
     } else {
@@ -275,7 +356,9 @@ export function useWebSocket(
       } catch (error) {
         console.error("Failed to send audio data:", error);
         setError(
-          error instanceof Error ? error.message : "Failed to send audio"
+          error instanceof Error
+            ? { title: error.message }
+            : { title: "Failed to send audio" }
         );
       }
     } else {
@@ -293,7 +376,9 @@ export function useWebSocket(
       } catch (error) {
         console.error("Failed to send end of audio stream:", error);
         setError(
-          error instanceof Error ? error.message : "Failed to end audio stream"
+          error instanceof Error
+            ? { title: error.message }
+            : { title: "Failed to end audio stream" }
         );
       }
     } else {

@@ -17,6 +17,11 @@ export enum WEBSOCKET_CUSTOM_EVENTS {
   TIMEOUT = "timeout",
   MESSAGE = "message",
   RECONNECT = "reconnect",
+  CONNECTION_ERROR = "connection_error",
+  CONNECTION_TIMEOUT_ERROR = "connection_timeout_error",
+  MAX_CONNECTION_ATTEMPTS_EXCEEDED = "max_connection_attempts_exceeded",
+  MAX_RECONNECTION_ATTEMPTS_EXCEEDED = "max_reconnection_attempts_exceeded",
+  SESSION_INACTIVE = "session_inactive",
 }
 
 export enum MULTI_SELECT_ADDITIONAL_OPTION {
