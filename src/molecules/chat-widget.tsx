@@ -58,7 +58,8 @@ export function ChatWidget({
     },
   ]);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
-  const [isWaitingForResponse, setIsWaitingForResponse] = useState<boolean>(false);
+  const [isWaitingForResponse, setIsWaitingForResponse] =
+    useState<boolean>(false);
   const {
     isConnectionEstablished,
     showRetryButton,
@@ -113,7 +114,6 @@ export function ChatWidget({
     (botMessage: string) => {
       // Clear waiting state when we receive a bot response
       setIsWaitingForResponse(false);
-      
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
@@ -183,7 +183,7 @@ export function ChatWidget({
     (progressMsg: string) => {
       // Clear waiting state when we receive progress messages
       setIsWaitingForResponse(false);
-      
+
       // Handle progress messages
       console.log("Progress message received:", progressMsg);
       setProgressMessage(progressMsg);
@@ -191,7 +191,7 @@ export function ChatWidget({
     (pillData: PillAction) => {
       // Clear waiting state when we receive pill data
       setIsWaitingForResponse(false);
-      
+
       // Handle pill messages - merge with existing bot message
       console.log("Pill message received:", pillData);
 
@@ -231,7 +231,7 @@ export function ChatWidget({
     (multiData: PillAction) => {
       // Clear waiting state when we receive multi data
       setIsWaitingForResponse(false);
-      
+
       // Handle multi messages - merge with existing bot message
       console.log("Multi message received:", multiData);
       setDisableInput(true);
@@ -482,7 +482,7 @@ export function ChatWidget({
     try {
       // Set waiting state immediately when audio is sent
       setIsWaitingForResponse(true);
-      
+
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
@@ -554,7 +554,7 @@ export function ChatWidget({
     try {
       // Set waiting state immediately when file upload request is sent
       setIsWaitingForResponse(true);
-      
+
       // Set files for upload when presigned URL is received
       setFilesForUpload(fileArray, message);
       await sendFileUploadRequest();
@@ -784,7 +784,7 @@ export function ChatWidget({
     try {
       // Set waiting state immediately when pill is clicked
       setIsWaitingForResponse(true);
-      
+
       // Send pill message via WebSocket
       await sendPillMessage(pillText, tool_use_id);
       if (disableInput) {
@@ -914,7 +914,7 @@ export function ChatWidget({
                   files={message.files}
                 />
               ))}
-              
+
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
                 <div className="px-4 py-2">
@@ -942,6 +942,7 @@ export function ChatWidget({
               startNewConnection={startNewConnection}
               clearError={clearError}
               error={error}
+              isConnected={isConnectionEstablished && isOnline}
             />
           )}
 

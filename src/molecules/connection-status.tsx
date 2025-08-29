@@ -10,6 +10,7 @@ interface ConnectionStatusProps {
   clearError: () => void;
   startNewConnection?: boolean;
   error: ErrorMessageUI | null;
+  isConnected: boolean;
 }
 
 export function ConnectionStatus({
@@ -20,6 +21,7 @@ export function ConnectionStatus({
   startNewConnection,
   clearError,
   error,
+  isConnected,
 }: ConnectionStatusProps) {
   const { isOnline } = useNetworkStatus();
   // const {
@@ -43,12 +45,10 @@ export function ConnectionStatus({
 
   useEffect(() => {
     console.log(
-      "showRetryButton",
-      showRetryButton,
-      "startNewConnection",
-      startNewConnection
+      "isConnected",
+      isConnected
     );
-  }, [showRetryButton, startNewConnection]);
+  }, [isConnected]);
   // Show new session error message if showSetNewSession is true
   if (startNewConnection) {
     return (
@@ -176,9 +176,10 @@ export function ConnectionStatus({
         </div>
 
         {/* Loading Spinner */}
+        {!isConnected && (
         <div className="flex-shrink-0">
           <div className="w-6 h-6 border-2 border-[#FDD835] border-t-transparent rounded-full animate-spin"></div>
-        </div>
+        </div>)}
       </div>
     </div>
   );
