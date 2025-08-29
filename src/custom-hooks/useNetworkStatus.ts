@@ -1,5 +1,4 @@
 import { useEffect, useState } from 'react';
-import { toast } from '@ui/index';
 
 interface NetworkStatus {
   isOnline: boolean;
@@ -18,19 +17,11 @@ export function useNetworkStatus(): NetworkStatus {
     const handleOnline = () => {
       setNetworkStatus(prev => ({ ...prev, isOnline: true }));
       console.log('Network: User is back online');
-      toast.success('You are back online!', {
-        description: 'Connection restored successfully.',
-        duration: 3000,
-      });
     };
 
     const handleOffline = () => {
       setNetworkStatus(prev => ({ ...prev, isOnline: false }));
       console.log('Network: User is offline');
-      toast.error('You are offline', {
-        description: 'Please check your internet connection.',
-        duration: 5000,
-      });
     };
 
     const handleConnectionChange = () => {
