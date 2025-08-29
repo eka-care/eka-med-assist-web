@@ -828,7 +828,7 @@ export function ChatWidget({
 
   // Mobile full-screen styles
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border flex flex-col h-screen w-screen"
+    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-screen w-screen"
     : isExpanded
     ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
     : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-2 pb-4 ${className}`;

@@ -106,10 +106,6 @@ function App({ config }: AppProps = {}) {
     setIsExpanded(newExpandedState);
     console.log("calling onMinimize", newExpandedState, config?.onMinimize);
 
-    // If minimizing, call the onMinimize callback
-    if (!newExpandedState && config?.onMinimize) {
-      config.onMinimize();
-    }
   };
 
   return (
