@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import startSession from "./api/post-start-session";
-import { ChatWidget } from "./molecules/chat-widget";
+import { ChatWidget } from "./organisms/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
 import { useNetworkStatus } from "./custom-hooks/useNetworkStatus";
 
@@ -104,7 +104,7 @@ function App({ config }: AppProps = {}) {
     //TODO: fix minimize
     const newExpandedState = !isExpanded;
     setIsExpanded(newExpandedState);
-    console.log("calling onMinimize",newExpandedState, config?.onMinimize);
+    console.log("calling onMinimize", newExpandedState, config?.onMinimize);
 
     // If minimizing, call the onMinimize callback
     if (!newExpandedState && config?.onMinimize) {

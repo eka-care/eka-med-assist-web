@@ -1,6 +1,6 @@
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
 import { ErrorMessageUI } from "@/types/socket";
-import { useEffect } from "react";
+import { X } from "lucide-react";
 
 interface ConnectionStatusProps {
   className?: string;
@@ -24,32 +24,7 @@ export function ConnectionStatus({
   isConnected,
 }: ConnectionStatusProps) {
   const { isOnline } = useNetworkStatus();
-  // const {
-  //   // isConnectionEstablished,
-  //   showRetryButton,
-  //   startNewConnection,
-  //   // error,
-  //   clearError,
-  // } = useMedAssistStore();
 
-  // // Don't show anything if connection is established and online and no error
-  // if (
-  //   isConnectionEstablished &&
-  //   isOnline &&
-  //   !error &&
-  //   !showRetryButton &&
-  //   !startNewConnection
-  // ) {
-  //   return null;
-  // }
-
-  useEffect(() => {
-    console.log(
-      "isConnected",
-      isConnected
-    );
-  }, [isConnected]);
-  // Show new session error message if showSetNewSession is true
   if (startNewConnection) {
     return (
       <div
@@ -69,6 +44,14 @@ export function ConnectionStatus({
               Start a new session
             </div>
           </div>
+
+          {/* Close Button */}
+          <button
+            onClick={clearError}
+            className="p-1 text-[#666666] hover:text-[#333333] hover:bg-[#FEE39B] rounded transition-colors flex-shrink-0"
+            aria-label="Close error message">
+            <X size={16} />
+          </button>
 
           {/* Start New Session Button */}
           <button
@@ -119,6 +102,14 @@ export function ConnectionStatus({
                 : "Please check your connection and try again"}
             </div>
           </div>
+
+          {/* Close Button */}
+          <button
+            onClick={clearError}
+            className="p-1 text-[#666666] hover:text-[#333333] hover:bg-[#FEE39B] rounded transition-colors flex-shrink-0"
+            aria-label="Close error message">
+            <X size={16} />
+          </button>
 
           {/* Retry Button */}
           <button
@@ -175,11 +166,20 @@ export function ConnectionStatus({
           </div>
         </div>
 
+        {/* Close Button */}
+        <button
+          onClick={clearError}
+          className="p-1 text-[#666666] hover:text-[#333333] hover:bg-[#FDD835] rounded transition-colors flex-shrink-0"
+          aria-label="Close error message">
+          <X size={16} />
+        </button>
+
         {/* Loading Spinner */}
         {!isConnected && (
-        <div className="flex-shrink-0">
-          <div className="w-6 h-6 border-2 border-[#FDD835] border-t-transparent rounded-full animate-spin"></div>
-        </div>)}
+          <div className="flex-shrink-0">
+            <div className="w-6 h-6 border-2 border-[#FDD835] border-t-transparent rounded-full animate-spin"></div>
+          </div>
+        )}
       </div>
     </div>
   );

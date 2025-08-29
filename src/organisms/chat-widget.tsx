@@ -6,11 +6,11 @@ import useMedAssistStore from "@/stores/medAssistStore";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
 import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { Card } from "@ui/index";
-import { ChatHeader } from "./chat-header";
-import { MessageBubble } from "./message-bubble";
-import { MessageInput } from "./message-input";
-import { PillAction } from "./quick-actions";
-import { ConnectionStatus } from "./connection-status";
+import { ChatHeader } from "../molecules/chat-header";
+import { MessageBubble } from "../molecules/message-bubble";
+import { MessageInput } from "../molecules/message-input";
+import { PillAction } from "../molecules/quick-actions";
+import { ConnectionStatus } from "../molecules/connection-status";
 import { DocAssistIcon } from "@ui/index";
 
 interface Message {
