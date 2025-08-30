@@ -4,7 +4,7 @@ import {
   MultiSelectGroup,
   MULTI_SELECT_ADDITIONAL_OPTION,
 } from "@ui/index";
-import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
+// import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
 import { PillAction, QuickActions } from "./quick-actions";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
@@ -37,16 +37,16 @@ interface MessageBubbleProps {
 export function MessageBubble({
   message,
   isBot = false,
-  onLike,
-  onDislike,
-  onRegenerate,
+  // onLike,
+  // onDislike,
+  // onRegenerate,
   quickActions,
   showActions,
   isQuickActionsDisabled,
   isStreaming = false,
   progressMessage,
   handleQuickAction,
-  messageId,
+  // messageId,
   isRegenerating = false,
   pillAction,
   onPillClick,
@@ -234,7 +234,7 @@ export function MessageBubble({
             />
           )}
 
-          {isBot && (
+          {/* {isBot && (
             <div className="flex items-center gap-1 mt-3">
               <Button
                 variant="ghost"
@@ -263,7 +263,7 @@ export function MessageBubble({
                 />
               </Button>
             </div>
-          )}
+          )} */}
         </div>
       </div>
     </div>
