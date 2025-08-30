@@ -1,3 +1,4 @@
+import { Message } from "@/types";
 import { ErrorMessageUI } from "@/types/socket";
 
 export type TMedAssistStore = {
@@ -19,9 +20,21 @@ export type TMedAssistStore = {
   showRetryButton: boolean;
   setShowRetryButton: (showRetry: boolean) => void;
 
+  chats: { [sessionId: string]: Message[] };
+
+  // Message actions
+  addMessageToSession: (sessionId: string, message: Message) => void;
+  updateMessageInSession: (
+    sessionId: string,
+    messageId: string,
+    updates: Partial<Message>
+  ) => void;
+  getMessagesForSession: (sessionId: string) => Message[];
+  clearMessagesForSession: (sessionId: string) => void;
+  clearAllChats: () => void;
   // Error handling
   error: ErrorMessageUI | null;
-  setError: (error: ErrorMessageUI| null) => void;
+  setError: (error: ErrorMessageUI | null) => void;
   clearError: () => void;
   isTimeoutError: boolean;
   setTimeoutError: (isTimeout: boolean) => void;

@@ -12,19 +12,7 @@ import { MessageInput } from "../molecules/message-input";
 import { PillAction } from "../molecules/quick-actions";
 import { ConnectionStatus } from "../molecules/connection-status";
 import { DocAssistIcon } from "@ui/index";
-
-interface Message {
-  id: string;
-  content: string;
-  isBot: boolean;
-  files?: File[];
-  originalUserMessage?: string; // Store the original user message for regeneration
-  isRegenerating?: boolean; // Track if this message is being regenerated
-  pillData?: PillAction;
-  multiData?: PillAction;
-  audioData?: AudioData; // Add audio data support
-  isResponded?: boolean; // Track if this bot message has been responded to
-}
+import { Message } from "@/types";
 
 interface ChatWidgetProps {
   title?: string;
@@ -55,6 +43,7 @@ export function ChatWidget({
       content:
         "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
       isBot: true,
+      isStored: true,
     },
   ]);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
@@ -71,6 +60,9 @@ export function ChatWidget({
     sessionId,
     sessionToken,
     clearSession,
+    getMessagesForSession,
+    addMessageToSession,
+    // updateMessageInSession,
   } = useMedAssistStore();
 
   const [disableInput, setDisableInput] = useState<boolean>(
@@ -90,6 +82,28 @@ export function ChatWidget({
     }
   }, []); // Only run on mount
 
+  //load previous messages on unmout
+  useEffect(() => {
+    if (sessionId) {
+      //TODO: add a loading state here
+      const previousMessages = getMessagesForSession(sessionId);
+      if (previousMessages.length > 0) {
+        console.log("previousMessages", previousMessages);
+        setMessages(previousMessages);
+      } else {
+        const welcomeMessage = {
+          id: "1",
+          content:
+            "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+          isBot: true,
+          isStored: true,
+        };
+
+        addMessageToSession(sessionId, welcomeMessage);
+        setMessages([welcomeMessage]);
+      }
+    }
+  }, [sessionId]);
   // Create socket configuration when session data is available
   const socketConfig: WebSocketConfig | null =
     sessionId && sessionToken
@@ -132,7 +146,9 @@ export function ChatWidget({
             ...lastMessage,
             content: botMessage,
             isRegenerating: false, // Clear regenerating state
+            isStored: false,
           };
+
           return updatedMessages;
         } else if (
           lastMessage &&
@@ -154,29 +170,28 @@ export function ChatWidget({
             botMessageLength: botMessage.length,
             lastMessageLength: lastMessage?.content?.length || 0,
           });
-
           // Check if we need to replace a regenerating message
-          const regeneratingMessageIndex = prev.findIndex(
-            (msg) => msg.isRegenerating
-          );
-          if (regeneratingMessageIndex !== -1) {
-            // Replace the regenerating message
-            const updatedMessages = [...prev];
-            updatedMessages[regeneratingMessageIndex] = {
-              ...updatedMessages[regeneratingMessageIndex],
-              content: botMessage,
-              isRegenerating: false,
-            };
-            return updatedMessages;
-          } else {
-            // Create a new bot message
-            const newMessage: Message = {
-              id: Date.now().toString(),
-              content: botMessage,
-              isBot: true,
-            };
-            return [...prev, newMessage];
-          }
+          // const regeneratingMessageIndex = prev.findIndex(
+          //   (msg) => msg.isRegenerating
+          // );
+          // if (regeneratingMessageIndex !== -1) {
+          //   // Replace the regenerating message
+          //   const updatedMessages = [...prev];
+          //   updatedMessages[regeneratingMessageIndex] = {
+          //     ...updatedMessages[regeneratingMessageIndex],
+          //     content: botMessage,
+          //     isRegenerating: false,
+          //   }; // Will be stored when streaming ends
+          //   return updatedMessages;
+          // } else {
+          // Create a new bot message
+          const newMessage: Message = {
+            id: Date.now().toString(),
+            content: botMessage,
+            isBot: true,
+            isStored: false,
+          }; // Will be stored when streaming ends
+          return [...prev, newMessage];
         }
       });
     },
@@ -214,6 +229,15 @@ export function ChatWidget({
             ...updatedMessages[lastBotMessageIndex],
             pillData: pillData, // Attach pills to the existing bot message
           };
+          // console.log(
+          //   "Updating pill message to session store",
+          //   updatedMessages[lastBotMessageIndex]
+          // );
+          // updateMessageInSession(
+          //   sessionId,
+          //   updatedMessages[lastBotMessageIndex].id,
+          //   updatedMessages[lastBotMessageIndex]
+          // );
           return updatedMessages;
         } else {
           console.log("No bot message found, creating a new one", pillData);
@@ -223,7 +247,10 @@ export function ChatWidget({
             content: "Here are some options:",
             isBot: true,
             pillData: pillData,
+            isStored: true,
           };
+          console.log("Adding pill message to session store", newMessage);
+          addMessageToSession(sessionId, newMessage);
           return [...prev, newMessage];
         }
       });
@@ -253,6 +280,16 @@ export function ChatWidget({
             ...updatedMessages[lastBotMessageIndex],
             multiData: multiData, // Attach multi data to the existing bot message
           };
+          // console.log(
+          //   "Updating multi message to session store",
+          //   updatedMessages[lastBotMessageIndex]
+          // );
+          // //in case of multi data, we need to update the message in session store
+          // updateMessageInSession(
+          //   sessionId,
+          //   updatedMessages[lastBotMessageIndex].id,
+          //   updatedMessages[lastBotMessageIndex]
+          // );
           return updatedMessages;
         } else {
           console.log("No bot message found, creating a new one", multiData);
@@ -262,7 +299,10 @@ export function ChatWidget({
             content: "Here are some options:",
             isBot: true,
             multiData: multiData,
+            isStored: true,
           };
+          console.log("Adding multi message to session store", newMessage);
+          addMessageToSession(sessionId, newMessage);
           return [...prev, newMessage];
         }
       });
@@ -279,12 +319,22 @@ export function ChatWidget({
     console.log("hi chat widget");
 
     if (isConnectionEstablished && isOnline) {
-      setDisableInput(false);
+      const lastMessage = messages[messages.length - 1];
+      console.log("lastMessage", lastMessage);
+      if (
+        lastMessage?.isBot &&
+        (lastMessage?.pillData || lastMessage?.multiData)
+      ) {
+        console.log("disabling input", lastMessage);
+        setDisableInput(true);
+      } else {
+        setDisableInput(false);
+      }
     } else {
       setDisableInput(true);
       setIsWaitingForResponse(false); // Clear waiting state when connection is lost
     }
-  }, [isConnectionEstablished, isOnline]);
+  }, [isConnectionEstablished, isOnline, messages]);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -303,18 +353,32 @@ export function ChatWidget({
 
   // Scroll to bottom whenever messages change
   useEffect(() => {
-    console.log("hi from messages and isStreaming", messages, isStreaming);
     scrollToBottom();
-  }, [messages, isStreaming]);
-
-  // Clear progress message and waiting state when streaming starts or ends
-  useEffect(() => {
     if (isStreaming) {
       setProgressMessage(null);
       setIsWaitingForResponse(false); // Clear waiting state when streaming starts
     }
-  }, [isStreaming]);
+  }, [messages, isStreaming]);
 
+  useEffect(() => {
+    if (!isStreaming && sessionId && messages.length > 0) {
+      const lastMessage = messages[messages.length - 1];
+      if (lastMessage.isBot && !lastMessage.isStored) {
+        console.log(
+          "Adding bot message to session store",
+          messages[messages.length - 1]
+        );
+        // Mark as stored to prevent duplicate storage
+        const updatedMessage = { ...lastMessage, isStored: true };
+        setMessages((prev) =>
+          prev.map((msg, index) =>
+            index === prev.length - 1 ? updatedMessage : msg
+          )
+        );
+        addMessageToSession(sessionId, updatedMessage);
+      }
+    }
+  }, [isStreaming, sessionId]);
   // Clear waiting state when there are errors
   useEffect(() => {
     if (error) {
@@ -418,6 +482,7 @@ export function ChatWidget({
       content,
       isBot: false,
       originalUserMessage: content, // Store for potential regeneration
+      isStored: true,
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -427,6 +492,8 @@ export function ChatWidget({
 
     try {
       await sendChatMessage(content);
+      console.log("Adding message to session store", newMessage);
+      addMessageToSession(sessionId, newMessage);
       console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -475,6 +542,7 @@ export function ChatWidget({
       content: "🎤 Voice message sent", // Cleaner, simpler text
       isBot: false,
       audioData: audioData, // Store the audio data
+      isStored: false,
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -487,6 +555,8 @@ export function ChatWidget({
       await sendAudioData(audioData);
       // Send end of stream signal
       await sendAudioEndOfStream();
+      console.log("Adding audio message to session store", newMessage);
+      addMessageToSession(sessionId, { ...newMessage, isStored: true });
       console.log("Audio sent successfully");
     } catch (error) {
       console.error("Failed to send audio:", error);
@@ -547,6 +617,7 @@ export function ChatWidget({
         } uploaded`, // Cleaner text
       isBot: false,
       files: fileArray,
+      isStored: true,
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -558,6 +629,8 @@ export function ChatWidget({
       // Set files for upload when presigned URL is received
       setFilesForUpload(fileArray, message);
       await sendFileUploadRequest();
+      console.log("Adding file message to session store", newMessage);
+      addMessageToSession(sessionId, newMessage);
       console.log("File upload request sent successfully");
     } catch (error) {
       console.error("Failed to upload file:", error);
@@ -603,7 +676,14 @@ export function ChatWidget({
           updatedMessages[i] = {
             ...updatedMessages[i],
             isResponded: true,
+            isStored: true,
           };
+          console.log(
+            "Adding quick action message to session store",
+            messages[0]
+          );
+
+          addMessageToSession(sessionId, updatedMessages[i]);
           break;
         }
       }
@@ -730,8 +810,6 @@ export function ChatWidget({
   };
 
   const handlePillClick = async (pillText: string, tool_use_id: string) => {
-    console.log("Pill clicked:", pillText, "tool_use_id:", tool_use_id);
-
     // Block pill clicks if currently streaming
     if (isStreaming) {
       console.log("Cannot use pill while streaming");
@@ -755,7 +833,7 @@ export function ChatWidget({
     // Clear progress message when using pill
     setProgressMessage(null);
 
-    // Mark the bot message as responded
+    // Mark the bot message as responded and storig updated message to local storage
     setMessages((prev) => {
       const updatedMessages = [...prev];
       // Find the last bot message and mark it as responded
@@ -765,6 +843,12 @@ export function ChatWidget({
             ...updatedMessages[i],
             isResponded: true,
           };
+          //storing updated message to local storage
+          console.log(
+            "updating pill message to session store",
+            updatedMessages[i]
+          );
+          addMessageToSession(sessionId, updatedMessages[i]);
           break;
         }
       }
@@ -777,6 +861,7 @@ export function ChatWidget({
       content: `${pillText}`, // Cleaner text with checkmark
       isBot: false,
       originalUserMessage: pillText,
+      isStored: true,
     };
 
     setMessages((prev) => [...prev, newMessage]);
@@ -787,6 +872,7 @@ export function ChatWidget({
 
       // Send pill message via WebSocket
       await sendPillMessage(pillText, tool_use_id);
+      addMessageToSession(sessionId, newMessage);
       if (disableInput) {
         setDisableInput(false);
       }
@@ -866,10 +952,11 @@ export function ChatWidget({
       )}
 
       {/* Single timestamp at top */}
-      <div className="text-xs text-[var(--color-muted-foreground)] text-center">
-        {getCurrentTimestamp()}
-      </div>
-
+      {!isLoading && (
+        <div className="text-xs text-[var(--color-muted-foreground)] text-center">
+          {getCurrentTimestamp()}
+        </div>
+      )}
       {!isLoading && (
         <div className={`${chatHeight} flex flex-col overflow-hidden`}>
           <div
