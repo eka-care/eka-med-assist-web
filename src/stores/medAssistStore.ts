@@ -11,11 +11,12 @@ const storeInitialState = {
   isTimeoutError: false,
   startNewConnection: false,
   showRetryButton: false,
+  chats: {},
 };
 
 const useMedAssistStore = create<TMedAssistStore>()(
   persist(
-    (set) => ({
+    (set, get) => ({
       sessionId: "",
       setSessionId: (sessionId) => set({ sessionId }),
 
@@ -32,6 +33,40 @@ const useMedAssistStore = create<TMedAssistStore>()(
       startNewConnection: false,
       setStartNewConnection: (startNewConnection) =>
         set({ startNewConnection }),
+
+      chats: {},
+
+      addMessageToSession: (sessionId, message) =>
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [sessionId]: [...(state.chats[sessionId] || []), message],
+          },
+        })),
+      updateMessageInSession: (sessionId, messageId, updates) =>
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [sessionId]: (state.chats[sessionId] || []).map((m) =>
+              m.id === messageId ? { ...m, ...updates } : m
+            ),
+          },
+        })),
+
+      getMessagesForSession: (sessionId: string) => {
+        const state = get();
+        return state.chats[sessionId] || [];
+      },
+
+      clearMessagesForSession: (sessionId: string) =>
+        set((state) => ({
+          chats: {
+            ...state.chats,
+            [sessionId]: [],
+          },
+        })),
+
+      clearAllChats: () => set({ chats: {} }),
 
       // Error handling
       error: null,
@@ -58,6 +93,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
       storage: createJSONStorage(() => localStorage), // use localStorage
       partialize: (state) => ({
         // Only persist these fields, exclude methods and sensitive data
+        chats: state.chats,
         sessionId: state.sessionId,
         sessionToken: state.sessionToken,
         isConnectionEstablished: state.isConnectionEstablished,

@@ -120,8 +120,6 @@ export function MessageInput({
 
   // Handle audio reinitialization when widget reopens
   useEffect(() => {
-    console.log("hi");
-
     // Clear audio errors when widget reopens
     if (!disabled && !isStreaming) {
       setAudioError(null);
@@ -170,9 +168,6 @@ export function MessageInput({
         }
       } else {
         console.error("Error checking microphone permission:", error);
-        const errorMsg =
-          "Unable to access microphone. Please check your device and try again.";
-        console.log("Setting error:", errorMsg);
         setError({ title: "Unable to access microphone.", description:" Please check your device and try again." });
       }
     }
@@ -199,7 +194,6 @@ export function MessageInput({
   //   return message.trim();
   // }, [message]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)
-  console.log("error", error);
   const isInputDisabled =
     !isConnectionEstablished ||
     disabled ||
@@ -389,48 +383,6 @@ export function MessageInput({
       }
     }
   };
-
-  // const handleSend = async () => {
-  //   console.log("called handle send", isStreaming);
-
-  //   if ((message.trim() || isAudioStreaming) && !disabled && !isSending) {
-  //     try {
-  //       setIsSending(true); // Disable send button immediately
-
-  //       // Send text message
-  //       if (message.trim()) {
-  //         onSendMessage(message.trim());
-  //       }
-
-  //       // // Send files if any
-  //       // if (uploadedFiles.length > 0) {
-  //       //   const fileList = new DataTransfer();
-  //       //   uploadedFiles.forEach((file) => fileList.items.add(file));
-  //       //   onFileUpload(fileList.files);
-  //       // }
-
-  //       // Send audio if any
-  //       if (isAudioStreaming) {
-  //         console.log("called sendRecording in message-input-copy-v2");
-  //         await sendRecording();
-  //       }
-
-  //       // Clear inputs
-  //       setMessage("");
-  //       // setUploadedFiles([]);
-  //       setShowEndButton(false);
-  //       setIsListening(false);
-  //     } catch (error) {
-  //       console.error("Error in handleSend:", error);
-  //       setError("Failed to send message. Please try again.");
-  //     } finally {
-  //       // Note: We don't set isSending to false here because:
-  //       // 1. For text messages: The button will be re-enabled when streaming starts
-  //       // 2. For audio/files: The button is re-enabled in sendRecording
-  //       // This prevents double-clicking and provides better UX
-  //     }
-  //   }
-  // };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
