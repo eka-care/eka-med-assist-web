@@ -3,11 +3,14 @@ import {
   DocAssistIcon,
   MultiSelectGroup,
   MULTI_SELECT_ADDITIONAL_OPTION,
+  // ScrollArea,
 } from "@ui/index";
 // import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
 import { PillAction, QuickActions } from "./quick-actions";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
+// import AppointmentCard from "./appointments-card";
+// import { items } from "@/configs/appointments-demo.config";
 
 interface MessageBubbleProps {
   message: string;
@@ -226,6 +229,25 @@ export function MessageBubble({
                 )}
               </div>
             )}
+
+          {/* <ScrollArea className="h-auto">
+            <div className="grid gap-3">
+              {items.map((item, idx) => (
+                <AppointmentCard
+                  key={idx}
+                  doctor={item.doctor}
+                  availability={item.availability}
+                  onCall={() => {
+                    console.log("onCall");
+                  }}
+                  onBook={(info: { date: string; time: string }) => {
+                    console.log("onBook", info);
+                  }}
+                />
+              ))}
+            </div>
+          </ScrollArea> */}
+
           {showActions && (
             <QuickActions
               actions={quickActions}
