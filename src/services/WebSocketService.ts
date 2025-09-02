@@ -205,7 +205,10 @@ export class WebSocketService {
       //call api to get session details
       const sessionDetails = await getSessionDetails(this.config.sessionId);
       console.log("sessionDetails response", sessionDetails);
-      if (sessionDetails.status === "active" || sessionDetails?.msg === "Session Active") {
+      if (
+        sessionDetails.status === "active" ||
+        sessionDetails?.msg === "Session Active"
+      ) {
         this.isReconnecting = true;
         //if active continue reconnecting
       } else {
@@ -477,7 +480,7 @@ export class WebSocketService {
   /**
    * Send chat message
    */
-  public sendChatMessage(message: string): void {
+  public sendChatMessage(message: string, tool_use_id?: string): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket not connected");
     }
@@ -487,7 +490,7 @@ export class WebSocketService {
       ct: ContentType.TEXT,
       ts: Date.now(),
       _id: Date.now().toString(),
-      data: { text: message },
+      data: { text: message, ...(tool_use_id && { tool_use_id }) },
     };
 
     this.sendMessage(chatMessage);
@@ -850,23 +853,42 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
-  /**
-   * Send pill message
-   */
-  public sendPillMessage(pillMessage: string, tool_use_id: string): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
-    }
-    const message: ChatRequest = {
-      ev: SocketEvent.CHAT,
-      ct: ContentType.TEXT,
-      ts: Date.now(),
-      _id: Date.now().toString(),
-      data: { text: pillMessage, tool_use_id: tool_use_id },
-    };
-    this.sendMessage(message);
-  }
+  // /**
+  //  * Send pill message
+  //  */
+  // public sendPillMessage(pillMessage: string, tool_use_id: string): void {
+  //   if (!this.isConnected()) {
+  //     throw new Error("WebSocket is not connected");
+  //   }
+  //   const message: ChatRequest = {
+  //     ev: SocketEvent.CHAT,
+  //     ct: ContentType.TEXT,
+  //     ts: Date.now(),
+  //     _id: Date.now().toString(),
+  //     data: { text: pillMessage, tool_use_id: tool_use_id },
+  //   };
+  //   this.sendMessage(message);
+  // }
 
+  // /**
+  //  * Send doctor card message
+  //  */
+  // public sendDoctorCardMessage(
+  //   doctorCardMessage: string,
+  //   tool_use_id: string
+  // ): void {
+  //   if (!this.isConnected()) {
+  //     throw new Error("WebSocket is not connected");
+  //   }
+  //   const message: ChatRequest = {
+  //     ev: SocketEvent.CHAT,
+  //     ct: ContentType.DOCTOR_CARD,
+  //     ts: Date.now(),
+  //     _id: Date.now().toString(),
+  //     data: { text: doctorCardMessage, tool_use_id: tool_use_id },
+  //   };
+  //   this.sendMessage(message);
+  // }
   /**
    * Send ping message
    */

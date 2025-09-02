@@ -1,7 +1,5 @@
-import { PillAction } from "@/molecules/quick-actions";
 import { AudioData } from "@/services/audioService";
 import type { ThemeType } from "@ui/eka-ui/organisms/theme-provider";
-
 
 export interface PillConfig {
   id: string;
@@ -67,9 +65,39 @@ export interface Message {
   files?: File[];
   originalUserMessage?: string; // Store the original user message for regeneration
   isRegenerating?: boolean; // Track if this message is being regenerated
-  pillData?: PillAction;
-  multiData?: PillAction;
+  commonContentData?: import("./socket").CommonHandlerData; // Add common content data support
   audioData?: AudioData; // Add audio data support
   isResponded?: boolean; // Track if this bot message has been responded to
-  isStored: boolean
+  isStored: boolean;
 }
+
+export type TDoctor = {
+  name: string;
+  specialty: string;
+  hospital: string;
+  timings?: {
+    day?: string;
+    time?: string;
+  };
+  experience?: string; // optional
+  profile_link?: string; // optional
+  profile_pic?: string; //optional
+  languages?: string[]; //optional
+};
+
+export type TAvailability = {
+  selected_date?: string; // optional
+  slots_details: TSlotDetail[];
+};
+
+export type TSlotDetail = {
+  date: string;
+  day?: string;
+  slots: string[];
+  selected_slot?: string; // optional
+};
+
+export type TDoctorDetails = {
+  doctor: TDoctor;
+  availability?: TAvailability;
+};

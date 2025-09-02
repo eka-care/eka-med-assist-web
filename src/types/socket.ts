@@ -1,4 +1,5 @@
 import { MULTI_SELECT_ADDITIONAL_OPTION } from "@/configs/enums";
+import { TDoctorDetails } from "./widget";
 
 // WebSocket event types for chatbot
 export const SocketEvent = {
@@ -25,15 +26,16 @@ export type WebSocketErrorCode =
 export type SocketEventType = (typeof SocketEvent)[keyof typeof SocketEvent];
 
 // Content types
-export const ContentType = {
-  TEXT: "text",
-  AUDIO: "audio",
-  FILE: "file",
-  PILL: "pill",
-  MULTI: "multi",
-} as const;
+export enum ContentType {
+  TEXT = "text",
+  AUDIO = "audio",
+  FILE = "file",
+  PILL = "pill",
+  MULTI = "multi",
+  DOCTOR_CARD = "doctor_card",
+}
 
-export type ContentTypeType = (typeof ContentType)[keyof typeof ContentType];
+// export type ContentTypeType = (typeof ContentType)[keyof typeof ContentType];
 
 // Socket disconnect codes
 export const SocketCodes = {
@@ -60,7 +62,10 @@ export interface PingRequest extends BaseMessage {
 // Client to Server: Chat message
 export interface ChatRequest extends BaseMessage {
   ev: typeof SocketEvent.CHAT;
-  ct: typeof ContentType.TEXT | typeof ContentType.FILE;
+  ct:
+    | typeof ContentType.TEXT
+    | typeof ContentType.FILE
+    | typeof ContentType.DOCTOR_CARD;
   _id: string;
   data?: { url?: string; text?: string; tool_use_id?: string }; // message content or S3 URL
 }
@@ -94,13 +99,15 @@ export interface ChatResponseMessage extends BaseMessage {
   ct:
     | typeof ContentType.FILE
     | typeof ContentType.PILL
-    | typeof ContentType.MULTI;
+    | typeof ContentType.MULTI
+    | typeof ContentType.DOCTOR_CARD;
   data: {
     url?: string;
     exp?: number;
     tool_use_id?: string;
     choices?: string[];
-    additional_option: MULTI_SELECT_ADDITIONAL_OPTION;
+    doctor_details?: TDoctorDetails;
+    additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
   }; // S3 presigned URL
   // ct: typeof ContentType.FILE;
   // data: { url: string; exp?: number }; // S3 presigned URL
@@ -113,6 +120,12 @@ export interface PillResponseMessage extends BaseMessage {
   data: { choices: string[]; tool_use_id: string }; // pill data
 }
 
+// export interface DoctorCardResponseMessage extends BaseMessage {
+//   _id: string;
+//   ev: typeof SocketEvent.CHAT;
+//   ct: typeof ContentType.DOCTOR_CARD;
+//   data: { doctor_details: TDoctorDetails; tool_use_id: string }; // doctor card data
+// }
 // Server to Client: Stream response
 export interface StreamResponseMessage extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
@@ -271,9 +284,22 @@ export interface WebSocketConfig {
   };
 }
 
+// Common handler data type for different content types
+export interface CommonHandlerData {
+  type: ContentType;
+  tool_use_id: string;
+  data: {
+    choices?: string[];
+    doctor_details?: TDoctorDetails;
+    additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
+    url?: string;
+  };
+}
+
 // Event callback types
 export type MessageCallback = (message: ChatMessage) => void;
 export type ConnectionCallback = (connected: boolean) => void;
 export type ErrorCallback = (error: Error) => void;
 export type StreamCallback = (chunk: string) => void;
 export type FileUploadCallback = (url: string) => void;
+export type CommonContentCallback = (data: CommonHandlerData) => void;

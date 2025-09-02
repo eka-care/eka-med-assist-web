@@ -9,12 +9,14 @@ import {
   ERROR_MESSAGES,
   ErrorMessage,
   SOCKET_ERROR_CODES,
+  type CommonContentCallback,
+  type CommonHandlerData,
 } from "@/types/socket";
 import {
   WEBSOCKET_CUSTOM_EVENTS,
   WEBSOCKET_SERVER_EVENTS,
 } from "@/configs/enums";
-import { PillAction } from "@/molecules/quick-actions";
+
 import type { AudioData } from "@/services/audioService";
 import { WebSocketService } from "@/services/WebSocketService";
 
@@ -22,8 +24,7 @@ export function useWebSocket(
   config: WebSocketConfig | null,
   onTextMessage?: (message: string) => void,
   onProgressMessage?: (message: string) => void,
-  onPillMessage?: (pillData: PillAction) => void,
-  onMultiMessage?: (multiData: PillAction) => void
+  onCommonContent?: CommonContentCallback
   //   onAudioData?: (audioData: AudioData) => void
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
@@ -104,31 +105,25 @@ export function useWebSocket(
         }
         console.log("message.ct", message.ct);
         if (
-          message.ct === ContentType.PILL &&
-          message.data.choices &&
+          (message.ct === ContentType.PILL ||
+            message.ct === ContentType.MULTI ||
+            message.ct === ContentType.DOCTOR_CARD) &&
           message.data.tool_use_id
         ) {
-          console.log("Pill message received:", message.data?.choices);
-          // Call the callback to display the pill message
-          if (onPillMessage) {
-            onPillMessage({
-              choices: message.data.choices,
+          console.log(`${message.ct} message received:`, message.data);
+          // Call the common callback to handle all content types
+          if (onCommonContent) {
+            const commonData: CommonHandlerData = {
+              type: message.ct,
               tool_use_id: message.data.tool_use_id,
-            });
-          }
-        } else if (
-          message.ct === ContentType.MULTI &&
-          message.data.choices &&
-          message.data.tool_use_id
-        ) {
-          console.log("Multi message received:", message.data?.choices);
-          // Call the callback to display the multi message
-          if (onMultiMessage) {
-            onMultiMessage({
-              choices: message.data.choices,
-              tool_use_id: message.data.tool_use_id,
-              additionalOption: message.data.additional_option,
-            });
+              data: {
+                choices: message.data.choices,
+                doctor_details: message.data.doctor_details,
+                additional_option: message.data.additional_option,
+                url: message.data.url,
+              },
+            };
+            onCommonContent(commonData);
           }
         }
       }
@@ -318,11 +313,13 @@ export function useWebSocket(
     };
   }, [config?.sessionId, config?.auth?.token, setConnectionEstablished]);
 
-  // Send text message
-  const sendTextMessage = (message: string) => {
+
+
+  // Send chat message (alias for sendTextMessage)
+  const sendChatMessage = (message: string, tool_use_id?: string) => {
     if (wsRef.current?.isConnected()) {
       try {
-        wsRef.current.sendChatMessage(message);
+        wsRef.current.sendChatMessage(message, tool_use_id);
       } catch (error) {
         console.error("Failed to send text message:", error);
         setError(
@@ -337,23 +334,18 @@ export function useWebSocket(
     }
   };
 
-  // Send chat message (alias for sendTextMessage)
-  const sendChatMessage = (message: string) => {
-    sendTextMessage(message);
-  };
-
-  // Send pill message
-  const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
-    if (wsRef.current && isConnectionEstablished) {
-      wsRef.current.sendPillMessage(pillMessage, tool_use_id);
-      console.log(
-        "Pill message sent:",
-        pillMessage,
-        "tool_use_id:",
-        tool_use_id
-      );
-    }
-  };
+  // // Send pill message
+  // const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
+  //   if (wsRef.current && isConnectionEstablished) {
+  //     wsRef.current.sendChatMessage(pillMessage, tool_use_id);
+  //     console.log(
+  //       "Pill message sent:",
+  //       pillMessage,
+  //       "tool_use_id:",
+  //       tool_use_id
+  //     );
+  //   }
+  // };
   // Send full audio data (AudioServiceV2 format)
   const sendAudioData = (audioData: AudioData) => {
     if (wsRef.current?.isConnected()) {
@@ -485,7 +477,6 @@ export function useWebSocket(
     connectionState: getConnectionState(),
 
     // Actions
-    sendTextMessage,
     sendChatMessage,
     sendAudioData,
     sendEndOfAudioStream,
@@ -494,7 +485,6 @@ export function useWebSocket(
     setFilesForUpload,
     clearPendingFiles,
     clearError,
-    sendPillMessage,
     sendPing,
     regenerateResponse,
     // WebSocket service reference (for advanced usage)

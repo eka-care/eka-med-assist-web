@@ -6,10 +6,11 @@ import {
   // ScrollArea,
 } from "@ui/index";
 // import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
-import { PillAction, QuickActions } from "./quick-actions";
+import { QuickActions } from "./quick-actions";
 import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
-// import AppointmentCard from "./appointments-card";
+import AppointmentCard from "./appointment-card";
+import { ContentType, type CommonHandlerData } from "@/types/socket";
 // import { items } from "@/configs/appointments-demo.config";
 
 interface MessageBubbleProps {
@@ -28,10 +29,8 @@ interface MessageBubbleProps {
   onRetry?: () => void;
   messageId: string; // Add messageId prop
   isRegenerating?: boolean; // Add isRegenerating prop
-  pillAction?: PillAction; // Add pills prop
-  onPillClick?: (pillText: string, tool_use_id: string) => void; // Add pill click handler
-  multiData?: PillAction; // Add multi data prop
-  onMultiClick?: (multiText: string, tool_use_id: string) => void; // Add multi click handler
+  commonContentData?: CommonHandlerData; // Add common content data prop
+  onContentClick?: (text: string, tool_use_id: string) => void; // Add common content click handler
   audioData?: any; // Add audio data support
   isResponded?: boolean; // Track if this bot message has been responded to
   files?: File[]; // Add files prop for file previews
@@ -51,32 +50,37 @@ export function MessageBubble({
   handleQuickAction,
   // messageId,
   isRegenerating = false,
-  pillAction,
-  onPillClick,
-  multiData,
-  onMultiClick,
+  commonContentData,
+  onContentClick,
   isResponded = false,
   files,
 }: MessageBubbleProps) {
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
-  // Reset selected values when new multiData comes in
+  // Reset selected values when new commonContentData comes in
   useEffect(() => {
-    if (multiData) {
+    if (commonContentData && commonContentData.type === ContentType.MULTI) {
       setSelectedMultiValues([]);
     }
-  }, [multiData]);
+  }, [commonContentData]);
 
   const handleMultiSelect = (values: string[]) => {
     setSelectedMultiValues(values);
   };
 
   const handleMultiSubmit = () => {
-    if (onMultiClick && multiData?.tool_use_id) {
+    if (
+      onContentClick &&
+      commonContentData?.tool_use_id &&
+      commonContentData.type === ContentType.MULTI
+    ) {
       // Handle additional options logic
       let finalValues = [...selectedMultiValues];
 
-      if (multiData.additionalOption === MULTI_SELECT_ADDITIONAL_OPTION.NOTA) {
+      if (
+        commonContentData.data.additional_option ===
+        MULTI_SELECT_ADDITIONAL_OPTION.NOTA
+      ) {
         // If "none of the above" is selected, only send that
         const notaValue = selectedMultiValues.find(
           (value) => value === MULTI_SELECT_ADDITIONAL_OPTION.NOTA
@@ -85,19 +89,20 @@ export function MessageBubble({
           finalValues = [notaValue];
         }
       } else if (
-        multiData.additionalOption === MULTI_SELECT_ADDITIONAL_OPTION.AOTA
+        commonContentData.data.additional_option ===
+        MULTI_SELECT_ADDITIONAL_OPTION.AOTA
       ) {
         // If "all of the above" is selected, send all choices
         const aotaValue = selectedMultiValues.find(
           (value) => value === MULTI_SELECT_ADDITIONAL_OPTION.AOTA
         );
-        if (aotaValue) {
-          finalValues = [...multiData.choices, aotaValue];
+        if (aotaValue && commonContentData.data.choices) {
+          finalValues = [...commonContentData.data.choices, aotaValue];
         }
       }
 
       // Send the selected values as comma-separated text
-      onMultiClick(finalValues.join(", "), multiData.tool_use_id);
+      onContentClick(finalValues.join(", "), commonContentData.tool_use_id);
     }
   };
   return (
@@ -156,97 +161,118 @@ export function MessageBubble({
               </div>
             </div>
           )}
-          {/* Display pills for bot messages */}
-          {isBot &&
-            pillAction &&
-            pillAction.tool_use_id &&
-            pillAction.choices.length > 0 && (
-              <div>
-                <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
-                  {isResponded ? "Option selected:" : "Select an option:"}
-                </div>
-                <div className="flex flex-row gap-2 flex-wrap">
-                  {pillAction.choices.map((choice, index) => (
-                    <Button
-                      key={`${pillAction.tool_use_id}-${index}`}
-                      variant="outline"
-                      size="sm"
-                      className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit ${
-                        isResponded
-                          ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                          : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
-                      }`}
-                      onClick={() =>
-                        !isResponded &&
-                        onPillClick?.(choice, pillAction.tool_use_id)
-                      }
-                      disabled={isQuickActionsDisabled || isResponded}>
-                      {choice}
-                    </Button>
-                  ))}
-                </div>
-              </div>
-            )}
-
-          {isBot &&
-            multiData &&
-            multiData.tool_use_id &&
-            multiData.choices.length > 0 && (
-              <div className="mt-3">
-                <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
-                  {isResponded
-                    ? "Options selected:"
-                    : "Select multiple options:"}
-                </div>
-                <MultiSelectGroup
-                  options={multiData.choices.map((choice, index) => ({
-                    id: `${multiData.tool_use_id}-${index}`,
-                    label: choice,
-                    value: choice,
-                  }))}
-                  selectedValues={selectedMultiValues}
-                  onSelectionChange={
-                    isResponded
-                      ? () => {
-                          console.log("already responded");
-                        }
-                      : handleMultiSelect
-                  }
-                  additionalOption={multiData.additionalOption}
-                  required={false}
-                />
-                {!isResponded && (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    className="mt-2 text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-8 rounded-lg"
-                    onClick={handleMultiSubmit}
-                    disabled={
-                      isQuickActionsDisabled || selectedMultiValues.length === 0
-                    }>
-                    Confirm
-                  </Button>
+          {/* Display common content for bot messages */}
+          {isBot && commonContentData && (
+            <>
+              {commonContentData.type === ContentType.PILL &&
+                commonContentData.data.choices &&
+                commonContentData.data.choices.length > 0 && (
+                  <div>
+                    <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
+                      {isResponded ? "Option selected:" : "Select an option:"}
+                    </div>
+                    <div className="flex flex-row gap-2 flex-wrap">
+                      {commonContentData.data.choices.map((choice, index) => (
+                        <Button
+                          key={`${commonContentData.tool_use_id}-${index}`}
+                          variant="outline"
+                          size="sm"
+                          className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit ${
+                            isResponded
+                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                              : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
+                          }`}
+                          onClick={() =>
+                            !isResponded &&
+                            onContentClick?.(
+                              choice,
+                              commonContentData.tool_use_id
+                            )
+                          }
+                          disabled={isQuickActionsDisabled || isResponded}>
+                          {choice}
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 )}
-              </div>
-            )}
 
-          {/* <ScrollArea className="h-auto">
-            <div className="grid gap-3">
-              {items.map((item, idx) => (
-                <AppointmentCard
-                  key={idx}
-                  doctor={item.doctor}
-                  availability={item.availability}
-                  onCall={() => {
-                    console.log("onCall");
-                  }}
-                  onBook={(info: { date: string; time: string }) => {
-                    console.log("onBook", info);
-                  }}
-                />
-              ))}
-            </div>
-          </ScrollArea> */}
+              {commonContentData.type === ContentType.MULTI &&
+                commonContentData.data.choices &&
+                commonContentData.data.choices.length > 0 && (
+                  <div className="mt-3">
+                    <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
+                      {isResponded
+                        ? "Options selected:"
+                        : "Select multiple options:"}
+                    </div>
+                    <MultiSelectGroup
+                      options={commonContentData.data.choices.map(
+                        (choice, index) => ({
+                          id: `${commonContentData.tool_use_id}-${index}`,
+                          label: choice,
+                          value: choice,
+                        })
+                      )}
+                      selectedValues={selectedMultiValues}
+                      onSelectionChange={
+                        isResponded
+                          ? () => {
+                              console.log("already responded");
+                            }
+                          : handleMultiSelect
+                      }
+                      additionalOption={
+                        commonContentData.data.additional_option
+                      }
+                      required={false}
+                    />
+                    {!isResponded && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        className="mt-2 text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-8 rounded-lg"
+                        onClick={handleMultiSubmit}
+                        disabled={
+                          isQuickActionsDisabled ||
+                          selectedMultiValues.length === 0
+                        }>
+                        Confirm
+                      </Button>
+                    )}
+                  </div>
+                )}
+
+              {commonContentData.type === ContentType.DOCTOR_CARD &&
+                commonContentData.data.doctor_details?.doctor && (
+                  <AppointmentCard
+                    doctor={commonContentData.data.doctor_details.doctor}
+                    availability={
+                      commonContentData.data.doctor_details?.availability
+                    }
+                    onSelect={() => {
+                      onContentClick?.(
+                        `Can you give me availability dates and slots of Dr.${
+                          commonContentData?.data?.doctor_details?.doctor
+                            .name || "the doctor"
+                        }`,
+                        commonContentData.tool_use_id
+                      );
+                    }}
+                    onBook={(info: { date: string; time: string }) => {
+                      onContentClick?.(
+                        `I want to book an appointment for Dr.${
+                          commonContentData?.data?.doctor_details?.doctor
+                            .name || "the doctor"
+                        } on ${info.date} for ${info.time}`,
+                        commonContentData.tool_use_id
+                      );
+                    }}
+                    disabled={isResponded}
+                  />
+                )}
+            </>
+          )}
 
           {showActions && (
             <QuickActions
