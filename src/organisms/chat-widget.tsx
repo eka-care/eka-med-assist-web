@@ -15,6 +15,7 @@ import { ConnectionStatus } from "../molecules/connection-status";
 import { DocAssistIcon } from "@ui/index";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
+import { getSessionDetails } from "@/api/get-session-details";
 
 interface ChatWidgetProps {
   title?: string;
@@ -82,6 +83,21 @@ export function ChatWidget({
       onStartSession();
     } else if (sessionId && sessionToken) {
       console.log("Session already exists:", { sessionId, sessionToken });
+
+      // Check if session is still valid
+      getSessionDetails(sessionId)
+        .then((isValid) => {
+          console.log("isValid", isValid);
+          if (!isValid) {
+            console.log("Session is invalid, starting new session");
+            onStartSession?.(true);
+          }
+        })
+        .catch((error) => {
+          console.error("Error checking session details:", error);
+          // If there's an error checking session, start a new one
+          onStartSession?.(true);
+        });
     }
   }, []); // Only run on mount
 

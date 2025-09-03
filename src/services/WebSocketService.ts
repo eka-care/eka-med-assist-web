@@ -205,10 +205,7 @@ export class WebSocketService {
       //call api to get session details
       const sessionDetails = await getSessionDetails(this.config.sessionId);
       console.log("sessionDetails response", sessionDetails);
-      if (
-        sessionDetails.status === "active" ||
-        sessionDetails?.msg === "Session Active"
-      ) {
+      if (sessionDetails) {
         this.isReconnecting = true;
         //if active continue reconnecting
       } else {
@@ -221,6 +218,11 @@ export class WebSocketService {
         this.triggerEvent(
           WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
           new Error(ERROR_MESSAGES.SESSION_INACTIVE.title)
+        );
+        // Trigger event to start a new session
+        this.triggerEvent(
+          WEBSOCKET_CUSTOM_EVENTS.START_NEW_SESSION,
+          new Error("Session is invalid, starting new session")
         );
         this.cleanup();
         return;

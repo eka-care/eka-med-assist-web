@@ -354,6 +354,17 @@ export function useWebSocket(
       }
     );
 
+    // Handle start new session event
+    wsRef.current?.on(
+      WEBSOCKET_CUSTOM_EVENTS.START_NEW_SESSION,
+      (error: Error) => {
+        console.log("START_NEW_SESSION received:", error);
+        setShowRetryButton(false);
+        setStartNewConnection(true);
+        setError(ERROR_MESSAGES.SESSION_INACTIVE);
+      }
+    );
+
     // Connect to WebSocket
     service
       .connect()
