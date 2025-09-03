@@ -1,63 +1,39 @@
 #!/bin/bash
 
 # Configuration - Update these values
-BUCKET_NAME="your-widget-bucket-name"
-REGION="us-east-1"
-CLOUDFRONT_DISTRIBUTION_ID="your-cloudfront-distribution-id"
+ENV="dev"
+BUCKET_NAME="m-prod-medassist"
+REGION="ap-south-1"
+tag="$ENV-1.0.5"
 
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS..."
 
-# Check if AWS CLI is installed
-if ! command -v aws &> /dev/null; then
-    echo "❌ AWS CLI is not installed. Please install it first."
-    echo "   Visit: https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html"
-    exit 1
-fi
+yarn build
 
-# Check if bucket name is configured
-if [ "$BUCKET_NAME" = "your-widget-bucket-name" ]; then
-    echo "❌ Please update the BUCKET_NAME variable in this script first."
-    exit 1
-fi
+cd dist
+aws s3 cp widget.js s3://$BUCKET_NAME/apollo/widget-$tag.js
+aws s3 cp assets/widget.css s3://$BUCKET_NAME/apollo/widget-$tag.css
 
-# Build the widget first
-echo "🔨 Building widget..."
-./build-widget.sh
+echo "Uploaded widget.js and assets/widget.css to S3"
 
-# Sync files to S3
-echo "📤 Uploading files to S3 bucket: $BUCKET_NAME"
-aws s3 sync dist/ s3://$BUCKET_NAME/ --delete --region $REGION
+# Save S3 URLs in variables
+WIDGET_JS_URL="https://med-assist-agent.eka.care/apollo/widget-$tag.js"
+WIDGET_CSS_URL="https://med-assist-agent.eka.care/apollo/widget-$tag.css"
 
-# Set cache headers for different file types
-echo "⚙️ Setting cache headers..."
-aws s3 cp s3://$BUCKET_NAME/widget.js s3://$BUCKET_NAME/widget.js --cache-control "max-age=31536000,immutable" --metadata-directive REPLACE --region $REGION
-aws s3 cp s3://$BUCKET_NAME/widget-loader.js s3://$BUCKET_NAME/widget-loader.js --cache-control "max-age=31536000,immutable" --metadata-directive REPLACE --region $REGION
-aws s3 cp s3://$BUCKET_NAME/widget.html s3://$BUCKET_NAME/widget.html --cache-control "max-age=3600" --metadata-directive REPLACE --region $REGION
+echo "widget.js $WIDGET_JS_URL"
+echo "assets/widget.css $WIDGET_CSS_URL"
 
-# Invalidate CloudFront cache if distribution ID is provided
-if [ "$CLOUDFRONT_DISTRIBUTION_ID" != "your-cloudfront-distribution-id" ]; then
-    echo "🔄 Invalidating CloudFront cache..."
-    aws cloudfront create-invalidation \
-        --distribution-id $CLOUDFRONT_DISTRIBUTION_ID \
-        --paths "/*" \
-        --region $REGION
-else
-    echo "⚠️  CloudFront distribution ID not configured. Skipping cache invalidation."
-fi
+cd ../
+# now update the widget-loader.js with the new urls
+sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
+sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+
+yarn build
+
+cd dist
+aws s3 cp widget-loader.js s3://$BUCKET_NAME/apollo/widget-loader-$tag.js
+
+echo "Uploaded widget-loader.js to S3"
+
 
 echo "✅ Deployment completed successfully!"
-echo ""
-echo "🌐 Your widget is now available at:"
-echo "   - Widget Loader: https://$BUCKET_NAME.s3.$REGION.amazonaws.com/widget-loader.js"
-echo "   - Widget HTML: https://$BUCKET_NAME.s3.$REGION.amazonaws.com/widget.html"
-echo "   - Demo: https://$BUCKET_NAME.s3.$REGION.amazonaws.com/demo.html"
-echo ""
-echo "📝 To use the widget on any website, add this code:"
-echo "   <script src=\"https://$BUCKET_NAME.s3.$REGION.amazonaws.com/widget-loader.js\"></script>"
-echo "   <script>"
-echo "     EkaMedAssist.init({"
-echo "       theme: 'doctor-light',"
-echo "       widgetUrl: 'https://$BUCKET_NAME.s3.$REGION.amazonaws.com/widget.html',"
-echo "       apiEndpoint: 'https://matrix.dev.eka.care/med-assist/session'"
-echo "     });"
-echo "   </script>" 
