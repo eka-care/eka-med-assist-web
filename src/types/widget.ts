@@ -75,10 +75,7 @@ export type TDoctor = {
   name: string;
   specialty: string;
   hospital: string;
-  timings?: {
-    day?: string;
-    time?: string;
-  };
+  timings?: string;
   experience?: string; // optional
   profile_link?: string; // optional
   profile_pic?: string; //optional
