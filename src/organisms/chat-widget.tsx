@@ -893,7 +893,9 @@ export function ChatWidget({
                       ? progressMessage
                       : null
                   }
-                  tips={tips}
+                  tips={
+                    message.isBot && index === messages.length - 1 ? tips : null
+                  }
                   onTipsExpire={() => setTips(null)}
                   isRegenerating={message.isRegenerating}
                   commonContentData={message.commonContentData}
