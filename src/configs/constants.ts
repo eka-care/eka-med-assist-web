@@ -6,9 +6,9 @@ const PRODUCTION_CONFIG = {
 };
 
 const DEVELOPMENT_CONFIG = {
-    WEBSOCKET_URL: "wss:///8a42ca76c9d9.ngrok-free.app",
+    WEBSOCKET_URL: "wss://matrix-ws.dev.eka.care",
     ENVIRONMENT: "development",
-    BASE_API_URL: "https://8a42ca76c9d9.ngrok-free.app",
+    BASE_API_URL: "https://matrix.dev.eka.care",
     X_AGENT_ID: "MWZlZDRkYzktMTBmMS00OTFkLWEzNDMtZGM3MzIzZDM5N2VmIzc3MDg4MTY2OTk2NzI0"
 };
 
