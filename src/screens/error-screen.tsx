@@ -1,3 +1,4 @@
+import { config } from "@/configs/constants";
 import React, { useEffect, useState } from "react";
 import { ErrorInfo } from "react";
 
@@ -57,7 +58,7 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({
         {/* Robot Illustration */}
         <div>
           <img
-            src="/assets/error.png"
+            src={`${config.CDN_BASE_URL}/assets/error.png`}
             alt="Error Robot"
             className={`${
               isMobile

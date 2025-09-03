@@ -14,6 +14,7 @@ import { ConnectionStatus } from "../molecules/connection-status";
 // import { TipsDisplay } from "../molecules/tips-display";
 import { DocAssistIcon } from "@ui/index";
 import { Message } from "@/types";
+import { config } from "@/configs/constants";
 
 interface ChatWidgetProps {
   title?: string;
@@ -932,7 +933,7 @@ export function ChatWidget({
           <div className="flex items-center justify-center py-1.5 px-4">
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src="/assets/powered-by-eka-care.svg"
+                src={`${config.CDN_BASE_URL}/assets/powered-by-eka-care.svg`}
                 alt="eka.care"
                 className="h-3.5"
               />
