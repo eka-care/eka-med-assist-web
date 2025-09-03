@@ -410,21 +410,21 @@ export function AppointmentCard({
       <CardContent className="px-4 pb-2">
         {/* Info rows */}
         <div className="grid gap-2 border-b border-slate-200 pb-3">
-          {doctor.timings && (
+          {Object.keys(doctor.timings || {}).length > 0 && (
             <div className="flex items-start gap-2 text-sm text-slate-900">
               <Clock
                 className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
                 aria-hidden
               />
               <div className="flex flex-col gap-1">
-                {doctor.timings.day && (
+                {doctor?.timings?.day && (
                   <span className="text-slate-500 text-xs">
-                    {doctor.timings.day}
+                    {doctor?.timings?.day}
                   </span>
                 )}
-                {doctor.timings.time && (
+                {doctor?.timings?.time && (
                   <div className="flex flex-wrap gap-1">
-                    {doctor.timings.time.split(",").map((timeSlot, index) => (
+                    {doctor?.timings?.time.split(",").map((timeSlot, index) => (
                       <span
                         key={index}
                         className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">
