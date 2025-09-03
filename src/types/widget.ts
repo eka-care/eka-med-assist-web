@@ -83,11 +83,19 @@ export type TDoctor = {
   profile_link?: string; // optional
   profile_pic?: string; //optional
   languages?: string[]; //optional
+  // Additional fields for API callbacks
+  doctor_id?: string; // optional - for availability API calls
+  hospital_id?: string; // optional - for availability API calls
+  region_id?: number; // optional - for availability API calls
 };
 
 export type TAvailability = {
   selected_date?: string; // optional
   slots_details: TSlotDetail[];
+  callbacks?: {
+    tool_callback_availability_dates: boolean;
+    tool_callback_availability_slots: boolean;
+  };
 };
 
 export type TSlotDetail = {

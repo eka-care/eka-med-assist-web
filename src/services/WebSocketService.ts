@@ -231,6 +231,46 @@ export class WebSocketService {
       this.isReconnecting = true;
     }
   }
+
+  /**
+   * Attempt to refresh the session when it becomes inactive
+   */
+  private async attemptSessionRefresh(): Promise<boolean> {
+    try {
+      console.log("Attempting to refresh session:", this.config.sessionId);
+
+      // Import the refresh session function dynamically to avoid circular dependencies
+      const { default: refreshSession } = await import(
+        "@/api/get-refresh-session"
+      );
+      const response = await refreshSession(this.config.sessionId);
+
+      if (response.session_id && response.session_token) {
+        // Update the WebSocket config with new session details
+        this.config.sessionId = response.session_id;
+        this.config.auth.token = response.session_token;
+
+        console.log("Session refreshed successfully, updated config");
+        return true;
+      } else {
+        console.error("Invalid refresh response:", response);
+        return false;
+      }
+    } catch (error: any) {
+      console.error("Failed to refresh session:", error);
+
+      // Handle specific error codes
+      if (
+        error.code === "session_expired" ||
+        error.code === "session_not_found"
+      ) {
+        console.log("Session expired or not found, cannot refresh");
+        return false;
+      }
+
+      return false;
+    }
+  }
   /**
    * Set up WebSocket event handlers
    */
@@ -241,10 +281,10 @@ export class WebSocketService {
       console.log("WebSocket opened");
     };
 
-    this.ws.onmessage = (event) => {
+    this.ws.onmessage = async (event) => {
       try {
         const data: ServerMessage = JSON.parse(event.data);
-        this.handleServerMessage(data);
+        await this.handleServerMessage(data);
       } catch (error) {
         console.error("Failed to parse WebSocket message:", error);
       }
@@ -267,7 +307,7 @@ export class WebSocketService {
   /**
    * Handle server messages
    */
-  private handleServerMessage(message: ServerMessage): void {
+  private async handleServerMessage(message: ServerMessage): Promise<void> {
     console.log("Received server message:", message);
 
     switch (message.ev) {
@@ -298,7 +338,7 @@ export class WebSocketService {
         break;
 
       case WEBSOCKET_SERVER_EVENTS.ERROR:
-        this.handleErrorMessage(message as ErrorMessage);
+        await this.handleErrorMessage(message as ErrorMessage);
         break;
 
       default:
@@ -356,6 +396,11 @@ export class WebSocketService {
         // Send the PROGRESSIVE (accumulated) text, not just the new word
         this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
       }
+    } else if (message.ct === ContentType.TIPS) {
+      console.log("Tips message received:", message.data);
+      if (message.data.tips?.length) {
+        this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.TIPS, message.data.tips);
+      }
     } else {
       // For non-text streams, just pass through
       this.triggerEvent(WEBSOCKET_SERVER_EVENTS.STREAM, message);
@@ -403,17 +448,54 @@ export class WebSocketService {
   /**
    * Handle error message
    */
-  private handleErrorMessage(message: ErrorMessage): void {
+  private async handleErrorMessage(message: ErrorMessage): Promise<void> {
     console.error("Error message received:", message);
     switch (message.code) {
       case SOCKET_ERROR_CODES.TIMEOUT:
         this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
         break;
       case SOCKET_ERROR_CODES.SESSION_INACTIVE:
-        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        // Try to refresh the session when it becomes inactive
+        console.log("Session inactive, attempting to refresh...");
+        const refreshSuccess = await this.attemptSessionRefresh();
+        if (refreshSuccess) {
+          console.log(
+            "Session refreshed successfully, triggering reconnection"
+          );
+          this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED, true);
+          // Attempt to reconnect with the refreshed session
+          setTimeout(() => {
+            this.reconnect(false, "session refreshed");
+          }, 1000);
+        } else {
+          console.log(
+            "Failed to refresh session, triggering session inactive event"
+          );
+          this.triggerEvent(
+            WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
+            new Error(message.msg)
+          );
+        }
         break;
       case SOCKET_ERROR_CODES.SESSION_EXPIRED:
-        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        // Try to refresh the session when it expires
+        console.log("Session expired, attempting to refresh...");
+        const refreshExpiredSuccess = await this.attemptSessionRefresh();
+        if (refreshExpiredSuccess) {
+          console.log(
+            "Expired session refreshed successfully, triggering reconnection"
+          );
+          this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED, true);
+          // Attempt to reconnect with the refreshed session
+          setTimeout(() => {
+            this.reconnect(false, "expired session refreshed");
+          }, 1000);
+        } else {
+          console.log(
+            "Failed to refresh expired session, triggering session expired event"
+          );
+          this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        }
         break;
       case SOCKET_ERROR_CODES.INVALID_EVENT:
         this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
@@ -521,6 +603,45 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
+  // const sendRegenerateLastMessage = (data: { text: string, tool_use_id?: string ,url?: string, audio?: AudioData, type?: ContentType}): void {
+  //   if (!this.isConnected()) {
+  //     throw new Error("WebSocket is not connected");
+  //   }
+  //   let message: ChatRequest;
+
+  //   switch(data.type){
+  //     case ContentType.TEXT:
+  //       message = {
+  //         ev: SocketEvent.CHAT,
+  //         ct: ContentType.TEXT,
+  //         ts: Date.now(),
+  //         _id: Date.now().toString(),
+  //         data: { text: data.text },
+  //       };
+  //       break;
+  //     case ContentType.FILE:
+  //       if(data.url){
+  //       message = {
+  //         ev: SocketEvent.CHAT,
+  //         ct: ContentType.FILE,
+  //         ts: Date.now(),
+  //         _id: Date.now().toString(),
+  //         data: { url: data.url, ...(data.text&&{text: data.text}) },
+  //       };}
+  //       break;
+  //   }
+  //   if(data.type === ContentType.TEXT && data.text){
+  //    message = {
+  //     ev: SocketEvent.CHAT,
+  //     ct: ContentType.TEXT,
+  //     ts: Date.now(),
+  //     _id: Date.now().toString(),
+  //     data: { text: data.text },
+  //   };
+  // }
+
+  //   this.sendMessage(message);
+  // }
   /**
    * Send file upload completion with S3 URL
    */
@@ -965,6 +1086,19 @@ export class WebSocketService {
    */
   public getConnectionState(): ConnectionStateType {
     return this.connectionState;
+  }
+
+  /**
+   * Update WebSocket configuration
+   */
+  public updateConfig(newConfig: Partial<WebSocketConfig>): void {
+    if (newConfig.sessionId) {
+      this.config.sessionId = newConfig.sessionId;
+    }
+    if (newConfig.auth?.token) {
+      this.config.auth.token = newConfig.auth.token;
+    }
+    console.log("WebSocket config updated:", this.config);
   }
 
   /**

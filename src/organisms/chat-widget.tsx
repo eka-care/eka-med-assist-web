@@ -11,6 +11,7 @@ import { ChatHeader } from "../molecules/chat-header";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ConnectionStatus } from "../molecules/connection-status";
+// import { TipsDisplay } from "../molecules/tips-display";
 import { DocAssistIcon } from "@ui/index";
 import { Message } from "@/types";
 
@@ -46,6 +47,7 @@ export function ChatWidget({
       isStored: true,
     },
   ]);
+  const [tips, setTips] = useState<string[] | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [isWaitingForResponse, setIsWaitingForResponse] =
     useState<boolean>(false);
@@ -122,6 +124,7 @@ export function ChatWidget({
     sendAudioData,
     regenerateResponse,
     sendChatMessage,
+    retryLastMessage,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
@@ -201,6 +204,11 @@ export function ChatWidget({
       // Handle progress messages
       console.log("Progress message received:", progressMsg);
       setProgressMessage(progressMsg);
+    },
+    (tips: string[]) => {
+      console.log("Tips message received:", tips);
+      setIsWaitingForResponse(false);
+      setTips(tips);
     },
     (commonContentData: CommonHandlerData) => {
       // Clear waiting state when we receive common content data
@@ -312,7 +320,7 @@ export function ChatWidget({
           messages[messages.length - 1]
         );
         // Mark as stored to prevent duplicate storage
-        const updatedMessage = { ...lastMessage, isStored: true};
+        const updatedMessage = { ...lastMessage, isStored: true };
         setMessages((prev) =>
           prev.map((msg, index) =>
             index === prev.length - 1 ? updatedMessage : msg
@@ -363,8 +371,9 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
       return;
     }
-    // Clear any errors when starting audio streaming
+    // Clear any errors and tips when starting audio streaming
     clearError();
+    setTips(null);
 
     console.log("Audio stream received:", audioData);
 
@@ -398,41 +407,48 @@ export function ChatWidget({
     // Clear any errors when sending a message
     clearError();
 
-    // Clear progress message when sending new message
+    // Clear progress message and tips when sending new message
     setProgressMessage(null);
-
-    // Mark the bot message as responded if it has pills or multiselect
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      // Find the last bot message and mark it as responded if it has interactive elements
-      for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
-          updatedMessages[i] = {
-            ...updatedMessages[i],
-            isResponded: true,
-          };
-          updateMessageInSession(sessionId, updatedMessages[i].id, updatedMessages[i]);
-          break;
-        }
-      }
-      return updatedMessages;
-    });
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      isBot: false,
-      originalUserMessage: content, // Store for potential regeneration
-      isStored: true,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Set waiting state immediately when message is sent
-    setIsWaitingForResponse(true);
+    setTips(null);
 
     try {
-      await sendChatMessage(content,tool_use_id);
+      await sendChatMessage(content, tool_use_id);
+      // Mark the bot message as responded if it has pills or multiselect
+      setMessages((prev) => {
+        const updatedMessages = [...prev];
+        // Find the last bot message and mark it as responded if it has interactive elements
+        for (let i = updatedMessages.length - 1; i >= 0; i--) {
+          if (
+            updatedMessages[i].isBot &&
+            updatedMessages[i].commonContentData
+          ) {
+            updatedMessages[i] = {
+              ...updatedMessages[i],
+              isResponded: true,
+            };
+            updateMessageInSession(
+              sessionId,
+              updatedMessages[i].id,
+              updatedMessages[i]
+            );
+            break;
+          }
+        }
+        return updatedMessages;
+      });
+
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        content,
+        isBot: false,
+        originalUserMessage: content, // Store for potential regeneration
+        isStored: true,
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+
+      // Set waiting state immediately when message is sent
+      setIsWaitingForResponse(true);
       console.log("Adding message to session store", newMessage);
       addMessageToSession(sessionId, newMessage);
       if (disableInput) {
@@ -461,6 +477,9 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
       return;
     }
+
+    // Clear tips when sending final audio stream
+    setTips(null);
     // Mark the bot message as responded if it has pills or multiselect
     setMessages((prev) => {
       const updatedMessages = [...prev];
@@ -599,8 +618,9 @@ export function ChatWidget({
     // Clear any errors when using quick actions
     clearError();
 
-    // Clear progress message when using quick action
+    // Clear progress message and tips when using quick action
     setProgressMessage(null);
+    setTips(null);
 
     // Mark the bot message as responded if it has pills or multiselect
     setMessages((prev) => {
@@ -744,83 +764,6 @@ export function ChatWidget({
     }
   };
 
-  // const handlePillClick = async (pillText: string, tool_use_id: string) => {
-  //   // Block pill clicks if currently streaming
-  //   if (isStreaming) {
-  //     console.log("Cannot use pill while streaming");
-  //     return;
-  //   }
-
-  //   if (!isOnline) {
-  //     setError(ERROR_MESSAGES.OFFLINE);
-  //     setIsWaitingForResponse(false);
-  //     return;
-  //   }
-
-  //   if (!isConnectionEstablished) {
-  //     setError(ERROR_MESSAGES.CONNECTION_LOST);
-  //     setIsWaitingForResponse(false);
-  //     return;
-  //   }
-  //   // Clear any errors when using pills
-  //   clearError();
-
-  //   // Clear progress message when using pill
-  //   setProgressMessage(null);
-
-  //   // Mark the bot message as responded and storig updated message to local storage
-  //   setMessages((prev) => {
-  //     const updatedMessages = [...prev];
-  //     // Find the last bot message and mark it as responded
-  //     for (let i = updatedMessages.length - 1; i >= 0; i--) {
-  //       if (updatedMessages[i].isBot) {
-  //         updatedMessages[i] = {
-  //           ...updatedMessages[i],
-  //           isResponded: true,
-  //         };
-  //         //storing updated message to local storage
-  //         console.log(
-  //           "updating pill message to session store",
-  //           updatedMessages[i]
-  //         );
-  //         // addMessageToSession(sessionId, updatedMessages[i]);
-  //         break;
-  //       }
-  //     }
-  //     return updatedMessages;
-  //   });
-
-  //   // Add user message showing the pill selection
-  //   const newMessage: Message = {
-  //     id: Date.now().toString(),
-  //     content: `${pillText}`, // Cleaner text with checkmark
-  //     isBot: false,
-  //     originalUserMessage: pillText,
-  //     isStored: true,
-  //   };
-
-  //   setMessages((prev) => [...prev, newMessage]);
-
-  //   try {
-  //     // Set waiting state immediately when pill is clicked
-  //     setIsWaitingForResponse(true);
-
-  //     // Send pill message via WebSocket
-  //     await sendChatMessage(pillText, tool_use_id);
-  //     addMessageToSession(sessionId, newMessage);
-  //     if (disableInput) {
-  //       setDisableInput(false);
-  //     }
-  //     // For now, just log since sendPillMessage is not available in V2
-  //     console.log("Pill message would be sent:", pillText, tool_use_id);
-  //   } catch (error) {
-  //     console.error("Failed to send pill message:", error);
-  //     setIsWaitingForResponse(false); // Clear waiting state on error
-  //     // setError({ title: "Failed to send selection. Please try again." });
-  //     throw error;
-  //   }
-  // };
-
   const handleStartNewSession = () => {
     try {
       setMessages([messages[0]]);
@@ -834,31 +777,39 @@ export function ChatWidget({
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     if (!isConnectionEstablished) {
       if (wsService) {
         clearError();
         wsService.reconnect(true, "manual reconnect");
       }
+    } else {
+      // If socket throws an error (e.g., parsing / code-related error) → retry last message
+      try {
+        const success = await retryLastMessage();
+        if (success) {
+          clearError();
+          setIsWaitingForResponse(true);
+        }
+      } catch (error) {
+        console.error("Failed to retry last message:", error);
+        setError({ title: "Failed to retry message. Please try again." });
+      }
     }
-    // If socket throws an error (e.g., parsing / code-related error) → show Retry
-    // On handleRetry: Call a regenerate function (to be added later)
-    // For now, just clear the error and retry button
-    clearError();
   };
 
   // Mobile full-screen styles
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-screen w-screen"
+    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-screen w-screen py-0 gap-1"
     : isExpanded
-    ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
-    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-2 pb-4 ${className}`;
+    ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
+    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
 
   const chatHeight = isMobile
     ? "flex-1 min-h-0"
     : isExpanded
     ? "flex-1 min-h-0"
-    : "h-96";
+    : "h-[500px]";
 
   return (
     <Card className={containerStyles}>
@@ -925,6 +876,8 @@ export function ChatWidget({
                       ? progressMessage
                       : null
                   }
+                  tips={tips}
+                  onTipsExpire={() => setTips(null)}
                   isRegenerating={message.isRegenerating}
                   commonContentData={message.commonContentData}
                   onContentClick={handleSendMessage}
@@ -974,6 +927,17 @@ export function ChatWidget({
             disabled={disableInput}
             setError={setError}
           />
+
+          {/* Powered by eka.care branding */}
+          <div className="flex items-center justify-center py-1.5 px-4">
+            <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
+              <img
+                src="/assets/powered-by-eka-care.svg"
+                alt="eka.care"
+                className="h-3.5"
+              />
+            </div>
+          </div>
         </div>
       )}
     </Card>

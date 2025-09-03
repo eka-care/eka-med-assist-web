@@ -11,7 +11,7 @@ import { useState, useEffect } from "react";
 import ReactMarkdown from "react-markdown";
 import AppointmentCard from "./appointment-card";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
-// import { items } from "@/configs/appointments-demo.config";
+import { TipsDisplay } from "./tips-display";
 
 interface MessageBubbleProps {
   message: string;
@@ -34,6 +34,8 @@ interface MessageBubbleProps {
   audioData?: any; // Add audio data support
   isResponded?: boolean; // Track if this bot message has been responded to
   files?: File[]; // Add files prop for file previews
+  tips?: string[] | null;
+  onTipsExpire?: () => void;
 }
 
 export function MessageBubble({
@@ -52,6 +54,8 @@ export function MessageBubble({
   isRegenerating = false,
   commonContentData,
   onContentClick,
+  tips,
+  onTipsExpire,
   isResponded = false,
   files,
 }: MessageBubbleProps) {
@@ -138,6 +142,10 @@ export function MessageBubble({
             )}
             {isBot && isStreaming && !progressMessage && (
               <span className="animate-pulse">...</span>
+            )}
+            {/* Show tips when available */}
+            {isBot && tips?.length && tips.length > 0 && (
+              <TipsDisplay tips={tips} onTipsExpire={onTipsExpire} />
             )}
             {isBot && isRegenerating && (
               <span className="ml-2 text-blue-600 animate-pulse">

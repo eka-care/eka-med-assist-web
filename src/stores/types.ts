@@ -40,4 +40,8 @@ export type TMedAssistStore = {
   setTimeoutError: (isTimeout: boolean) => void;
 
   clearSession: () => void;
+
+  // Session refresh functionality
+  refreshSession: () => Promise<boolean>;
+  isRefreshingSession: boolean;
 };

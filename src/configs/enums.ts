@@ -10,6 +10,7 @@ export enum WEBSOCKET_SERVER_EVENTS {
 }
 
 export enum WEBSOCKET_CUSTOM_EVENTS {
+  TIPS = "tips",
   PROGRESS_MESSAGE = "progress_message",
   STREAM_CHUNK = "stream_chunk",
   SERVER_RESTART = "server_restart",
@@ -22,6 +23,8 @@ export enum WEBSOCKET_CUSTOM_EVENTS {
   MAX_CONNECTION_ATTEMPTS_EXCEEDED = "max_connection_attempts_exceeded",
   MAX_RECONNECTION_ATTEMPTS_EXCEEDED = "max_reconnection_attempts_exceeded",
   SESSION_INACTIVE = "session_inactive",
+  SESSION_REFRESHED = "session_refreshed",
+  SESSION_NOT_FOUND = "session_not_found",
 }
 
 export enum MULTI_SELECT_ADDITIONAL_OPTION {

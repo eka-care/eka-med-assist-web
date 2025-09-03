@@ -33,6 +33,7 @@ export enum ContentType {
   PILL = "pill",
   MULTI = "multi",
   DOCTOR_CARD = "doctor_card",
+  TIPS = "tips",
 }
 
 // export type ContentTypeType = (typeof ContentType)[keyof typeof ContentType];
@@ -129,8 +130,8 @@ export interface PillResponseMessage extends BaseMessage {
 // Server to Client: Stream response
 export interface StreamResponseMessage extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
-  ct: typeof ContentType.TEXT;
-  data: { text?: string; progress_msg?: string }; // text chunk
+  ct: typeof ContentType.TEXT | typeof ContentType.TIPS;
+  data: { text?: string; progress_msg?: string; tips?: string[] }; // text chunk
 }
 
 // Server to Client: End of stream
@@ -263,6 +264,11 @@ export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
   CONNECTION_ATTEMPTS_EXCEEDED: {
     title: "Failed to connect",
     description: "Please check your connection and try again",
+  },
+  ERROR_PROCESSING_MESSAGE: {
+    title: "Oops! Something went wrong",
+    description:
+      "We had trouble processing your message. Please start a new session to continue.",
   },
 } as const;
 
