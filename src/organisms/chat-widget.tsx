@@ -67,6 +67,8 @@ export function ChatWidget({
     getMessagesForSession,
     addMessageToSession,
     updateMessageInSession,
+    setShowRetryButton,
+    setStartNewConnection,
   } = useMedAssistStore();
 
   const [disableInput, setDisableInput] = useState<boolean>(
@@ -90,13 +92,17 @@ export function ChatWidget({
           console.log("isValid", isValid);
           if (!isValid) {
             console.log("Session is invalid, starting new session");
-            onStartSession?.(true);
+            setShowRetryButton(false);
+            setStartNewConnection(true);
+            //onStartSession?.(true);
           }
         })
         .catch((error) => {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
-          onStartSession?.(true);
+          //onStartSession?.(true);
+          setShowRetryButton(false);
+          setStartNewConnection(true);
         });
     }
   }, []); // Only run on mount
