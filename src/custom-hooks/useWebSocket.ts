@@ -9,12 +9,14 @@ import {
   ERROR_MESSAGES,
   ErrorMessage,
   SOCKET_ERROR_CODES,
+  type CommonContentCallback,
+  type CommonHandlerData,
 } from "@/types/socket";
 import {
   WEBSOCKET_CUSTOM_EVENTS,
   WEBSOCKET_SERVER_EVENTS,
 } from "@/configs/enums";
-import { PillAction } from "@/molecules/quick-actions";
+
 import type { AudioData } from "@/services/audioService";
 import { WebSocketService } from "@/services/WebSocketService";
 
@@ -22,11 +24,20 @@ export function useWebSocket(
   config: WebSocketConfig | null,
   onTextMessage?: (message: string) => void,
   onProgressMessage?: (message: string) => void,
-  onPillMessage?: (pillData: PillAction) => void,
-  onMultiMessage?: (multiData: PillAction) => void
+  onTipsMessage?: (tips: string[]) => void,
+  onCommonContent?: CommonContentCallback
   //   onAudioData?: (audioData: AudioData) => void
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
+  const retryAttempts = useRef(0);
+  const lastSentMessageRef = useRef<{
+    content: string;
+    tool_use_id?: string;
+    type: "text" | "audio" | "file";
+    audioData?: AudioData;
+    files?: File[];
+    message?: string;
+  } | null>(null);
   const setError = useMedAssistStore((state) => state.setError);
   const setShowRetryButton = useMedAssistStore(
     (state) => state.setShowRetryButton
@@ -34,6 +45,9 @@ export function useWebSocket(
   const setStartNewConnection = useMedAssistStore(
     (state) => state.setStartNewConnection
   );
+  const refreshSession = useMedAssistStore((state) => state.refreshSession);
+  const setSessionId = useMedAssistStore((state) => state.setSessionId);
+  const setSessionToken = useMedAssistStore((state) => state.setSessionToken);
   // const [isStreaming, setIsStreaming] = useState(false);
   const isAudioStreaming = useRef(false);
   // const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -69,6 +83,7 @@ export function useWebSocket(
         if (connected) {
           setShowRetryButton(false);
           setStartNewConnection(false);
+          retryAttempts.current = 0;
         }
       }
     );
@@ -104,31 +119,25 @@ export function useWebSocket(
         }
         console.log("message.ct", message.ct);
         if (
-          message.ct === ContentType.PILL &&
-          message.data.choices &&
+          (message.ct === ContentType.PILL ||
+            message.ct === ContentType.MULTI ||
+            message.ct === ContentType.DOCTOR_CARD) &&
           message.data.tool_use_id
         ) {
-          console.log("Pill message received:", message.data?.choices);
-          // Call the callback to display the pill message
-          if (onPillMessage) {
-            onPillMessage({
-              choices: message.data.choices,
+          console.log(`${message.ct} message received:`, message.data);
+          // Call the common callback to handle all content types
+          if (onCommonContent) {
+            const commonData: CommonHandlerData = {
+              type: message.ct,
               tool_use_id: message.data.tool_use_id,
-            });
-          }
-        } else if (
-          message.ct === ContentType.MULTI &&
-          message.data.choices &&
-          message.data.tool_use_id
-        ) {
-          console.log("Multi message received:", message.data?.choices);
-          // Call the callback to display the multi message
-          if (onMultiMessage) {
-            onMultiMessage({
-              choices: message.data.choices,
-              tool_use_id: message.data.tool_use_id,
-              additionalOption: message.data.additional_option,
-            });
+              data: {
+                choices: message.data.choices,
+                doctor_details: message.data.doctor_details,
+                additional_option: message.data.additional_option,
+                url: message.data.url,
+              },
+            };
+            onCommonContent(commonData);
           }
         }
       }
@@ -171,6 +180,10 @@ export function useWebSocket(
       (message: EndOfStreamMessage) => {
         console.log("END_OF_STREAM received:", message);
         setIsStreaming(false);
+
+        // Clear the last sent message data when response is complete
+        lastSentMessageRef.current = null;
+
         // Call the callback to display the end of stream message
         if (onProgressMessage) {
           onProgressMessage("");
@@ -205,23 +218,35 @@ export function useWebSocket(
           break;
         }
         case SOCKET_ERROR_CODES.PARSING_ERROR: {
-          setShowRetryButton(true);
-          setError(ERROR_MESSAGES.PARSING_ERROR);
+          console.log("Retry attempts:", retryAttempts);
+
+          if (retryAttempts.current < 2) {
+            console.log("Retrying...");
+            retryAttempts.current++;
+            setShowRetryButton(true);
+            setError(ERROR_MESSAGES.PARSING_ERROR);
+          } else {
+            setShowRetryButton(false);
+            setStartNewConnection(true);
+            retryAttempts.current = 0;
+            setError(ERROR_MESSAGES.ERROR_PROCESSING_MESSAGE);
+          }
           break;
         }
-        case SOCKET_ERROR_CODES.FILE_UPLOAD_INPROGRESS: {
-          // setShowRetryButton(true);
-          //TODO: handle this case
-          setError(ERROR_MESSAGES.FILE_UPLOAD_INPROGRESS);
-          break;
-        }
+
         case SOCKET_ERROR_CODES.SERVER_ERROR: {
-          // setShowRetryButton(true);
+          setShowRetryButton(true);
           setError(ERROR_MESSAGES.SERVER_ERROR);
+          break;
+        }
+        case SOCKET_ERROR_CODES.TIMEOUT: {
+          setError(ERROR_MESSAGES.TIMEOUT);
+          setShowRetryButton(true);
           break;
         }
         default: {
           setError({ title: error.msg });
+          setShowRetryButton(true);
           break;
         }
       }
@@ -242,6 +267,13 @@ export function useWebSocket(
       console.log("Progress message received:", progressMessage);
       if (onProgressMessage) {
         onProgressMessage(progressMessage);
+      }
+    });
+
+    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.TIPS, (tips: string[]) => {
+      console.log("Tips message received in use websocket:", tips);
+      if (onTipsMessage) {
+        onTipsMessage(tips);
       }
     });
 
@@ -296,6 +328,32 @@ export function useWebSocket(
       }
     );
 
+    // Handle session refresh events
+    wsRef.current?.on(
+      WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED,
+      (success: boolean) => {
+        console.log("SESSION_REFRESHED received:", success);
+        if (success) {
+          // Session was refreshed successfully, update the store
+          const currentState = useMedAssistStore.getState();
+          if (currentState.sessionId && currentState.sessionToken) {
+            setSessionId(currentState.sessionId);
+            setSessionToken(currentState.sessionToken);
+
+            // Also update the WebSocket service config
+            if (wsRef.current) {
+              wsRef.current.updateConfig({
+                sessionId: currentState.sessionId,
+                auth: { token: currentState.sessionToken },
+              });
+            }
+
+            console.log("Session store updated after refresh");
+          }
+        }
+      }
+    );
+
     // Connect to WebSocket
     service
       .connect()
@@ -318,11 +376,22 @@ export function useWebSocket(
     };
   }, [config?.sessionId, config?.auth?.token, setConnectionEstablished]);
 
-  // Send text message
-  const sendTextMessage = (message: string) => {
+  useEffect(() => {
+    console.log("retryAttempts", retryAttempts);
+  }, [retryAttempts]);
+
+  // Send chat message (alias for sendTextMessage)
+  const sendChatMessage = (message: string, tool_use_id?: string) => {
     if (wsRef.current?.isConnected()) {
       try {
-        wsRef.current.sendChatMessage(message);
+        // Store the last sent message data for potential retry
+        lastSentMessageRef.current = {
+          content: message,
+          tool_use_id,
+          type: "text",
+        };
+
+        wsRef.current.sendChatMessage(message, tool_use_id);
       } catch (error) {
         console.error("Failed to send text message:", error);
         setError(
@@ -337,23 +406,18 @@ export function useWebSocket(
     }
   };
 
-  // Send chat message (alias for sendTextMessage)
-  const sendChatMessage = (message: string) => {
-    sendTextMessage(message);
-  };
-
-  // Send pill message
-  const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
-    if (wsRef.current && isConnectionEstablished) {
-      wsRef.current.sendPillMessage(pillMessage, tool_use_id);
-      console.log(
-        "Pill message sent:",
-        pillMessage,
-        "tool_use_id:",
-        tool_use_id
-      );
-    }
-  };
+  // // Send pill message
+  // const sendPillMessage = (pillMessage: string, tool_use_id: string) => {
+  //   if (wsRef.current && isConnectionEstablished) {
+  //     wsRef.current.sendChatMessage(pillMessage, tool_use_id);
+  //     console.log(
+  //       "Pill message sent:",
+  //       pillMessage,
+  //       "tool_use_id:",
+  //       tool_use_id
+  //     );
+  //   }
+  // };
   // Send full audio data (AudioServiceV2 format)
   const sendAudioData = (audioData: AudioData) => {
     if (wsRef.current?.isConnected()) {
@@ -362,6 +426,14 @@ export function useWebSocket(
           wsRef.current?.sendAudioStreamStart();
           isAudioStreaming.current = true;
         }
+
+        // Store the last sent message data for potential retry
+        lastSentMessageRef.current = {
+          content: "🎤 Voice message sent",
+          type: "audio",
+          audioData,
+        };
+
         console.log("Sending audio data via WebSocket:", audioData);
         wsRef.current.sendAudioData(audioData);
         isAudioStreaming.current = true;
@@ -429,6 +501,17 @@ export function useWebSocket(
   // Set files for upload when presigned URL is received
   const setFilesForUpload = (files: File[], message?: string) => {
     console.log("setFilesForUpload called with:", files);
+
+    // Store the last sent message data for potential retry
+    lastSentMessageRef.current = {
+      content:
+        message ||
+        `📎 ${files.length > 1 ? `${files.length} files` : "File"} uploaded`,
+      type: "file",
+      files,
+      message,
+    };
+
     // setPendingFiles(files);
     if (wsRef.current) {
       wsRef.current.setFilesForUpload(files, message);
@@ -468,6 +551,78 @@ export function useWebSocket(
     setError(null);
   };
 
+  // Manual session refresh
+  const triggerSessionRefresh = async (): Promise<boolean> => {
+    try {
+      console.log("Manually triggering session refresh...");
+      const success = await refreshSession();
+      if (success) {
+        console.log("Manual session refresh successful");
+        // Update the WebSocket config with new session details
+        if (wsRef.current && config) {
+          const currentState = useMedAssistStore.getState();
+          wsRef.current.updateConfig({
+            sessionId: currentState.sessionId,
+            auth: { token: currentState.sessionToken },
+          });
+        }
+      } else {
+        console.log("Manual session refresh failed");
+      }
+      return success;
+    } catch (error) {
+      console.error("Error during manual session refresh:", error);
+      return false;
+    }
+  };
+
+  // Retry the last sent message
+  const retryLastMessage = async () => {
+    if (!wsRef.current?.isConnected()) {
+      console.error("WebSocket not connected, cannot retry message");
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      return false;
+    }
+    if (!lastSentMessageRef.current) {
+      console.error("No last message to retry");
+      // setError({ title: "No message to retry" });
+      return false;
+    }
+
+    const lastMessage = lastSentMessageRef.current;
+    console.log("Retrying last message:", lastMessage);
+
+    try {
+      switch (lastMessage.type) {
+        case "text":
+          await sendChatMessage(lastMessage.content, lastMessage.tool_use_id);
+          break;
+        case "audio":
+          if (lastMessage.audioData) {
+            await sendAudioData(lastMessage.audioData);
+            await sendEndOfAudioStream();
+          }
+          break;
+        case "file":
+          if (lastMessage.files) {
+            await setFilesForUpload(lastMessage.files, lastMessage.message);
+            await sendFileUploadRequest();
+          }
+          break;
+        default:
+          console.error("Unknown message type for retry:", lastMessage.type);
+          return false;
+      }
+      // setRetryAttempts(0);
+      console.log("Successfully retried last message");
+      return true;
+    } catch (error) {
+      console.error("Failed to retry last message:", error);
+      setError({ title: "Failed to retry message. Please try again." });
+      return false;
+    }
+  };
+
   // Check if WebSocket is connected
   const isConnected = () => {
     return wsRef.current?.isConnected() || false;
@@ -485,7 +640,6 @@ export function useWebSocket(
     connectionState: getConnectionState(),
 
     // Actions
-    sendTextMessage,
     sendChatMessage,
     sendAudioData,
     sendEndOfAudioStream,
@@ -494,9 +648,10 @@ export function useWebSocket(
     setFilesForUpload,
     clearPendingFiles,
     clearError,
-    sendPillMessage,
     sendPing,
     regenerateResponse,
+    triggerSessionRefresh,
+    retryLastMessage,
     // WebSocket service reference (for advanced usage)
     webSocketService: wsRef.current,
   };

@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
+import { type CommonHandlerData } from "@/types/socket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
@@ -9,8 +10,8 @@ import { Card } from "@ui/index";
 import { ChatHeader } from "../molecules/chat-header";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
-import { PillAction } from "../molecules/quick-actions";
 import { ConnectionStatus } from "../molecules/connection-status";
+// import { TipsDisplay } from "../molecules/tips-display";
 import { DocAssistIcon } from "@ui/index";
 import { Message } from "@/types";
 
@@ -46,6 +47,7 @@ export function ChatWidget({
       isStored: true,
     },
   ]);
+  const [tips, setTips] = useState<string[] | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [isWaitingForResponse, setIsWaitingForResponse] =
     useState<boolean>(false);
@@ -62,7 +64,7 @@ export function ChatWidget({
     clearSession,
     getMessagesForSession,
     addMessageToSession,
-    // updateMessageInSession,
+    updateMessageInSession,
   } = useMedAssistStore();
 
   const [disableInput, setDisableInput] = useState<boolean>(
@@ -116,13 +118,13 @@ export function ChatWidget({
   // Use WebSocketV2 hook
   const {
     webSocketService: wsService,
-    sendTextMessage: sendChatMessage,
     setFilesForUpload,
     sendFileUploadRequest,
     sendEndOfAudioStream: sendAudioEndOfStream,
     sendAudioData,
-    sendPillMessage,
     regenerateResponse,
+    sendChatMessage,
+    retryLastMessage,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
@@ -203,67 +205,20 @@ export function ChatWidget({
       console.log("Progress message received:", progressMsg);
       setProgressMessage(progressMsg);
     },
-    (pillData: PillAction) => {
-      // Clear waiting state when we receive pill data
+    (tips: string[]) => {
+      console.log("Tips message received:", tips);
       setIsWaitingForResponse(false);
-
-      // Handle pill messages - merge with existing bot message
-      console.log("Pill message received:", pillData);
-
-      setMessages((prev) => {
-        // Find the last bot message to attach pills to it
-        setDisableInput(true);
-        let lastBotMessageIndex = -1;
-        for (let i = prev.length - 1; i >= 0; i--) {
-          if (prev[i].isBot) {
-            lastBotMessageIndex = i;
-            break;
-          }
-        }
-
-        if (lastBotMessageIndex !== -1) {
-          console.log("Bot message found, updating with pill data", pillData);
-          // Update the last bot message with pill data
-          const updatedMessages = [...prev];
-          updatedMessages[lastBotMessageIndex] = {
-            ...updatedMessages[lastBotMessageIndex],
-            pillData: pillData, // Attach pills to the existing bot message
-          };
-          // console.log(
-          //   "Updating pill message to session store",
-          //   updatedMessages[lastBotMessageIndex]
-          // );
-          // updateMessageInSession(
-          //   sessionId,
-          //   updatedMessages[lastBotMessageIndex].id,
-          //   updatedMessages[lastBotMessageIndex]
-          // );
-          return updatedMessages;
-        } else {
-          console.log("No bot message found, creating a new one", pillData);
-          // If no bot message found, create a new one (fallback)
-          const newMessage: Message = {
-            id: Date.now().toString(),
-            content: "Here are some options:",
-            isBot: true,
-            pillData: pillData,
-            isStored: true,
-          };
-          console.log("Adding pill message to session store", newMessage);
-          addMessageToSession(sessionId, newMessage);
-          return [...prev, newMessage];
-        }
-      });
+      setTips(tips);
     },
-    (multiData: PillAction) => {
-      // Clear waiting state when we receive multi data
+    (commonContentData: CommonHandlerData) => {
+      // Clear waiting state when we receive common content data
       setIsWaitingForResponse(false);
 
-      // Handle multi messages - merge with existing bot message
-      console.log("Multi message received:", multiData);
+      // Handle common content messages - merge with existing bot message
+      console.log("Common content message received:", commonContentData);
       setDisableInput(true);
       setMessages((prev) => {
-        // Find the last bot message to attach pills to it
+        // Find the last bot message to attach content to it
         let lastBotMessageIndex = -1;
         for (let i = prev.length - 1; i >= 0; i--) {
           if (prev[i].isBot) {
@@ -273,35 +228,34 @@ export function ChatWidget({
         }
 
         if (lastBotMessageIndex !== -1) {
-          console.log("Bot message found, updating with multi data", multiData);
-          // Update the last bot message with multi data
+          console.log(
+            "Bot message found, updating with common content data",
+            commonContentData
+          );
+          // Update the last bot message with common content data
           const updatedMessages = [...prev];
           updatedMessages[lastBotMessageIndex] = {
             ...updatedMessages[lastBotMessageIndex],
-            multiData: multiData, // Attach multi data to the existing bot message
+            commonContentData: commonContentData, // Attach common content to the existing bot message
           };
-          // console.log(
-          //   "Updating multi message to session store",
-          //   updatedMessages[lastBotMessageIndex]
-          // );
-          // //in case of multi data, we need to update the message in session store
-          // updateMessageInSession(
-          //   sessionId,
-          //   updatedMessages[lastBotMessageIndex].id,
-          //   updatedMessages[lastBotMessageIndex]
-          // );
           return updatedMessages;
         } else {
-          console.log("No bot message found, creating a new one", multiData);
+          console.log(
+            "No bot message found, creating a new one",
+            commonContentData
+          );
           // If no bot message found, create a new one (fallback)
           const newMessage: Message = {
             id: Date.now().toString(),
             content: "Here are some options:",
             isBot: true,
-            multiData: multiData,
+            commonContentData: commonContentData,
             isStored: true,
           };
-          console.log("Adding multi message to session store", newMessage);
+          console.log(
+            "Adding common content message to session store",
+            newMessage
+          );
           addMessageToSession(sessionId, newMessage);
           return [...prev, newMessage];
         }
@@ -321,10 +275,7 @@ export function ChatWidget({
     if (isConnectionEstablished && isOnline) {
       const lastMessage = messages[messages.length - 1];
       console.log("lastMessage", lastMessage);
-      if (
-        lastMessage?.isBot &&
-        (lastMessage?.pillData || lastMessage?.multiData)
-      ) {
+      if (lastMessage?.isBot && lastMessage?.commonContentData) {
         console.log("disabling input", lastMessage);
         setDisableInput(true);
       } else {
@@ -420,8 +371,9 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
       return;
     }
-    // Clear any errors when starting audio streaming
+    // Clear any errors and tips when starting audio streaming
     clearError();
+    setTips(null);
 
     console.log("Audio stream received:", audioData);
 
@@ -434,7 +386,7 @@ export function ChatWidget({
     }
   };
 
-  const handleSendMessage = async (content: string) => {
+  const handleSendMessage = async (content: string, tool_use_id?: string) => {
     // Block sending if currently streaming
     if (isStreaming) {
       console.log("Cannot send message while streaming");
@@ -455,45 +407,53 @@ export function ChatWidget({
     // Clear any errors when sending a message
     clearError();
 
-    // Clear progress message when sending new message
+    // Clear progress message and tips when sending new message
     setProgressMessage(null);
-
-    // Mark the bot message as responded if it has pills or multiselect
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      // Find the last bot message and mark it as responded if it has interactive elements
-      for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (
-          updatedMessages[i].isBot &&
-          (updatedMessages[i].pillData || updatedMessages[i].multiData)
-        ) {
-          updatedMessages[i] = {
-            ...updatedMessages[i],
-            isResponded: true,
-          };
-          break;
-        }
-      }
-      return updatedMessages;
-    });
-
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content,
-      isBot: false,
-      originalUserMessage: content, // Store for potential regeneration
-      isStored: true,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
-    // Set waiting state immediately when message is sent
-    setIsWaitingForResponse(true);
+    setTips(null);
 
     try {
-      await sendChatMessage(content);
+      await sendChatMessage(content, tool_use_id);
+      // Mark the bot message as responded if it has pills or multiselect
+      setMessages((prev) => {
+        const updatedMessages = [...prev];
+        // Find the last bot message and mark it as responded if it has interactive elements
+        for (let i = updatedMessages.length - 1; i >= 0; i--) {
+          if (
+            updatedMessages[i].isBot &&
+            updatedMessages[i].commonContentData
+          ) {
+            updatedMessages[i] = {
+              ...updatedMessages[i],
+              isResponded: true,
+            };
+            updateMessageInSession(
+              sessionId,
+              updatedMessages[i].id,
+              updatedMessages[i]
+            );
+            break;
+          }
+        }
+        return updatedMessages;
+      });
+
+      const newMessage: Message = {
+        id: Date.now().toString(),
+        content,
+        isBot: false,
+        originalUserMessage: content, // Store for potential regeneration
+        isStored: true,
+      };
+
+      setMessages((prev) => [...prev, newMessage]);
+
+      // Set waiting state immediately when message is sent
+      setIsWaitingForResponse(true);
       console.log("Adding message to session store", newMessage);
       addMessageToSession(sessionId, newMessage);
+      if (disableInput) {
+        setDisableInput(false);
+      }
       console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
@@ -517,15 +477,15 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
       return;
     }
+
+    // Clear tips when sending final audio stream
+    setTips(null);
     // Mark the bot message as responded if it has pills or multiselect
     setMessages((prev) => {
       const updatedMessages = [...prev];
       // Find the last bot message and mark it as responded if it has interactive elements
       for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (
-          updatedMessages[i].isBot &&
-          (updatedMessages[i].pillData || updatedMessages[i].multiData)
-        ) {
+        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
           updatedMessages[i] = {
             ...updatedMessages[i],
             isResponded: true,
@@ -592,10 +552,7 @@ export function ChatWidget({
       const updatedMessages = [...prev];
       // Find the last bot message and mark it as responded if it has interactive elements
       for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (
-          updatedMessages[i].isBot &&
-          (updatedMessages[i].pillData || updatedMessages[i].multiData)
-        ) {
+        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
           updatedMessages[i] = {
             ...updatedMessages[i],
             isResponded: true,
@@ -661,18 +618,16 @@ export function ChatWidget({
     // Clear any errors when using quick actions
     clearError();
 
-    // Clear progress message when using quick action
+    // Clear progress message and tips when using quick action
     setProgressMessage(null);
+    setTips(null);
 
     // Mark the bot message as responded if it has pills or multiselect
     setMessages((prev) => {
       const updatedMessages = [...prev];
       // Find the last bot message and mark it as responded if it has interactive elements
       for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (
-          updatedMessages[i].isBot &&
-          (updatedMessages[i].pillData || updatedMessages[i].multiData)
-        ) {
+        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
           updatedMessages[i] = {
             ...updatedMessages[i],
             isResponded: true,
@@ -809,83 +764,6 @@ export function ChatWidget({
     }
   };
 
-  const handlePillClick = async (pillText: string, tool_use_id: string) => {
-    // Block pill clicks if currently streaming
-    if (isStreaming) {
-      console.log("Cannot use pill while streaming");
-      return;
-    }
-
-    if (!isOnline) {
-      setError(ERROR_MESSAGES.OFFLINE);
-      setIsWaitingForResponse(false);
-      return;
-    }
-
-    if (!isConnectionEstablished) {
-      setError(ERROR_MESSAGES.CONNECTION_LOST);
-      setIsWaitingForResponse(false);
-      return;
-    }
-    // Clear any errors when using pills
-    clearError();
-
-    // Clear progress message when using pill
-    setProgressMessage(null);
-
-    // Mark the bot message as responded and storig updated message to local storage
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      // Find the last bot message and mark it as responded
-      for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (updatedMessages[i].isBot) {
-          updatedMessages[i] = {
-            ...updatedMessages[i],
-            isResponded: true,
-          };
-          //storing updated message to local storage
-          console.log(
-            "updating pill message to session store",
-            updatedMessages[i]
-          );
-          addMessageToSession(sessionId, updatedMessages[i]);
-          break;
-        }
-      }
-      return updatedMessages;
-    });
-
-    // Add user message showing the pill selection
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: `${pillText}`, // Cleaner text with checkmark
-      isBot: false,
-      originalUserMessage: pillText,
-      isStored: true,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
-    try {
-      // Set waiting state immediately when pill is clicked
-      setIsWaitingForResponse(true);
-
-      // Send pill message via WebSocket
-      await sendPillMessage(pillText, tool_use_id);
-      addMessageToSession(sessionId, newMessage);
-      if (disableInput) {
-        setDisableInput(false);
-      }
-      // For now, just log since sendPillMessage is not available in V2
-      console.log("Pill message would be sent:", pillText, tool_use_id);
-    } catch (error) {
-      console.error("Failed to send pill message:", error);
-      setIsWaitingForResponse(false); // Clear waiting state on error
-      // setError({ title: "Failed to send selection. Please try again." });
-      throw error;
-    }
-  };
-
   const handleStartNewSession = () => {
     try {
       setMessages([messages[0]]);
@@ -899,31 +777,39 @@ export function ChatWidget({
     }
   };
 
-  const handleRetry = () => {
+  const handleRetry = async () => {
     if (!isConnectionEstablished) {
       if (wsService) {
         clearError();
         wsService.reconnect(true, "manual reconnect");
       }
+    } else {
+      // If socket throws an error (e.g., parsing / code-related error) → retry last message
+      try {
+        const success = await retryLastMessage();
+        if (success) {
+          clearError();
+          setIsWaitingForResponse(true);
+        }
+      } catch (error) {
+        console.error("Failed to retry last message:", error);
+        setError({ title: "Failed to retry message. Please try again." });
+      }
     }
-    // If socket throws an error (e.g., parsing / code-related error) → show Retry
-    // On handleRetry: Call a regenerate function (to be added later)
-    // For now, just clear the error and retry button
-    clearError();
   };
 
   // Mobile full-screen styles
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-screen w-screen"
+    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-screen w-screen py-0 gap-1"
     : isExpanded
-    ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)]"
-    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-2 pb-4 ${className}`;
+    ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
+    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
 
   const chatHeight = isMobile
     ? "flex-1 min-h-0"
     : isExpanded
     ? "flex-1 min-h-0"
-    : "h-96";
+    : "h-[500px]";
 
   return (
     <Card className={containerStyles}>
@@ -990,12 +876,12 @@ export function ChatWidget({
                       ? progressMessage
                       : null
                   }
+                  tips={tips}
+                  onTipsExpire={() => setTips(null)}
                   isRegenerating={message.isRegenerating}
-                  pillAction={message.pillData}
-                  onPillClick={handlePillClick}
+                  commonContentData={message.commonContentData}
+                  onContentClick={handleSendMessage}
                   onRegenerate={handleRegenerate}
-                  multiData={message.multiData}
-                  onMultiClick={handlePillClick}
                   audioData={message.audioData} // Pass audio data to MessageBubble
                   isResponded={message.isResponded}
                   files={message.files}
@@ -1041,6 +927,17 @@ export function ChatWidget({
             disabled={disableInput}
             setError={setError}
           />
+
+          {/* Powered by eka.care branding */}
+          <div className="flex items-center justify-center py-1.5 px-4">
+            <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
+              <img
+                src="/assets/powered-by-eka-care.svg"
+                alt="eka.care"
+                className="h-3.5"
+              />
+            </div>
+          </div>
         </div>
       )}
     </Card>

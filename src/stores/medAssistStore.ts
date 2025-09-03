@@ -1,6 +1,7 @@
 import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TMedAssistStore } from "./types";
+import refreshSession from "@/api/get-refresh-session";
 
 const storeInitialState = {
   sessionId: "",
@@ -12,6 +13,7 @@ const storeInitialState = {
   startNewConnection: false,
   showRetryButton: false,
   chats: {},
+  isRefreshingSession: false,
 };
 
 const useMedAssistStore = create<TMedAssistStore>()(
@@ -87,6 +89,64 @@ const useMedAssistStore = create<TMedAssistStore>()(
         set({ isTimeoutError: isTimeout }),
 
       clearSession: () => set(storeInitialState),
+
+      // Session refresh functionality
+      isRefreshingSession: false,
+      refreshSession: async (): Promise<boolean> => {
+        const state = get();
+        const { sessionId } = state;
+
+        if (!sessionId) {
+          console.warn("No session ID available for refresh");
+          return false;
+        }
+
+        if (state.isRefreshingSession) {
+          console.log("Session refresh already in progress");
+          return false;
+        }
+
+        set({ isRefreshingSession: true });
+
+        try {
+          console.log("Refreshing session:", sessionId);
+          const response = await refreshSession(sessionId);
+
+          if (response.session_id && response.session_token) {
+            // Update session with new token
+            set({
+              sessionId: response.session_id,
+              sessionToken: response.session_token,
+              isRefreshingSession: false,
+            });
+            console.log("Session refreshed successfully");
+            return true;
+          } else {
+            console.error("Invalid refresh response:", response);
+            set({ isRefreshingSession: false });
+            return false;
+          }
+        } catch (error: any) {
+          console.error("Failed to refresh session:", error);
+          set({ isRefreshingSession: false });
+
+          // Handle specific error codes
+          if (
+            error.code === "session_expired" ||
+            error.code === "session_not_found"
+          ) {
+            // Session is no longer valid, clear it
+            set({
+              sessionId: "",
+              sessionToken: "",
+              isConnectionEstablished: false,
+            });
+            console.log("Session expired or not found, cleared session");
+          }
+
+          return false;
+        }
+      },
     }),
     {
       name: "med-assist-store", // unique name for localStorage key
