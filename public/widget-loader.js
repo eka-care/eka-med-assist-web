@@ -5,10 +5,10 @@
     var defaultConfig = {
         theme: "doctor-light",
         position: "bottom-right",
-        scriptUrl: "https://med-assist-agent.eka.care/apollo/widget-dev-1.0.4.js",
-        cssUrl: "https://med-assist-agent.eka.care/apollo/widget-dev-1.0.4.css",
-        // scriptUrl: "https://med-assist-agent.eka.care/apollo/widget-dev-1.0.4.js",
-        // cssUrl: "https://med-assist-agent.eka.care/apollo/widget-dev-1.0.4.css",
+        scriptUrl: "https://med-assist-agent.eka.care/apollo/widget-prod-1.0.5.js",
+        cssUrl: "https://med-assist-agent.eka.care/apollo/widget-prod-1.0.5.css",
+        // scriptUrl: "https://med-assist-agent.eka.care/apollo/widget-prod-1.0.5.js",
+        // cssUrl: "https://med-assist-agent.eka.care/apollo/widget-prod-1.0.5.css",
     };
 
     // Create isolated CSS
