@@ -74,6 +74,28 @@ export function AppointmentCard({
         if (selectedIndex >= 0) {
           targetDateIndex = selectedIndex;
         }
+      } else {
+        // If no selected_date, prioritize the first date that already has slots
+        // from the original availability data (before merging)
+        const existingSlots = availability?.slots_details || [];
+        const firstDateWithSlots = currentAvailability.slots_details.findIndex(
+          (slot) => {
+            // Check if this date exists in original data and has slots
+            const originalSlot = existingSlots.find(
+              (orig) => orig.date === slot.date
+            );
+            return (
+              originalSlot &&
+              originalSlot.slots &&
+              originalSlot.slots.length > 0
+            );
+          }
+        );
+
+        if (firstDateWithSlots >= 0) {
+          targetDateIndex = firstDateWithSlots;
+        }
+        // If no date with existing slots found, targetDateIndex remains 0 (first date)
       }
 
       // Set the active index to the target date
@@ -83,7 +105,8 @@ export function AppointmentCard({
       const targetOffset = Math.floor(targetDateIndex / 3) * 3;
       setCalendarOffset(targetOffset);
 
-      // If the selected date doesn't have slots and callbacks are enabled, load slots
+      // Only load slots for empty dates after setting loadingDates to false
+      // and only if the selected date doesn't have slots
       const selectedSlot = currentAvailability.slots_details[targetDateIndex];
       if (
         (!selectedSlot?.slots || selectedSlot.slots.length === 0) &&
@@ -91,12 +114,21 @@ export function AppointmentCard({
         doctor.doctor_id &&
         doctor.hospital_id &&
         doctor.region_id &&
-        sessionId
+        sessionId &&
+        !loadingDates // Only load if we're not currently loading dates
       ) {
-        loadSlotsForDate(selectedSlot.date);
+        // Use setTimeout to ensure this runs after loadingDates is set to false
+        setTimeout(() => {
+          loadSlotsForDate(selectedSlot.date);
+        }, 0);
       }
     }
-  }, [currentAvailability, availability?.selected_date, userHasSelectedDate]);
+  }, [
+    currentAvailability,
+    availability?.selected_date,
+    userHasSelectedDate,
+    loadingDates,
+  ]);
 
   // Generate calendar days from merged availability data
   const calendarDays = useMemo(() => {
@@ -417,9 +449,7 @@ export function AppointmentCard({
                 aria-hidden
               />
 
-              <span className="text-slate-500 text-xs">
-                {doctor?.timings}
-              </span>
+              <span className="text-slate-500 text-xs">{doctor?.timings}</span>
 
               {/* {doctor?.timings?.time && (
                   <div className="flex flex-wrap gap-1">

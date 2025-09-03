@@ -315,7 +315,7 @@ export function MessageBubble({
                     }
                     onSelect={() => {
                       onContentClick?.(
-                        `Can you give me availability dates and slots of Dr.${
+                        `Can you give me availability dates and slots of ${
                           commonContentData?.data?.doctor_details?.doctor
                             .name || "the doctor"
                         }`,
@@ -324,7 +324,7 @@ export function MessageBubble({
                     }}
                     onBook={(info: { date: string; time: string }) => {
                       onContentClick?.(
-                        `I want to book an appointment for Dr.${
+                        `I want to book an appointment for ${
                           commonContentData?.data?.doctor_details?.doctor
                             .name || "the doctor"
                         } on ${info.date} for ${info.time}`,
