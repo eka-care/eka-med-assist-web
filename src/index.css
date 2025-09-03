@@ -147,3 +147,57 @@
 .markdown-content a:hover {
   color: #2563eb;
 }
+
+/* Marquee animation for text overflow */
+@keyframes marquee-scroll {
+  0% {
+    transform: translateX(100%);
+  }
+  100% {
+    transform: translateX(-100%);
+  }
+}
+
+/* Container for marquee text */
+.marquee-container {
+  position: relative;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+/* Normal text state: no overflow, no marquee needed */
+.marquee-text-normal {
+  display: inline-block;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* Default state: show ellipsis for overflow */
+.marquee-text-default {
+  display: inline-block;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100%;
+  transform: translateX(0);
+  transition: transform 0.3s ease;
+}
+
+/* Hover state: start marquee animation */
+.marquee-container:hover .marquee-text-default {
+  animation: marquee-scroll 4s linear infinite;
+  text-overflow: unset;
+  overflow: visible;
+  white-space: nowrap;
+  width: max-content;
+}
+
+/* Reset animation when not hovering */
+.marquee-container:not(:hover) .marquee-text-default {
+  animation: none;
+  transform: translateX(0);
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+  width: 100%;
+}

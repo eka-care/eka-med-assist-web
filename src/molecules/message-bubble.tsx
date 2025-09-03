@@ -7,11 +7,62 @@ import {
 } from "@ui/index";
 // import { ThumbsUp, ThumbsDown, RotateCcw } from "lucide-react";
 import { QuickActions } from "./quick-actions";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import AppointmentCard from "./appointment-card";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
+
+// MarqueeText component for handling text overflow with hover-triggered marquee
+interface MarqueeTextProps {
+  text: string;
+  maxWidth?: string;
+  className?: string;
+}
+
+function MarqueeText({
+  text,
+  maxWidth = "200px",
+  className = "",
+}: MarqueeTextProps) {
+  const [needsMarquee, setNeedsMarquee] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+
+  useEffect(() => {
+    const checkOverflow = () => {
+      if (containerRef.current && textRef.current) {
+        const containerWidth = containerRef.current.offsetWidth;
+        const textWidth = textRef.current.scrollWidth;
+        setNeedsMarquee(textWidth > containerWidth);
+      }
+    };
+
+    checkOverflow();
+
+    // Check on window resize
+    window.addEventListener("resize", checkOverflow);
+    return () => window.removeEventListener("resize", checkOverflow);
+  }, [text, maxWidth]);
+
+  return (
+    <div
+      ref={containerRef}
+      className={`marquee-container ${className}`}
+      style={{
+        maxWidth,
+      }}
+      title={text}>
+      <span
+        ref={textRef}
+        className={
+          needsMarquee ? "marquee-text-default" : "marquee-text-normal"
+        }>
+        {text}
+      </span>
+    </div>
+  );
+}
 
 interface MessageBubbleProps {
   message: string;
@@ -185,7 +236,7 @@ export function MessageBubble({
                           key={`${commonContentData.tool_use_id}-${index}`}
                           variant="outline"
                           size="sm"
-                          className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit ${
+                          className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
                             isResponded
                               ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                               : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
@@ -198,7 +249,11 @@ export function MessageBubble({
                             )
                           }
                           disabled={isQuickActionsDisabled || isResponded}>
-                          {choice}
+                          <MarqueeText
+                            text={choice}
+                            maxWidth="300px"
+                            className="text-left"
+                          />
                         </Button>
                       ))}
                     </div>
