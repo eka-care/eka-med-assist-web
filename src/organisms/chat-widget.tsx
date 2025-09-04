@@ -5,7 +5,7 @@ import { type CommonHandlerData } from "@/types/socket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
-import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
+// import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { Card } from "@ui/index";
 import { ChatHeader } from "../molecules/chat-header";
 import { MessageBubble } from "../molecules/message-bubble";
@@ -823,7 +823,7 @@ export function ChatWidget({
 
   // Mobile full-screen styles
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-screen w-screen py-0 gap-1"
+    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
     ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
     : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
@@ -860,12 +860,11 @@ export function ChatWidget({
         </div>
       )}
 
-      {/* Single timestamp at top */}
-      {!isLoading && (
+      {/* {!isLoading && (
         <div className="text-xs text-[var(--color-muted-foreground)] text-center">
           {getCurrentTimestamp()}
         </div>
-      )}
+      )} */}
       {!isLoading && (
         <div className={`${chatHeight} flex flex-col overflow-hidden`}>
           <div
@@ -944,17 +943,22 @@ export function ChatWidget({
             />
           )}
 
-          <MessageInput
-            onSendMessage={handleSendMessage}
-            onFinalAudioStream={handleFinalAudioStream}
-            onAudioStream={handleAudioStream}
-            onFileUpload={handleFileUpload}
-            disabled={disableInput}
-            setError={setError}
-          />
+          <div className={isMobile ? "pb-safe" : ""}>
+            <MessageInput
+              onSendMessage={handleSendMessage}
+              onFinalAudioStream={handleFinalAudioStream}
+              onAudioStream={handleAudioStream}
+              onFileUpload={handleFileUpload}
+              disabled={disableInput}
+              setError={setError}
+            />
+          </div>
 
           {/* Powered by eka.care branding */}
-          <div className="flex items-center justify-center py-1.5 px-4">
+          <div
+            className={`flex items-center justify-center py-1.5 px-4 ${
+              isMobile ? "pb-safe" : ""
+            }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
                 src={`${config.CDN_BASE_URL}/assets/powered-by-eka-care.svg`}

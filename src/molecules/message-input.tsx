@@ -159,16 +159,25 @@ export function MessageInput({
           const errorMsg =
             "Microphone access is blocked. You'll need to manually enable it in your browser settings.";
           console.log("Setting error:", errorMsg);
-          setError({ title: "Microphone access is blocked.", description:"Enable it in your browser settings." });
+          setError({
+            title: "Microphone access is blocked.",
+            description: "Enable it in your browser settings.",
+          });
         } else {
           const errorMsg =
             "Microphone access denied. Please allow microphone permissions when prompted.";
           console.log("Setting error:", errorMsg);
-          setError({ title: "Microphone access is denied.", description:" Please allow microphone permissions when prompted." });
+          setError({
+            title: "Microphone access is denied.",
+            description: " Please allow microphone permissions when prompted.",
+          });
         }
       } else {
         console.error("Error checking microphone permission:", error);
-        setError({ title: "Unable to access microphone.", description:" Please check your device and try again." });
+        setError({
+          title: "Unable to access microphone.",
+          description: " Please check your device and try again.",
+        });
       }
     }
   };
@@ -460,7 +469,7 @@ export function MessageInput({
   }, []);
 
   return (
-    <div className="flex items-center gap-2 px-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4">
+    <div className="flex items-center gap-2 px-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4 flex-shrink-0">
       <input
         ref={fileInputRef}
         type="file"
@@ -544,12 +553,7 @@ export function MessageInput({
 
         {/* File Preview */}
         {uploadedFiles.length > 0 && (
-          <div className="absolute -top-8 left-0 right-0 flex flex-wrap gap-1">
-            {uploadedFiles.length > 1 && (
-              <div className="w-full text-xs text-[var(--color-primary)]/70 mb-1">
-                Multiple files will be zipped into a single file for upload
-              </div>
-            )}
+          <div className="absolute -top-8 left-0 right-0 flex flex-wrap gap-1 max-w-full overflow-hidden">
             {uploadedFiles.map((file, index) => (
               <div
                 key={index}
