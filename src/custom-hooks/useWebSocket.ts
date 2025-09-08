@@ -74,19 +74,30 @@ export function useWebSocket(
     console.log("WebSocket service  created:", service);
     wsRef.current = service;
 
-    // Set up event listeners
-    wsRef.current?.on(
-      WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
-      (connected: boolean) => {
-        console.log("WebSocket connection:", connected);
-        setConnectionEstablished(connected);
-        if (connected) {
-          setShowRetryButton(false);
-          setStartNewConnection(false);
-          retryAttempts.current = 0;
-        }
+
+    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS, (connected: boolean) => {
+      //If got auth event will set connection established to true, else disable incase of error
+      setConnectionEstablished(connected);
+      if (connected) {
+        setShowRetryButton(false);
+        setStartNewConnection(false);
+        retryAttempts.current = 0;
       }
-    );
+    });
+
+    // Set up event listeners
+    // wsRef.current?.on(
+    //   WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
+    //   (connected: boolean) => {
+    //     console.log("WebSocket connection:", connected);
+    //     setConnectionEstablished(connected);
+    //     if (connected) {
+    //       setShowRetryButton(false);
+    //       setStartNewConnection(false);
+    //       retryAttempts.current = 0;
+    //     }
+    //   }
+    // );
 
     wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.PONG, (data: any) => {
       console.log("PONG received:", data);

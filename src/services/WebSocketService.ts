@@ -6,11 +6,12 @@ import {
 import type {
   AudioEndOfStreamRequest,
   AudioStreamRequest,
+  AuthRequest,
+  AuthResponseMessage,
   ChatMessage,
   ChatRequest,
   ChatResponseMessage,
   ClientMessage,
-  ConnectionEstablishedMessage,
   ConnectionStateType,
   EndOfStreamMessage,
   ErrorMessage,
@@ -114,9 +115,7 @@ export class WebSocketService {
       this.connectionAttempts++;
 
       // Connect to WebSocket with session ID in URL and token as query param
-      const wsUrl = `${BASE_URL}/${
-        this.config.sessionId
-      }/?token=${encodeURIComponent(this.config.auth.token)}`;
+      const wsUrl = `${BASE_URL}/${this.config.sessionId}`;
 
       console.log(
         "Connecting to WebSocket:",
@@ -165,15 +164,16 @@ export class WebSocketService {
         }
 
         const onOpen = () => {
-          console.log("WebSocket connected successfully");
+          console.log("WebSocket connected successfully from onOpen");
           this.isReconnecting = false;
           this.connectionAttempts = 0;
           this.updateConnectionState(ConnectionState.CONNECTED);
           this.startPingInterval();
-          this.triggerEvent(
-            WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
-            true
-          );
+          // establish connection only after authenticating
+          // this.triggerEvent(
+          //   WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
+          //   true
+          // );
           resolve();
         };
 
@@ -212,7 +212,7 @@ export class WebSocketService {
         this.isReconnecting = false;
         this.updateConnectionState(ConnectionState.ERROR);
         this.triggerEvent(
-          WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
+          WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS,
           false
         );
         this.triggerEvent(
@@ -314,9 +314,11 @@ export class WebSocketService {
 
     switch (message.ev) {
       case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
-        this.handleConnectionEstablished(
-          message as ConnectionEstablishedMessage
-        );
+        this.handleConnectionEstablished();
+        break;
+
+      case WEBSOCKET_SERVER_EVENTS.AUTH:
+        this.handleAuthMessage(message as AuthResponseMessage);
         break;
 
       case WEBSOCKET_SERVER_EVENTS.CHAT:
@@ -351,11 +353,15 @@ export class WebSocketService {
   /**
    * Handle connection established message
    */
-  private handleConnectionEstablished(
-    message: ConnectionEstablishedMessage
-  ): void {
-    console.log("Connection established:", message);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
+  private handleConnectionEstablished(): void {
+    //send an event back to server
+    //when backend sends back auth event connection is established
+    this.sendAuthMessage();
+  }
+
+  private handleAuthMessage(message: AuthResponseMessage): void {
+    console.log("Auth message received:", message);
+    this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS, true);
   }
 
   /**
@@ -526,7 +532,7 @@ export class WebSocketService {
   private handleConnectionClose(event: CloseEvent): void {
     this.cleanup();
     this.updateConnectionState(ConnectionState.DISCONNECTED);
-    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, false);
+    this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS, false);
 
     // Attempt to reconnect if not manually closed
     if (event.code !== 1000 && !this.isReconnecting) {
@@ -605,45 +611,18 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
-  // const sendRegenerateLastMessage = (data: { text: string, tool_use_id?: string ,url?: string, audio?: AudioData, type?: ContentType}): void {
-  //   if (!this.isConnected()) {
-  //     throw new Error("WebSocket is not connected");
-  //   }
-  //   let message: ChatRequest;
-
-  //   switch(data.type){
-  //     case ContentType.TEXT:
-  //       message = {
-  //         ev: SocketEvent.CHAT,
-  //         ct: ContentType.TEXT,
-  //         ts: Date.now(),
-  //         _id: Date.now().toString(),
-  //         data: { text: data.text },
-  //       };
-  //       break;
-  //     case ContentType.FILE:
-  //       if(data.url){
-  //       message = {
-  //         ev: SocketEvent.CHAT,
-  //         ct: ContentType.FILE,
-  //         ts: Date.now(),
-  //         _id: Date.now().toString(),
-  //         data: { url: data.url, ...(data.text&&{text: data.text}) },
-  //       };}
-  //       break;
-  //   }
-  //   if(data.type === ContentType.TEXT && data.text){
-  //    message = {
-  //     ev: SocketEvent.CHAT,
-  //     ct: ContentType.TEXT,
-  //     ts: Date.now(),
-  //     _id: Date.now().toString(),
-  //     data: { text: data.text },
-  //   };
-  // }
-
-  //   this.sendMessage(message);
-  // }
+  private sendAuthMessage(): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+    const message: AuthRequest = {
+      ev: SocketEvent.AUTH,
+      _id: Date.now().toString(),
+      ts: Date.now(),
+      data: { token: this.config.auth.token },
+    };
+    this.sendMessage(message);
+  }
   /**
    * Send file upload completion with S3 URL
    */

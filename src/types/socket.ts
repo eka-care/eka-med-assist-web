@@ -8,6 +8,7 @@ export const SocketEvent = {
   PONG: "pong",
   CHAT: "chat",
   STREAM: "stream",
+  AUTH: "auth",
   END_OF_STREAM: "eos",
   SYNC: "sync",
   ERROR: "err",
@@ -72,7 +73,11 @@ export interface ChatRequest extends BaseMessage {
 }
 
 // Client to Server: Audio stream
-
+export interface AuthRequest extends BaseMessage {
+  ev: typeof SocketEvent.AUTH;
+  _id: string;
+  data: { token: string };
+}
 export interface AudioStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
   ct: typeof ContentType.AUDIO;
@@ -92,6 +97,12 @@ export interface ConnectionEstablishedMessage extends BaseMessage {
   ev: typeof SocketEvent.CONNECTION_ESTABLISHED;
   sid: string; // session id
   msg: string; // message
+}
+
+// Server to Client: Auth response
+export interface AuthResponseMessage extends BaseMessage {
+  ev: typeof SocketEvent.AUTH;
+  _id: string;
 }
 
 // Server to Client: Chat response (S3 URL for file upload)
@@ -161,6 +172,7 @@ export interface ErrorMessage extends BaseMessage {
 // Union type for all server messages
 export type ServerMessage =
   | ConnectionEstablishedMessage
+  | AuthResponseMessage
   | ChatResponseMessage
   | PillResponseMessage
   | StreamResponseMessage

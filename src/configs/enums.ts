@@ -2,6 +2,7 @@ export enum WEBSOCKET_SERVER_EVENTS {
   PING = "ping",
   PONG = "pong",
   CONNECTION_ESTABLISHED = "conn",
+  AUTH = "auth",
   CHAT = "chat",
   STREAM = "stream",
   END_OF_STREAM = "eos",
@@ -26,6 +27,7 @@ export enum WEBSOCKET_CUSTOM_EVENTS {
   SESSION_REFRESHED = "session_refreshed",
   SESSION_NOT_FOUND = "session_not_found",
   START_NEW_SESSION = "start_new_session",
+  MANAGE_CONNECTION_STATUS = "manage_connection_status",
 }
 
 export enum MULTI_SELECT_ADDITIONAL_OPTION {
