@@ -21,6 +21,10 @@ function App({ config }: AppProps = {}) {
   const { isOnline } = useNetworkStatus();
   const setSessionId = useSessionStore((state) => state.setSessionId);
   const setSessionToken = useSessionStore((state) => state.setSessionToken);
+  const setError = useSessionStore((state) => state.setError);
+  const setStartNewConnection = useSessionStore(
+    (state) => state.setStartNewConnection
+  );
 
   useEffect(() => {
     const checkMobile = () => {
@@ -47,11 +51,6 @@ function App({ config }: AppProps = {}) {
     const currentSessionId = useSessionStore.getState().sessionId;
     const currentSessionToken = useSessionStore.getState().sessionToken;
 
-    console.log("Current session state:", {
-      sessionId: currentSessionId,
-      sessionToken: currentSessionToken,
-    });
-
     if (currentSessionId && currentSessionToken && !newSession) {
       setIsWidgetOpen(true);
       return;
@@ -62,7 +61,6 @@ function App({ config }: AppProps = {}) {
     try {
       console.log("Calling startSession API...");
       const { session_id, session_token } = await startSession();
-      console.log("Session API response:", { session_id, session_token });
 
       if (!session_id || !session_token) {
         throw new Error(
@@ -73,13 +71,14 @@ function App({ config }: AppProps = {}) {
       console.log("Setting session in store...");
       setSessionId(session_id);
       setSessionToken(session_token);
-      console.log(
-        "Session started successfully, widget opened with session:",
-        session_id
-      );
+      console.log("Session started successfully, widget opened with session:");
     } catch (error) {
       console.error("Failed to start a new session:", error);
-      // TODO: Show error to the user
+      setError({
+        title: error instanceof Error ? error.message : "Something went wrong",
+        description: "Please start a new session.",
+      });
+      setStartNewConnection(true);
     } finally {
       setIsLoading(false);
       setIsWidgetOpen(true);
@@ -101,11 +100,8 @@ function App({ config }: AppProps = {}) {
   };
 
   const handleExpandWidget = () => {
-    //TODO: fix minimize
     const newExpandedState = !isExpanded;
     setIsExpanded(newExpandedState);
-    console.log("calling onMinimize", newExpandedState, config?.onMinimize);
-
   };
 
   return (

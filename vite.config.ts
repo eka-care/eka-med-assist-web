@@ -2,13 +2,57 @@ import { defineConfig } from "vite";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
+import fs from "fs";
+import { minify } from "terser";
+
+// Custom plugin to minify widget-loader.js using Terser
+function minifyWidgetLoader() {
+  return {
+    name: "minify-widget-loader",
+    async writeBundle() {
+      const loaderPath = path.resolve(__dirname, "public/widget-loader.js");
+      const distPath = path.resolve(__dirname, "dist/widget-loader.js");
+
+      if (fs.existsSync(loaderPath)) {
+        const content = fs.readFileSync(loaderPath, "utf8");
+
+        try {
+          const result = await minify(content, {
+            compress: {
+              drop_console: true, // Keep console.log for debugging
+              drop_debugger: true,
+            },
+            mangle: {
+              // Don't mangle global variables
+              reserved: ["EkaMedAssist", "EkaMedAssistWidget"],
+            },
+            format: {
+              comments: false, // Remove all comments
+            },
+          });
+
+          if (result.code) {
+            fs.writeFileSync(distPath, result.code);
+            console.log("✓ Minified widget-loader.js with Terser");
+          } else {
+            throw new Error("Terser minification failed");
+          }
+        } catch (error) {
+          console.error("Error minifying widget-loader.js:", error);
+          // Fallback to copying original file
+          fs.copyFileSync(loaderPath, distPath);
+        }
+      }
+    },
+  };
+}
 
 // This app always runs as a widget, so build it as a library
 export default defineConfig({
-  plugins: [react(), tailwindcss()],
+  plugins: [react(), tailwindcss(), minifyWidgetLoader()],
   define: {
-    'process.env': {},
-    'process.env.NODE_ENV': JSON.stringify('production'),
+    "process.env": {},
+    "process.env.NODE_ENV": JSON.stringify("production"),
   },
   build: {
     outDir: "dist",

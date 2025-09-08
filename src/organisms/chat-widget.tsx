@@ -77,17 +77,14 @@ export function ChatWidget({
   );
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
-    console.log("ChatWidget mounted - checking session", {
-      sessionId,
-      sessionToken,
-    });
+    console.log("ChatWidget mounted - checking session");
     if (!sessionId && !sessionToken && onStartSession) {
       console.log("No session found, starting new session...");
       onStartSession();
       // For new sessions, we don't need validation
       setIsSessionValidated(true);
     } else if (sessionId && sessionToken) {
-      console.log("Session already exists:", { sessionId });
+      console.log("Session already exists:");
 
       // Check if session is still valid - AWAIT this before proceeding
       const validateSession = async () => {
@@ -96,7 +93,7 @@ export function ChatWidget({
           console.log("isValid", isValid);
           if (!isValid) {
             console.log("Session is invalid, starting new session");
-            onStartSession?.(true);
+            await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
           } else {
@@ -106,7 +103,7 @@ export function ChatWidget({
         } catch (error) {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
-          onStartSession?.(true);
+          await onStartSession?.(true);
           //For new sessions, we don't need validation
           setIsSessionValidated(true);
         }
@@ -139,13 +136,20 @@ export function ChatWidget({
     }
   }, [sessionId]);
   // Create socket configuration when session data is available AND validated
-  const socketConfig: WebSocketConfig | null =
-    sessionId && sessionToken && isSessionValidated
-      ? {
-          sessionId,
-          auth: { token: sessionToken },
-        }
-      : null;
+  const socketConfig: WebSocketConfig | null = useMemo(() => {
+    if (sessionId && sessionToken && isSessionValidated) {
+      console.log(
+        "Creating WebSocket config with validated session:",
+        sessionId
+      );
+      return {
+        sessionId,
+        auth: { token: sessionToken },
+      };
+    }
+    console.log("WebSocket config not created - session not validated yet");
+    return null;
+  }, [sessionId, sessionToken, isSessionValidated]);
 
   // Use WebSocketV2 hook
   const {
