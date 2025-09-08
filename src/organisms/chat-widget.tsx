@@ -53,6 +53,7 @@ export function ChatWidget({
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [isWaitingForResponse, setIsWaitingForResponse] =
     useState<boolean>(false);
+  const [isSessionValidated, setIsSessionValidated] = useState<boolean>(false);
   const {
     isConnectionEstablished,
     showRetryButton,
@@ -83,27 +84,35 @@ export function ChatWidget({
     if (!sessionId && !sessionToken && onStartSession) {
       console.log("No session found, starting new session...");
       onStartSession();
+      // For new sessions, we don't need validation
+      setIsSessionValidated(true);
     } else if (sessionId && sessionToken) {
-      console.log("Session already exists:", { sessionId, sessionToken });
+      console.log("Session already exists:", { sessionId });
 
-      // Check if session is still valid
-      getSessionDetails(sessionId)
-        .then((isValid) => {
+      // Check if session is still valid - AWAIT this before proceeding
+      const validateSession = async () => {
+        try {
+          const isValid = await getSessionDetails(sessionId);
           console.log("isValid", isValid);
           if (!isValid) {
             console.log("Session is invalid, starting new session");
-            // setShowRetryButton(false);
-            // setStartNewConnection(true);
             onStartSession?.(true);
+            //For new sessions, we don't need validation
+            setIsSessionValidated(true);
+          } else {
+            console.log("Session is valid, allowing WebSocket connection");
+            setIsSessionValidated(true);
           }
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
           onStartSession?.(true);
-          // setShowRetryButton(false);
-          // setStartNewConnection(true);
-        });
+          //For new sessions, we don't need validation
+          setIsSessionValidated(true);
+        }
+      };
+
+      validateSession();
     }
   }, []); // Only run on mount
 
@@ -129,9 +138,9 @@ export function ChatWidget({
       }
     }
   }, [sessionId]);
-  // Create socket configuration when session data is available
+  // Create socket configuration when session data is available AND validated
   const socketConfig: WebSocketConfig | null =
-    sessionId && sessionToken
+    sessionId && sessionToken && isSessionValidated
       ? {
           sessionId,
           auth: { token: sessionToken },

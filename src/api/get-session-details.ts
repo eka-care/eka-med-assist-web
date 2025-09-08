@@ -7,7 +7,7 @@ export const getSessionDetails = async (
   try {
     const url = `${config.BASE_API_URL}/med-assist/session/${sessionId}`;
     console.log("🌐 Making API call to:", url);
-    
+
     const response = await fetch(url, {
       method: "GET",
       headers: {
@@ -15,7 +15,7 @@ export const getSessionDetails = async (
         "X-agent-id": config.X_AGENT_ID,
       },
     });
-    
+
     console.log("📡 API response status:", response.status, response.ok);
 
     if (!response.ok) {

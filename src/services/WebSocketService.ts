@@ -7,11 +7,11 @@ import type {
   AudioEndOfStreamRequest,
   AudioStreamRequest,
   AuthRequest,
-  AuthResponseMessage,
   ChatMessage,
   ChatRequest,
   ChatResponseMessage,
   ClientMessage,
+  ConnectionEstablishedMessage,
   ConnectionStateType,
   EndOfStreamMessage,
   ErrorMessage,
@@ -115,7 +115,7 @@ export class WebSocketService {
       this.connectionAttempts++;
 
       // Connect to WebSocket with session ID in URL and token as query param
-      const wsUrl = `${BASE_URL}/${this.config.sessionId}`;
+      const wsUrl = `${BASE_URL}/${this.config.sessionId}/`;
 
       console.log(
         "Connecting to WebSocket:",
@@ -156,37 +156,10 @@ export class WebSocketService {
         }
       }, this.config.options?.connectionTimeout || 5000);
 
-      // Wait for connection to be established
-      await new Promise<void>((resolve, reject) => {
-        if (!this.ws) {
-          reject(new Error("WebSocket not initialized"));
-          return;
-        }
-
-        const onOpen = () => {
-          console.log("WebSocket connected successfully from onOpen");
-          this.isReconnecting = false;
-          this.connectionAttempts = 0;
-          this.updateConnectionState(ConnectionState.CONNECTED);
-          this.startPingInterval();
-          // establish connection only after authenticating
-          // this.triggerEvent(
-          //   WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
-          //   true
-          // );
-          resolve();
-        };
-
-        const onError = (error: Event) => {
-          console.error("WebSocket connection error:", error);
-          this.isReconnecting = false;
-          this.updateConnectionState(ConnectionState.ERROR);
-          reject(new Error("WebSocket connection failed"));
-        };
-
-        this.ws.onopen = onOpen;
-        this.ws.onerror = onError;
-      });
+      // Error handler will be set up in setupWebSocketHandlers()
+      if (!this.ws) {
+        throw new Error("WebSocket not initialized");
+      }
     } catch (error) {
       console.error("Failed to connect:", error);
       this.isReconnecting = false;
@@ -212,7 +185,7 @@ export class WebSocketService {
         this.isReconnecting = false;
         this.updateConnectionState(ConnectionState.ERROR);
         this.triggerEvent(
-          WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS,
+          WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
           false
         );
         this.triggerEvent(
@@ -281,6 +254,11 @@ export class WebSocketService {
 
     this.ws.onopen = () => {
       console.log("WebSocket opened");
+      this.sendAuthMessage();
+      this.isReconnecting = false;
+      this.connectionAttempts = 0;
+      this.updateConnectionState(ConnectionState.CONNECTED);
+      this.startPingInterval();
     };
 
     this.ws.onmessage = async (event) => {
@@ -299,6 +277,8 @@ export class WebSocketService {
 
     this.ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      this.isReconnecting = false;
+      this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_SERVER_EVENTS.ERROR,
         new Error("WebSocket error occurred")
@@ -314,11 +294,9 @@ export class WebSocketService {
 
     switch (message.ev) {
       case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
-        this.handleConnectionEstablished();
-        break;
-
-      case WEBSOCKET_SERVER_EVENTS.AUTH:
-        this.handleAuthMessage(message as AuthResponseMessage);
+        this.handleConnectionEstablished(
+          message as ConnectionEstablishedMessage
+        );
         break;
 
       case WEBSOCKET_SERVER_EVENTS.CHAT:
@@ -353,15 +331,11 @@ export class WebSocketService {
   /**
    * Handle connection established message
    */
-  private handleConnectionEstablished(): void {
-    //send an event back to server
-    //when backend sends back auth event connection is established
-    this.sendAuthMessage();
-  }
-
-  private handleAuthMessage(message: AuthResponseMessage): void {
-    console.log("Auth message received:", message);
-    this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS, true);
+  private handleConnectionEstablished(
+    message: ConnectionEstablishedMessage
+  ): void {
+    console.log("Connection established:", message);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
   }
 
   /**
@@ -532,7 +506,7 @@ export class WebSocketService {
   private handleConnectionClose(event: CloseEvent): void {
     this.cleanup();
     this.updateConnectionState(ConnectionState.DISCONNECTED);
-    this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.MANAGE_CONNECTION_STATUS, false);
+    this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, false);
 
     // Attempt to reconnect if not manually closed
     if (event.code !== 1000 && !this.isReconnecting) {

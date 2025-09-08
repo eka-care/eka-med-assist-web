@@ -78,6 +78,7 @@ export interface AuthRequest extends BaseMessage {
   _id: string;
   data: { token: string };
 }
+
 export interface AudioStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
   ct: typeof ContentType.AUDIO;
@@ -97,12 +98,6 @@ export interface ConnectionEstablishedMessage extends BaseMessage {
   ev: typeof SocketEvent.CONNECTION_ESTABLISHED;
   sid: string; // session id
   msg: string; // message
-}
-
-// Server to Client: Auth response
-export interface AuthResponseMessage extends BaseMessage {
-  ev: typeof SocketEvent.AUTH;
-  _id: string;
 }
 
 // Server to Client: Chat response (S3 URL for file upload)
@@ -172,7 +167,6 @@ export interface ErrorMessage extends BaseMessage {
 // Union type for all server messages
 export type ServerMessage =
   | ConnectionEstablishedMessage
-  | AuthResponseMessage
   | ChatResponseMessage
   | PillResponseMessage
   | StreamResponseMessage
