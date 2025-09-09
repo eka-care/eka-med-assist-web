@@ -12,7 +12,7 @@ import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ConnectionStatus } from "../molecules/connection-status";
 // import { TipsDisplay } from "../molecules/tips-display";
-import ApolloIcon from "../components/ApolloIcon";
+import ApolloAssistIcon from "../components/ApollossistIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
@@ -928,7 +928,7 @@ export function ChatWidget({
                 <div className="px-4 py-2">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0">
-                      <ApolloIcon size={32} />
+                      <ApolloAssistIcon size={32} />
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
