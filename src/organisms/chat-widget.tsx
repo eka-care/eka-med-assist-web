@@ -683,6 +683,7 @@ export function ChatWidget({
     if (action) {
       try {
         await handleSendMessage(action.label);
+        setDisableInput(true)
       } catch (error) {
         console.error("Failed to send quick action:", error);
         // Error is already handled in handleSendMessage
