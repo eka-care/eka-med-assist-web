@@ -12,7 +12,7 @@ import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ConnectionStatus } from "../molecules/connection-status";
 // import { TipsDisplay } from "../molecules/tips-display";
-import { DocAssistIcon } from "@ui/index";
+import ApolloIcon from "../components/ApolloIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
@@ -156,7 +156,6 @@ export function ChatWidget({
     webSocketService: wsService,
     setFilesForUpload,
     sendFileUploadRequest,
-    sendEndOfAudioStream: sendAudioEndOfStream,
     sendAudioData,
     regenerateResponse,
     sendChatMessage,
@@ -550,7 +549,6 @@ export function ChatWidget({
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
-      await sendAudioEndOfStream();
       console.log("Adding audio message to session store", newMessage);
       addMessageToSession(sessionId, { ...newMessage, isStored: true });
       console.log("Audio sent successfully");
@@ -928,9 +926,9 @@ export function ChatWidget({
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
                 <div className="px-4 py-2">
-                  <div className="flex gap-2 items-start justify-center">
-                    <div className="flex-shrink-0 mt-1">
-                      <DocAssistIcon size={24} />
+                  <div className="flex gap-1 items-start justify-center">
+                    <div className="flex-shrink-0">
+                      <ApolloIcon size={32} />
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">

@@ -434,7 +434,6 @@ export function useWebSocket(
     if (wsRef.current?.isConnected()) {
       try {
         if (!isAudioStreaming.current) {
-          wsRef.current?.sendAudioStreamStart();
           isAudioStreaming.current = true;
         }
 
@@ -447,7 +446,7 @@ export function useWebSocket(
 
         console.log("Sending audio data via WebSocket:", audioData);
         wsRef.current.sendAudioData(audioData);
-        isAudioStreaming.current = true;
+        isAudioStreaming.current = false;
       } catch (error) {
         console.error("Failed to send audio data:", error);
         setError(
@@ -463,24 +462,24 @@ export function useWebSocket(
   };
 
   // Send end of audio stream
-  const sendEndOfAudioStream = () => {
-    if (wsRef.current?.isConnected()) {
-      try {
-        wsRef.current.sendAudioEndOfStream();
-        isAudioStreaming.current = false;
-      } catch (error) {
-        console.error("Failed to send end of audio stream:", error);
-        setError(
-          error instanceof Error
-            ? { title: error.message }
-            : { title: "Failed to end audio stream" }
-        );
-      }
-    } else {
-      console.error("WebSocket not connected");
-      setError(ERROR_MESSAGES.CONNECTION_LOST);
-    }
-  };
+  // const sendEndOfAudioStream = () => {
+  //   if (wsRef.current?.isConnected()) {
+  //     try {
+  //       wsRef.current.sendAudioEndOfStream();
+  //       isAudioStreaming.current = false;
+  //     } catch (error) {
+  //       console.error("Failed to send end of audio stream:", error);
+  //       setError(
+  //         error instanceof Error
+  //           ? { title: error.message }
+  //           : { title: "Failed to end audio stream" }
+  //       );
+  //     }
+  //   } else {
+  //     console.error("WebSocket not connected");
+  //     setError(ERROR_MESSAGES.CONNECTION_LOST);
+  //   }
+  // };
 
   // Send file upload request
   const sendFileUploadRequest = () => {
@@ -611,7 +610,6 @@ export function useWebSocket(
         case "audio":
           if (lastMessage.audioData) {
             await sendAudioData(lastMessage.audioData);
-            await sendEndOfAudioStream();
           }
           break;
         case "file":
@@ -653,7 +651,6 @@ export function useWebSocket(
     // Actions
     sendChatMessage,
     sendAudioData,
-    sendEndOfAudioStream,
     sendFileUploadRequest,
     sendFileUploadComplete,
     setFilesForUpload,

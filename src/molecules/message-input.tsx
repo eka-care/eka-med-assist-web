@@ -39,7 +39,7 @@ export function MessageInput({
   onInputChange,
   // onFocus,
   // onBlur,
-  onAudioStream,
+  //onAudioStream,
   placeholder = "Message Apollo Assist...",
   disabled = false,
   setError,
@@ -222,10 +222,10 @@ export function MessageInput({
         console.log("Received full audio data:", audioData);
         setCurrentAudioData(audioData);
 
-        if (onAudioStream) {
-          console.log("Calling onAudioStream with full audio data");
-          onAudioStream(audioData);
-        }
+        // if (onAudioStream) {
+        //   console.log("Calling onAudioStream with full audio data");
+        //   onAudioStream(audioData);
+        // }
 
         // Auto-pause will handle stopping, but we can also handle it here
         setIsAudioStreaming(true);
