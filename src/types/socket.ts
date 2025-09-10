@@ -107,10 +107,12 @@ export interface ChatResponseMessage extends BaseMessage {
     | typeof ContentType.FILE
     | typeof ContentType.PILL
     | typeof ContentType.MULTI
-    | typeof ContentType.DOCTOR_CARD;
+    | typeof ContentType.DOCTOR_CARD
+    | typeof ContentType.TEXT;
   data: {
     url?: string;
     exp?: number;
+    text?: string;
     tool_use_id?: string;
     choices?: string[];
     doctor_details?: TDoctorDetails;

@@ -415,7 +415,6 @@ export class WebSocketService {
    * Handle pong message
    */
   private handlePongMessage(message: PongMessage): void {
-    console.log("Pong message received:", message);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.PONG, message);
   }
 
@@ -423,7 +422,6 @@ export class WebSocketService {
    * Handle sync message
    */
   private handleSyncMessage(message: SyncMessage): void {
-    console.log("Sync message received:", message);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.SYNC, message);
   }
 
@@ -431,7 +429,6 @@ export class WebSocketService {
    * Handle error message
    */
   private async handleErrorMessage(message: ErrorMessage): Promise<void> {
-    console.error("Error message received:", message);
     switch (message.code) {
       case SOCKET_ERROR_CODES.TIMEOUT:
         this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);

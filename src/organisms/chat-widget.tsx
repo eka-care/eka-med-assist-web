@@ -5,13 +5,11 @@ import { type CommonHandlerData } from "@/types/socket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
-// import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { Card } from "@ui/index";
 import { ChatHeader } from "../molecules/chat-header";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ConnectionStatus } from "../molecules/connection-status";
-// import { TipsDisplay } from "../molecules/tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
@@ -193,12 +191,6 @@ export function ChatWidget({
           botMessage.length <= lastMessage.content.length
         ) {
           // If the incoming text is shorter or equal, it might be a duplicate, skip
-          console.log(
-            "Skipping duplicate or shorter text:",
-            botMessage,
-            "vs",
-            lastMessage.content
-          );
           return prev;
         } else {
           console.log("Creating new bot message because:", {
@@ -350,10 +342,6 @@ export function ChatWidget({
     if (!isStreaming && sessionId && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.isBot && !lastMessage.isStored) {
-        console.log(
-          "Adding bot message to session store",
-          messages[messages.length - 1]
-        );
         // Mark as stored to prevent duplicate storage
         const updatedMessage = { ...lastMessage, isStored: true };
         setMessages((prev) =>
@@ -484,12 +472,10 @@ export function ChatWidget({
 
       // Set waiting state immediately when message is sent
       setIsWaitingForResponse(true);
-      console.log("Adding message to session store", newMessage);
       addMessageToSession(sessionId, newMessage);
       if (disableInput) {
         setDisableInput(false);
       }
-      console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
       setError({ title: "Failed to send message. Please try again." });
@@ -500,7 +486,6 @@ export function ChatWidget({
 
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
-    console.log("Final audio stream received:", audioData);
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
       setIsWaitingForResponse(false);
@@ -549,9 +534,7 @@ export function ChatWidget({
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
-      console.log("Adding audio message to session store", newMessage);
       addMessageToSession(sessionId, { ...newMessage, isStored: true });
-      console.log("Audio sent successfully");
     } catch (error) {
       console.error("Failed to send audio:", error);
       setError({ title: "Failed to send audio message. Please try again." });
@@ -620,9 +603,7 @@ export function ChatWidget({
       // Set files for upload when presigned URL is received
       setFilesForUpload(fileArray, message);
       await sendFileUploadRequest();
-      console.log("Adding file message to session store", newMessage);
       addMessageToSession(sessionId, newMessage);
-      console.log("File upload request sent successfully");
     } catch (error) {
       console.error("Failed to upload file:", error);
       setError({ title: "Failed to upload file. Please try again." });
@@ -667,10 +648,6 @@ export function ChatWidget({
             isResponded: true,
             isStored: true,
           };
-          console.log(
-            "Adding quick action message to session store",
-            messages[0]
-          );
 
           addMessageToSession(sessionId, updatedMessages[i]);
           break;
@@ -683,7 +660,7 @@ export function ChatWidget({
     if (action) {
       try {
         await handleSendMessage(action.label);
-        setDisableInput(true)
+        setDisableInput(true);
       } catch (error) {
         console.error("Failed to send quick action:", error);
         // Error is already handled in handleSendMessage

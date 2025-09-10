@@ -48,9 +48,7 @@ export function useWebSocket(
   const refreshSession = useMedAssistStore((state) => state.refreshSession);
   const setSessionId = useMedAssistStore((state) => state.setSessionId);
   const setSessionToken = useMedAssistStore((state) => state.setSessionToken);
-  // const [isStreaming, setIsStreaming] = useState(false);
   const isAudioStreaming = useRef(false);
-  // const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const {
     isConnectionEstablished,
     setConnectionEstablished,
@@ -59,7 +57,6 @@ export function useWebSocket(
   } = useMedAssistStore();
 
   useEffect(() => {
-    console.log("hi use web socket");
     if (!config || !config.sessionId || !config.auth?.token) {
       console.log("No config provided", config);
       setConnectionEstablished(false);
@@ -88,13 +85,11 @@ export function useWebSocket(
       }
     );
 
-    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.PONG, (data: any) => {
-      console.log("PONG received:", data);
+    wsRef.current?.on(WEBSOCKET_SERVER_EVENTS.PONG, (_: any) => {
       //TODO: Handle PONG
     });
 
-    wsRef.current.on(WEBSOCKET_SERVER_EVENTS.SYNC, (data: any) => {
-      console.log("SYNC received:", data);
+    wsRef.current.on(WEBSOCKET_SERVER_EVENTS.SYNC, (_: any) => {
       //TODO: Handle SYNC
     });
 
@@ -106,19 +101,15 @@ export function useWebSocket(
           message.data &&
           "url" in message.data
         ) {
-          console.log("File upload URL received:", message.data);
           service
             .uploadFilesToPresignedUrl(message.data?.url || "")
             .then(() => {
               // setPendingFiles([]);
-              console.log("Files uploaded successfully");
             })
             .catch((error) => {
               console.error("Failed to upload files:", error);
             });
-        }
-        console.log("message.ct", message.ct);
-        if (
+        } else if (
           (message.ct === ContentType.PILL ||
             message.ct === ContentType.MULTI ||
             message.ct === ContentType.DOCTOR_CARD) &&
@@ -139,6 +130,16 @@ export function useWebSocket(
             };
             onCommonContent(commonData);
           }
+        } else if (
+          message.ct === ContentType.TEXT &&
+          message.data &&
+          message.data.text
+        ) {
+         setIsStreaming(true);
+          if (onTextMessage) {
+            onTextMessage(message.data.text);
+          }
+          setIsStreaming(false);
         }
       }
     );
@@ -149,14 +150,12 @@ export function useWebSocket(
         if (!isStreaming) {
           setIsStreaming(true);
         }
-        console.log("STREAM received:", message);
         if (
           message.ct === ContentType.TEXT &&
           message.data &&
           message.data.text &&
           onTextMessage
         ) {
-          console.log("Text message received:", message.data.text);
           // Call the callback to display the bot response
           onTextMessage(message.data.text);
         }
@@ -168,7 +167,6 @@ export function useWebSocket(
       if (!isStreaming) {
         setIsStreaming(true);
       }
-      console.log("Stream chunk (accumulated) received:", accumulatedText);
       if (onTextMessage) {
         // Call the callback with the accumulated text
         onTextMessage(accumulatedText);
@@ -177,8 +175,7 @@ export function useWebSocket(
 
     wsRef.current?.on(
       WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
-      (message: EndOfStreamMessage) => {
-        console.log("END_OF_STREAM received:", message);
+      (_: EndOfStreamMessage) => {
         setIsStreaming(false);
 
         // Clear the last sent message data when response is complete
@@ -264,14 +261,12 @@ export function useWebSocket(
 
     // Handle progress messages
     wsRef.current?.on("progress_message", (progressMessage: string) => {
-      console.log("Progress message received:", progressMessage);
       if (onProgressMessage) {
         onProgressMessage(progressMessage);
       }
     });
 
     wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.TIPS, (tips: string[]) => {
-      console.log("Tips message received in use websocket:", tips);
       if (onTipsMessage) {
         onTipsMessage(tips);
       }
@@ -279,19 +274,16 @@ export function useWebSocket(
 
     // Handle progressive text updates
     wsRef.current?.on("stream_chunk", (progressiveText: string) => {
-      console.log("Progressive text received:", progressiveText);
       if (onTextMessage) {
         // Call the callback with the progressive text
         onTextMessage(progressiveText);
       }
       if (!isStreaming) {
-        console.log("Setting isStreaming to true");
         setIsStreaming(true);
       }
     });
 
     wsRef.current?.on("message", (message: any) => {
-      console.log("Message received:", message);
       if (message.metadata?.isStreaming === false) {
         setIsStreaming(false);
       }
@@ -303,7 +295,6 @@ export function useWebSocket(
         console.log("MAX_CONNECTION_ATTEMPTS_EXCEEDED received:", data);
         // If connection attempts exceeded → set showRetry = true
         setShowRetryButton(true);
-        console.log("setting error to CONNECTION_ATTEMPTS_EXCEEDED");
         setError(ERROR_MESSAGES.CONNECTION_ATTEMPTS_EXCEEDED);
       }
     );
@@ -461,26 +452,6 @@ export function useWebSocket(
     }
   };
 
-  // Send end of audio stream
-  // const sendEndOfAudioStream = () => {
-  //   if (wsRef.current?.isConnected()) {
-  //     try {
-  //       wsRef.current.sendAudioEndOfStream();
-  //       isAudioStreaming.current = false;
-  //     } catch (error) {
-  //       console.error("Failed to send end of audio stream:", error);
-  //       setError(
-  //         error instanceof Error
-  //           ? { title: error.message }
-  //           : { title: "Failed to end audio stream" }
-  //       );
-  //     }
-  //   } else {
-  //     console.error("WebSocket not connected");
-  //     setError(ERROR_MESSAGES.CONNECTION_LOST);
-  //   }
-  // };
-
   // Send file upload request
   const sendFileUploadRequest = () => {
     if (wsRef.current && isConnectionEstablished) {
@@ -488,17 +459,6 @@ export function useWebSocket(
       console.log("File upload request sent");
     }
   };
-
-  //   // Send file upload (alias for sendFileUploadRequest)
-  //   const sendFileUpload = (files: FileList) => {
-  //     if (wsRef.current && isConnectionEstablished) {
-  //       const fileArray = Array.from(files);
-  //       setPendingFiles(fileArray);
-  //       wsRef.current.setFilesForUpload(fileArray);
-  //       wsRef.current.sendFileUploadRequest();
-  //       console.log("File upload sent:", fileArray.length, "files");
-  //     }
-  //   };
 
   // Send file upload completion
   const sendFileUploadComplete = (s3Url: string) => {
@@ -536,14 +496,6 @@ export function useWebSocket(
       wsRef.current.clearPendingFiles();
     }
     console.log("Cleared pending files");
-  };
-
-  // Send PING function
-  const sendPing = () => {
-    if (wsRef.current && isConnectionEstablished) {
-      wsRef.current.sendPing();
-      console.log("Manual PING sent");
-    }
   };
 
   // Regenerate response for a specific chat
@@ -656,7 +608,6 @@ export function useWebSocket(
     setFilesForUpload,
     clearPendingFiles,
     clearError,
-    sendPing,
     regenerateResponse,
     triggerSessionRefresh,
     retryLastMessage,
