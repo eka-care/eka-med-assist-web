@@ -290,8 +290,6 @@ export class WebSocketService {
    * Handle server messages
    */
   private async handleServerMessage(message: ServerMessage): Promise<void> {
-    console.log("Received server message:", message);
-
     switch (message.ev) {
       case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
         this.handleConnectionEstablished(
@@ -351,8 +349,6 @@ export class WebSocketService {
    */
   private handleStreamMessage(message: StreamResponseMessage): void {
     if (message.ct === ContentType.TEXT && message.data) {
-      console.log("Stream response received:", message.data);
-
       // Handle progress messages
       if (message.data.progress_msg) {
         console.log("Progress message received:", message.data.progress_msg);

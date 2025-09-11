@@ -66,8 +66,8 @@ export function ChatWidget({
     getMessagesForSession,
     addMessageToSession,
     updateMessageInSession,
-    // setShowRetryButton,
-    // setStartNewConnection,
+    setInlineText,
+    inlineText,
   } = useMedAssistStore();
 
   const [disableInput, setDisableInput] = useState<boolean>(
@@ -130,6 +130,7 @@ export function ChatWidget({
 
         addMessageToSession(sessionId, welcomeMessage);
         setMessages([welcomeMessage]);
+        console.log("cleared inline text");
       }
     }
   }, [sessionId]);
@@ -167,7 +168,6 @@ export function ChatWidget({
       setMessages((prev) => {
         // Check if there's already a bot message at the end
         const lastMessage = prev[prev.length - 1];
-        console.log("lastMessage", lastMessage);
 
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
@@ -287,6 +287,9 @@ export function ChatWidget({
           return [...prev, newMessage];
         }
       });
+    },
+    (inlineMessage) => {
+      setInlineText(inlineMessage);
     }
   );
 
@@ -297,11 +300,8 @@ export function ChatWidget({
   ]);
 
   useEffect(() => {
-    console.log("hi chat widget");
-
     if (isConnectionEstablished && isOnline) {
       const lastMessage = messages[messages.length - 1];
-      console.log("lastMessage", lastMessage);
       if (lastMessage?.isBot && lastMessage?.commonContentData) {
         console.log("disabling input", lastMessage);
         setDisableInput(true);
@@ -317,7 +317,6 @@ export function ChatWidget({
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    console.log("scrollToBottom called");
     if (scrollAreaRef.current) {
       // Use setTimeout to ensure DOM is fully updated
       setTimeout(() => {
@@ -376,38 +375,38 @@ export function ChatWidget({
     startNewConnection,
   ]);
 
-  // CHANGED: Now handles AudioData instead of Blob
-  const handleAudioStream = (audioData: AudioData) => {
-    console.log("called on Audio stream in chat widget V2");
-    if (isStreaming) {
-      console.log("Cannot send voice while streaming");
-      return;
-    }
-    if (!isOnline) {
-      setError(ERROR_MESSAGES.OFFLINE);
-      setIsWaitingForResponse(false);
-      return;
-    }
+  // // CHANGED: Now handles AudioData instead of Blob
+  // const handleAudioStream = (audioData: AudioData) => {
+  //   console.log("called on Audio stream in chat widget V2");
+  //   if (isStreaming) {
+  //     console.log("Cannot send voice while streaming");
+  //     return;
+  //   }
+  //   if (!isOnline) {
+  //     setError(ERROR_MESSAGES.OFFLINE);
+  //     setIsWaitingForResponse(false);
+  //     return;
+  //   }
 
-    if (!isConnectionEstablished) {
-      setError(ERROR_MESSAGES.CONNECTION_LOST);
-      setIsWaitingForResponse(false);
-      return;
-    }
-    // Clear any errors and tips when starting audio streaming
-    clearError();
-    setTips(null);
+  //   if (!isConnectionEstablished) {
+  //     setError(ERROR_MESSAGES.CONNECTION_LOST);
+  //     setIsWaitingForResponse(false);
+  //     return;
+  //   }
+  //   // Clear any errors and tips when starting audio streaming
+  //   clearError();
+  //   setTips(null);
 
-    console.log("Audio stream received:", audioData);
+  //   console.log("Audio stream received:", audioData);
 
-    if (isConnectionEstablished) {
-      // Send full audio data to WebSocket
-      console.log("called on sendAudioData of socket in chat widget V2");
-      sendAudioData(audioData);
-    } else {
-      console.log("WebSocket not connected, cannot stream audio");
-    }
-  };
+  //   if (isConnectionEstablished) {
+  //     // Send full audio data to WebSocket
+  //     console.log("called on sendAudioData of socket in chat widget V2");
+  //     sendAudioData(audioData);
+  //   } else {
+  //     console.log("WebSocket not connected, cannot stream audio");
+  //   }
+  // };
 
   const handleSendMessage = async (content: string, tool_use_id?: string) => {
     // Block sending if currently streaming
@@ -433,7 +432,6 @@ export function ChatWidget({
     // Clear progress message and tips when sending new message
     setProgressMessage(null);
     setTips(null);
-
     try {
       await sendChatMessage(content, tool_use_id);
       // Mark the bot message as responded if it has pills or multiselect
@@ -501,44 +499,13 @@ export function ChatWidget({
     // Clear tips when sending final audio stream
     setTips(null);
     // Mark the bot message as responded if it has pills or multiselect
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      // Find the last bot message and mark it as responded if it has interactive elements
-      for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
-          updatedMessages[i] = {
-            ...updatedMessages[i],
-            isResponded: true,
-          };
-          break;
-        }
-      }
-      return updatedMessages;
-    });
-
-    // Create user message with audio data
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: "🎤 Voice message sent", // Cleaner, simpler text
-      isBot: false,
-      audioData: audioData, // Store the audio data
-      isStored: false,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
     try {
-      // Set waiting state immediately when audio is sent
-      setIsWaitingForResponse(true);
-
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
-      addMessageToSession(sessionId, { ...newMessage, isStored: true });
     } catch (error) {
       console.error("Failed to send audio:", error);
       setError({ title: "Failed to send audio message. Please try again." });
-      setIsWaitingForResponse(false); // Clear waiting state on error
       throw error;
     }
   };
@@ -936,7 +903,7 @@ export function ChatWidget({
             <MessageInput
               onSendMessage={handleSendMessage}
               onFinalAudioStream={handleFinalAudioStream}
-              onAudioStream={handleAudioStream}
+              inlineText={inlineText || ""}
               onFileUpload={handleFileUpload}
               disabled={disableInput}
               setError={setError}

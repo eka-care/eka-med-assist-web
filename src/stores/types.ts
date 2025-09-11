@@ -20,6 +20,9 @@ export type TMedAssistStore = {
   showRetryButton: boolean;
   setShowRetryButton: (showRetry: boolean) => void;
 
+  inlineText: string | null;
+  setInlineText: (inlineText: string) => void;
+
   chats: { [sessionId: string]: Message[] };
 
   // Message actions

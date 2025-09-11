@@ -1,4 +1,4 @@
-import { useState, useRef, useMemo, useEffect } from "react";
+import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { Mic, Send, Plus, Trash2, Check, Loader2 } from "lucide-react";
 import { Button, Input, voiceListeningGif } from "@ui/index";
 import { useAudioService } from "@/custom-hooks/useAudioService";
@@ -10,6 +10,11 @@ import { ErrorMessageUI } from "@/types/socket";
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
 
+enum RECODING_PHASE {
+  IDLE = "idle",
+  PROCESSING = "processing",
+  TRANSCRIBING = "transcribing",
+}
 // Helper function to format file size
 const formatFileSize = (bytes: number): string => {
   if (bytes === 0) return "0 Bytes";
@@ -26,7 +31,7 @@ interface MessageInputProps {
   onInputChange?: (value: string) => void;
   onInputFocus?: () => void;
   onInputBlur?: () => void;
-  onAudioStream?: (audioData: AudioData) => void;
+  inlineText?: string;
   placeholder?: string;
   disabled?: boolean;
   setError: (error: ErrorMessageUI) => void;
@@ -37,9 +42,7 @@ export function MessageInput({
   onFinalAudioStream,
   onFileUpload,
   onInputChange,
-  // onFocus,
-  // onBlur,
-  //onAudioStream,
+  inlineText,
   placeholder = "Message Apollo Assist...",
   disabled = false,
   setError,
@@ -47,8 +50,10 @@ export function MessageInput({
   const [message, setMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isAudioStreaming, setIsAudioStreaming] = useState(false);
+  const [recordingPhase, setRecordingPhase] = useState<RECODING_PHASE>(
+    RECODING_PHASE.IDLE
+  );
   const [recordingTime, setRecordingTime] = useState(0);
-  const [showEndButton, setShowEndButton] = useState(false);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [currentAudioData, setCurrentAudioData] = useState<AudioData | null>(
@@ -63,13 +68,13 @@ export function MessageInput({
   );
   const isStreaming = useSessionStore((state) => state.isStreaming);
   const error = useSessionStore((state) => state.error);
-  // AudioService hook - full MP3 audio with auto-pause
   const {
     isRecording,
     error: audioServiceError,
     recordingDuration,
     start,
     stop,
+    cancel,
     reinitialize,
   } = useAudioService();
 
@@ -95,7 +100,6 @@ export function MessageInput({
       isConnectionEstablished &&
       messageInputRef.current
     ) {
-      console.log("Attempting to focus input...");
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
         console.log("Focusing input now");
@@ -107,10 +111,17 @@ export function MessageInput({
   }, [isStreaming, error]);
 
   useEffect(() => {
+    if (inlineText) {
+      setMessage(inlineText);
+      setRecordingPhase(RECODING_PHASE.IDLE);
+    }
+  }, [inlineText]);
+
+  useEffect(() => {
     if (audioServiceError) {
       console.log("Audio error detected:", audioServiceError);
       setIsListening(false);
-      setShowEndButton(false);
+      // setShowEndButton(false);
       setAudioError(audioServiceError.message);
       if (intervalRef.current) {
         clearInterval(intervalRef.current);
@@ -142,6 +153,16 @@ export function MessageInput({
       setRecordingTime(Math.floor(recordingDuration / 1000));
     }
   }, [recordingDuration, isRecording]);
+
+  useEffect(() => {
+    if (isAudioStreaming) {
+      if (isListening) {
+        //in case of auto pause after 10 seconds call stop recording
+        stopRecording();
+      }
+      sendRecording();
+    }
+  }, [isAudioStreaming]);
 
   const checkMicrophonePermission = async () => {
     try {
@@ -199,9 +220,7 @@ export function MessageInput({
     return message.trim() || uploadedFiles.length > 0;
   }, [message, uploadedFiles]);
 
-  // const hasContent = useMemo(() => {
-  //   return message.trim();
-  // }, [message]);
+
   // Check if input should be disabled (either disabled prop, streaming, or sending)
   const isInputDisabled =
     !isConnectionEstablished ||
@@ -213,22 +232,14 @@ export function MessageInput({
   // Start recording with AudioService
   const startRecording = async () => {
     try {
-      console.log("Starting recording with AudioService");
-      setShowEndButton(false);
       setRecordingTime(0);
       setCurrentAudioData(null);
 
       await start((audioData) => {
-        console.log("Received full audio data:", audioData);
+        console.log("audio data arrived");
         setCurrentAudioData(audioData);
-
-        // if (onAudioStream) {
-        //   console.log("Calling onAudioStream with full audio data");
-        //   onAudioStream(audioData);
-        // }
-
-        // Auto-pause will handle stopping, but we can also handle it here
         setIsAudioStreaming(true);
+        // Auto-pause will handle stopping, but we can also handle it here
       });
 
       // Start timer for UI updates
@@ -268,49 +279,58 @@ export function MessageInput({
 
   // Stop recording manually
   const stopRecording = () => {
+    console.log("called stop recording");
+
     if (intervalRef.current) {
       clearInterval(intervalRef.current);
     }
-
-    setShowEndButton(true);
+    setIsListening(false);
+    setRecordingPhase(RECODING_PHASE.PROCESSING);
     stop();
   };
 
   // Cancel recording
   const cancelRecording = () => {
-    stop();
-    setShowEndButton(false);
+    cancel();
     setIsListening(false);
     setCurrentAudioData(null);
   };
 
   // Send recording with full audio data
-  const sendRecording = async () => {
+  const sendRecording = useCallback(async () => {
+    if (!isAudioStreaming) {
+      console.log("isAudiostreaming is false");
+      return;
+    }
+    if (!currentAudioData) {
+      console.error("No audio available");
+      return;
+    }
     try {
       setIsSending(true); // Disable send button
-
-      if (currentAudioData) {
-        console.log("Sending full audio data:", currentAudioData);
-        await onFinalAudioStream(currentAudioData);
-        setShowEndButton(false);
-        setIsListening(false);
-        setIsAudioStreaming(false);
-        setCurrentAudioData(null);
-      } else {
-        console.warn("No audio data available to send");
-        // Fallback: create empty audio data
-        const emptyAudioData: AudioData = {
-          audio: "",
-          format: "audio/mp4",
-          duration: 0,
-          timestamp: Date.now(),
+      setIsAudioStreaming(false);
+      setRecordingPhase(RECODING_PHASE.TRANSCRIBING);
+      const audioData = await new Promise<AudioData>((resolve, reject) => {
+        const t = setTimeout(
+          () => reject(new Error("Timed out waiting for audio")),
+          5000
+        );
+        const poll = () => {
+          if (currentAudioData) {
+            clearTimeout(t);
+            resolve(currentAudioData);
+          } else setTimeout(poll, 100);
         };
-        await onFinalAudioStream(emptyAudioData);
-      }
+        poll();
+      });
+      await onFinalAudioStream(audioData);
     } catch (error) {
       console.error("Error sending recording:", error);
       setError({ title: "Failed to send audio message. Please try again." });
       // Fallback: create empty audio data
+      //CHECK!!!!!!!!!!!!!!!!!!!
+      setIsSending(false);
+      setRecordingPhase(RECODING_PHASE.IDLE);
       const emptyAudioData: AudioData = {
         audio: "",
         format: "audio/mp4",
@@ -318,12 +338,8 @@ export function MessageInput({
         timestamp: Date.now(),
       };
       await onFinalAudioStream(emptyAudioData);
-    } finally {
-      console.log(
-        "finally called in sendRecording and re-enabling send button"
-      );
     }
-  };
+  }, [isAudioStreaming]);
 
   const handleSend = async () => {
     console.log("called handle send", isStreaming);
@@ -343,7 +359,7 @@ export function MessageInput({
 
         // Send files if any
         if (uploadedFiles.length > 0) {
-          //     // Check total size of all files (they will be zipped if multiple)
+          // Check total size of all files (they will be zipped if multiple)
           const totalFileSize = uploadedFiles.reduce(
             (acc, file) => acc + file.size,
             0
@@ -358,7 +374,6 @@ export function MessageInput({
               )} limit. Please select smaller files.`,
             });
             setUploadedFiles([]);
-            // setIsSending(false);
             return;
           }
 
@@ -366,19 +381,9 @@ export function MessageInput({
           uploadedFiles.forEach((file) => fileList.items.add(file));
           onFileUpload(fileList.files, message.trim());
           setUploadedFiles([]);
-          // setIsSending(false);
         }
-
-        // Send audio if any
-        if (isAudioStreaming) {
-          console.log("called sendRecording in message-input-copy-v2");
-          await sendRecording();
-        }
-
-        // Clear inputs
         setMessage("");
         setUploadedFiles([]);
-        setShowEndButton(false);
         setIsListening(false);
       } catch (error) {
         console.error("Error in handleSend:", error);
@@ -441,6 +446,8 @@ export function MessageInput({
         }
       }
     } else if (isRecording) {
+      console.log("called mic click and recording is true");
+
       stopRecording();
     }
   };
@@ -457,16 +464,6 @@ export function MessageInput({
       e.target.value = ""; // Reset input
     }
   };
-
-  // Cleanup on unmount
-  useEffect(() => {
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
-      // The useAudioService hook manages its own cleanup
-    };
-  }, []);
 
   return (
     <div className="flex items-center gap-2 px-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4 flex-shrink-0">
@@ -501,9 +498,9 @@ export function MessageInput({
       )}
 
       <div className="flex-1 relative">
-        {isListening || isRecording || showEndButton ? (
+        {isListening || isRecording ? (
           <div className="flex items-center justify-center px-3 py-2">
-            {isRecording ? (
+            {isRecording && (
               <div className="relative">
                 <img
                   src={voiceListeningGif}
@@ -515,14 +512,6 @@ export function MessageInput({
                   <div className="absolute right-0 top-0 w-4 h-full bg-gradient-to-l from-white to-transparent"></div>
                 </div>
               </div>
-            ) : (
-              <span className="text-sm text-[var(--color-primary)]">
-                {showEndButton
-                  ? isSending
-                    ? "Sending message..."
-                    : "Recording Paused"
-                  : "Listening..."}
-              </span>
             )}
           </div>
         ) : (
@@ -542,7 +531,11 @@ export function MessageInput({
                 isStreaming
                   ? "Please wait for response..."
                   : isSending
-                  ? "Sending message..."
+                  ? recordingPhase === RECODING_PHASE.PROCESSING
+                    ? "Processing your voice..."
+                    : recordingPhase === RECODING_PHASE.TRANSCRIBING
+                    ? "Transcribing recording.."
+                    : "Sending message..."
                   : placeholder
               }
               disabled={isInputDisabled}
@@ -561,9 +554,6 @@ export function MessageInput({
                   isSending ? "opacity-50" : ""
                 }`}>
                 <span className="truncate">{file.name}</span>
-                {/* <span className="text-[var(--color-primary)]/70 text-xs">
-                  ({formatFileSize(file.size)})
-                </span> */}
                 <button
                   onClick={() =>
                     setUploadedFiles((prev) =>
@@ -581,7 +571,7 @@ export function MessageInput({
       </div>
 
       {/* Timer and Remaining Time */}
-      {(isListening || isRecording || showEndButton) && (
+      {(isListening || isRecording) && (
         <div className="flex flex-col items-end text-sm font-mono text-[var(--color-primary)]">
           <span className={isSending ? "opacity-50" : ""}>
             {formatTime(recordingTime)}
@@ -590,9 +580,19 @@ export function MessageInput({
       )}
 
       {/* Voice Recording Controls */}
-      {isListening || isRecording || showEndButton ? (
+      {isListening || isRecording ? (
         <div className="flex items-center gap-2">
-          {showEndButton ? (
+          <Button
+            size="sm"
+            className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 flex-shrink-0 rounded-full"
+            onClick={handleMicClick}
+            disabled={isSending}>
+            <Check className="h-4 w-4 white" />
+          </Button>
+        </div>
+      ) : (
+        <>
+          {hasContent ? (
             <Button
               size="sm"
               className="h-8 w-8 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 flex-shrink-0 rounded-full"
@@ -606,36 +606,12 @@ export function MessageInput({
             </Button>
           ) : (
             <Button
+              variant="ghost"
               size="sm"
-              className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 flex-shrink-0 rounded-full"
+              className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
               onClick={handleMicClick}
-              disabled={isSending}>
-              <Check className="h-4 w-4 white" />
-            </Button>
-          )}
-        </div>
-      ) : (
-        <>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
-            onClick={handleMicClick}
-            disabled={disabled || isStreaming || !!audioError || isSending}>
-            <Mic className="h-4 w-4 text-[var(--color-primary)]" />
-          </Button>
-
-          {hasContent && (
-            <Button
-              size="sm"
-              className="h-8 w-8 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 flex-shrink-0 rounded-full"
-              onClick={handleSend}
-              disabled={isInputDisabled || isSending}>
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-foreground)]" />
-              ) : (
-                <Send className="h-4 w-4 text-[var(--color-primary-foreground)]" />
-              )}
+              disabled={disabled || isStreaming || !!audioError || isSending}>
+              <Mic className="h-4 w-4 text-[var(--color-primary)]" />
             </Button>
           )}
         </>

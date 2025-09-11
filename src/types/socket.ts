@@ -35,6 +35,7 @@ export enum ContentType {
   MULTI = "multi",
   DOCTOR_CARD = "doctor_card",
   TIPS = "tips",
+  INLINE_TEXT = "inline_text",
 }
 
 // export type ContentTypeType = (typeof ContentType)[keyof typeof ContentType];
@@ -108,7 +109,8 @@ export interface ChatResponseMessage extends BaseMessage {
     | typeof ContentType.PILL
     | typeof ContentType.MULTI
     | typeof ContentType.DOCTOR_CARD
-    | typeof ContentType.TEXT;
+    | typeof ContentType.TEXT
+    | typeof ContentType.INLINE_TEXT;
   data: {
     url?: string;
     exp?: number;

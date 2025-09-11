@@ -13,6 +13,7 @@ const storeInitialState = {
   startNewConnection: false,
   showRetryButton: false,
   chats: {},
+  inlineText:null,
   isRefreshingSession: false,
 };
 
@@ -36,6 +37,9 @@ const useMedAssistStore = create<TMedAssistStore>()(
       setStartNewConnection: (startNewConnection) =>
         set({ startNewConnection }),
 
+      inlineText: null,
+      setInlineText: (inlineText)=> set({inlineText}),
+      
       chats: {},
 
       addMessageToSession: (sessionId, message) =>

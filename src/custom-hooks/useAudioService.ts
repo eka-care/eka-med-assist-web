@@ -64,7 +64,7 @@ export function useAudioService() {
             serviceRef.current.cleanup();
           }
           const service = new AudioService({
-            maxRecordingDuration: 900000, // 15 minutes
+            maxRecordingDuration: 10000, // 10 seconds
             autoPauseEnabled: true,
             audioBitsPerSecond: 128000, // 128 kbps
           });
@@ -81,7 +81,6 @@ export function useAudioService() {
         await serviceRef.current.start(
           // Audio data callback - receives full audio when recording stops
           (audioData) => {
-            console.log("Received full audio data:", audioData);
             onAudioData(audioData);
             setIsRecording(false);
             stopDurationTracking();
@@ -150,6 +149,14 @@ export function useAudioService() {
     }
   }, [stopDurationTracking]);
 
+  const cancel = useCallback(() => {
+    if (serviceRef.current) {
+      serviceRef.current.cancel();
+      setIsRecording(false);
+      stopDurationTracking();
+    }
+  }, [stopDurationTracking]);
+
   const clearError = useCallback(() => {
     setError(null);
   }, []);
@@ -182,6 +189,7 @@ export function useAudioService() {
     remainingTime,
     start,
     stop,
+    cancel,
     clearError,
     getCurrentDuration,
     getRemainingTime,

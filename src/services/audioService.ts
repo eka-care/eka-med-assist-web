@@ -20,7 +20,7 @@ export interface AudioData {
 export type AudioDataCallback = (data: AudioData) => void;
 export type ErrorCallback = (error: Error) => void;
 export type StatusCallback = (
-  status: "recording" | "paused" | "stopped"
+  status: "recording" | "paused" | "stopped" | "cancelled"
 ) => void;
 
 export class AudioService {
@@ -222,6 +222,41 @@ export class AudioService {
   }
 
   /**
+   * Cancel recording (discard data and suppress callbacks)
+   */
+  cancel(): void {
+    if (!this.isActive || !this.mediaRecorder) return;
+
+    try {
+      if (this.autoPauseTimer) {
+        clearTimeout(this.autoPauseTimer);
+        this.autoPauseTimer = null;
+      }
+
+      // Discard any collected data and suppress further chunking
+      this.audioChunks = [];
+      // Prevent ondataavailable from pushing chunks
+      this.mediaRecorder.ondataavailable = null as any;
+
+      // Stop MediaRecorder
+      if (this.mediaRecorder.state === "recording") {
+        this.mediaRecorder.stop();
+      }
+
+      // Stop media stream
+      if (this.mediaStream) {
+        this.mediaStream.getTracks().forEach((track) => track.stop());
+        this.mediaStream = null;
+      }
+
+      this.isActive = false;
+      this.statusCallback?.("cancelled");
+    } catch (error) {
+      this.errorCallback?.(new Error(`Failed to cancel: ${error}`));
+    }
+  }
+
+  /**
    * Pause recording (for auto-pause functionality)
    */
   private pauseRecording(): void {
@@ -247,6 +282,8 @@ export class AudioService {
     if (!this.mediaRecorder) return;
 
     this.mediaRecorder.ondataavailable = (event) => {
+      console.log("media recorder data available");
+
       if (event.data.size > 0) {
         this.audioChunks.push(event.data);
       }
@@ -338,7 +375,7 @@ export class AudioService {
    * Clean up resources
    */
   async cleanup(): Promise<void> {
-    this.stop();
+    this.cancel();
 
     try {
       if (this.mediaRecorder) {
