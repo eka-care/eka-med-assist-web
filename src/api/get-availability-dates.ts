@@ -2,8 +2,8 @@ import { config } from "@/configs/constants";
 
 export interface AvailabilityDatesParams {
   doctor_id: string;
-  hospital_id: string;
-  region_id: number;
+  hospital_id?: string;
+  region_id?: string;
 }
 
 export interface AvailabilityDatesResponse {

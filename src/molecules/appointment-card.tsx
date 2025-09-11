@@ -15,7 +15,7 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TAvailability, TDoctor } from "@/types/widget";
+import { TAvailability, TCallbacks, TDoctor } from "@/types/widget";
 import { getAvailabilityDates } from "@/api/get-availability-dates";
 import { getAvailabilitySlots } from "@/api/get-availability-slots";
 import useSessionStore from "@/stores/medAssistStore";
@@ -23,6 +23,7 @@ import useSessionStore from "@/stores/medAssistStore";
 type Props = {
   doctor: TDoctor;
   availability?: TAvailability;
+  callbacks: TCallbacks | undefined;
   onSelect?: () => void;
   onBook?: (info: { date: string; time: string }) => void;
   disabled?: boolean;
@@ -31,6 +32,7 @@ type Props = {
 export function AppointmentCard({
   doctor,
   availability,
+  callbacks,
   onSelect,
   onBook,
   disabled = false,
@@ -55,7 +57,7 @@ export function AppointmentCard({
   // This will extend the existing availability data with more future dates
   useEffect(() => {
     if (
-      availability?.callbacks?.tool_callback_availability_dates &&
+      callbacks?.tool_callback_availability_dates &&
       doctor.doctor_id &&
       doctor.hospital_id &&
       doctor.region_id &&
@@ -64,11 +66,8 @@ export function AppointmentCard({
     ) {
       loadAvailabilityDates();
     }
-  }, [
-    availability?.callbacks?.tool_callback_availability_dates,
-    callbackAvailability,
-  ]);
-  
+  }, [callbacks?.tool_callback_availability_dates, callbackAvailability]);
+
   // Use callback availability if it has more data, otherwise use provided availability
   const currentAvailability = callbackAvailability || availability;
 
@@ -132,7 +131,7 @@ export function AppointmentCard({
       const selectedSlot = currentAvailability.slots_details[targetDateIndex];
       if (
         (!selectedSlot?.slots || selectedSlot.slots.length === 0) &&
-        currentAvailability?.callbacks?.tool_callback_availability_slots &&
+        callbacks?.tool_callback_availability_slots &&
         doctor.doctor_id &&
         doctor.hospital_id &&
         doctor.region_id &&
@@ -265,7 +264,7 @@ export function AppointmentCard({
     // 2. This date doesn't have slots already loaded
     // 3. We have all required parameters
     if (
-      currentAvailability?.callbacks?.tool_callback_availability_slots &&
+      callbacks?.tool_callback_availability_slots &&
       (!selectedDateData?.slots || selectedDateData.slots.length === 0) &&
       doctor.doctor_id &&
       doctor.hospital_id &&
@@ -314,8 +313,8 @@ export function AppointmentCard({
     try {
       const response = await getAvailabilityDates(sessionId, {
         doctor_id: doctor.doctor_id,
-        hospital_id: doctor.hospital_id,
-        region_id: doctor.region_id,
+        hospital_id: doctor?.hospital_id || "",
+        region_id: doctor?.region_id || "",
       });
 
       // Convert available dates to slots_details format
@@ -347,10 +346,6 @@ export function AppointmentCard({
 
       setCallbackAvailability({
         slots_details: mergedSlotsDetails,
-        callbacks: {
-          tool_callback_availability_dates: true,
-          tool_callback_availability_slots: true,
-        },
       });
     } catch (err) {
       console.error("Error loading availability dates:", err);
@@ -378,9 +373,9 @@ export function AppointmentCard({
     try {
       const response = await getAvailabilitySlots(sessionId, {
         doctor_id: doctor.doctor_id,
-        hospital_id: doctor.hospital_id,
-        region_id: doctor.region_id,
         appointment_date: date,
+        hospital_id: doctor?.hospital_id || "",
+        region_id: doctor?.region_id || "",
       });
 
       // Update the slots for the specific date
@@ -391,7 +386,7 @@ export function AppointmentCard({
             slots_details: [{ date, slots: response.slots }],
             callbacks: {
               tool_callback_availability_dates: Boolean(
-                availability?.callbacks?.tool_callback_availability_dates
+                callbacks?.tool_callback_availability_dates
               ),
               tool_callback_availability_slots: true,
             },

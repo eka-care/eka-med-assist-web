@@ -314,6 +314,7 @@ export function MessageBubble({
                     availability={
                       commonContentData.data.doctor_details?.availability
                     }
+                    callbacks={commonContentData.data.doctor_details.callbacks}
                     onSelect={() => {
                       onContentClick?.(
                         `Can you give me availability dates and slots of ${
