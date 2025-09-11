@@ -229,7 +229,6 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
 
       // Handle progress messages
-      console.log("Progress message received:", progressMsg);
       setProgressMessage(progressMsg);
     },
     (tips: string[]) => {

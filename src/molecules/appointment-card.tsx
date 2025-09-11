@@ -51,11 +51,31 @@ export function AppointmentCard({
   // Get session data from store
   const sessionId = useSessionStore((state) => state.sessionId);
 
+  // Load additional availability dates when component mounts if callbacks are enabled
+  // This will extend the existing availability data with more future dates
+  useEffect(() => {
+    if (
+      availability?.callbacks?.tool_callback_availability_dates &&
+      doctor.doctor_id &&
+      doctor.hospital_id &&
+      doctor.region_id &&
+      sessionId &&
+      !callbackAvailability
+    ) {
+      loadAvailabilityDates();
+    }
+  }, [
+    availability?.callbacks?.tool_callback_availability_dates,
+    callbackAvailability,
+  ]);
+  
   // Use callback availability if it has more data, otherwise use provided availability
   const currentAvailability = callbackAvailability || availability;
 
   // Get the first date from availability to start the calendar
   const firstDate = useMemo(() => {
+    console.log("current availabilty", currentAvailability);
+
     if (!currentAvailability?.slots_details?.length) return new Date();
     const firstSlot = currentAvailability.slots_details[0];
     return new Date(firstSlot.date);
@@ -63,6 +83,8 @@ export function AppointmentCard({
 
   // Auto-select date based on selected_date or first available date (only on initial load)
   useEffect(() => {
+    console.log("current availabilty in useeffect", currentAvailability);
+
     if (currentAvailability?.slots_details?.length && !userHasSelectedDate) {
       let targetDateIndex = 0;
 
@@ -193,7 +215,7 @@ export function AppointmentCard({
     return days;
   }, [firstDate, calendarOffset, currentAvailability]);
 
-  const activeDay = currentAvailability?.slots_details[activeIndex];
+  const activeDay = currentAvailability?.slots_details?.[activeIndex];
 
   const initials =
     doctor.name
@@ -363,15 +385,33 @@ export function AppointmentCard({
 
       // Update the slots for the specific date
       setCallbackAvailability((prev) => {
-        if (!prev) return null;
+        //if no previous availability ,initialize with fetched date
+        if (!prev || !prev.slots_details?.length)
+          return {
+            slots_details: [{ date, slots: response.slots }],
+            callbacks: {
+              tool_callback_availability_dates: Boolean(
+                availability?.callbacks?.tool_callback_availability_dates
+              ),
+              tool_callback_availability_slots: true,
+            },
+          };
 
         const updatedSlotsDetails = prev.slots_details.map((slot) =>
           slot.date === date ? { ...slot, slots: response.slots } : slot
         );
+        //if date not present in list, append it
+        const exists = prev.slots_details.some((s) => s.date === date);
+        const finalSlotDetails = exists
+          ? updatedSlotsDetails
+          : [...updatedSlotsDetails, { date, slots: response.slots }];
+        finalSlotDetails.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
 
         return {
           ...prev,
-          slots_details: updatedSlotsDetails,
+          slots_details: finalSlotDetails,
         };
       });
     } catch (err) {
@@ -381,24 +421,6 @@ export function AppointmentCard({
       setLoadingSlots(false);
     }
   };
-
-  // Load additional availability dates when component mounts if callbacks are enabled
-  // This will extend the existing availability data with more future dates
-  useEffect(() => {
-    if (
-      availability?.callbacks?.tool_callback_availability_dates &&
-      doctor.doctor_id &&
-      doctor.hospital_id &&
-      doctor.region_id &&
-      sessionId &&
-      !callbackAvailability
-    ) {
-      loadAvailabilityDates();
-    }
-  }, [
-    availability?.callbacks?.tool_callback_availability_dates,
-    callbackAvailability,
-  ]);
 
   return (
     <Card

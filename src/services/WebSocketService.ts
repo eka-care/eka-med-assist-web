@@ -351,7 +351,6 @@ export class WebSocketService {
     if (message.ct === ContentType.TEXT && message.data) {
       // Handle progress messages
       if (message.data.progress_msg) {
-        console.log("Progress message received:", message.data.progress_msg);
         this.triggerEvent("progress_message", message.data.progress_msg);
         return;
       }

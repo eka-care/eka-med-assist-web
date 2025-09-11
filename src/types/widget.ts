@@ -88,7 +88,7 @@ export type TDoctor = {
 
 export type TAvailability = {
   selected_date?: string; // optional
-  slots_details: TSlotDetail[];
+  slots_details?: TSlotDetail[];
   callbacks?: {
     tool_callback_availability_dates: boolean;
     tool_callback_availability_slots: boolean;
