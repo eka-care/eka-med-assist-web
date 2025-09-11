@@ -9,6 +9,7 @@ class EkaMedAssistWidgetElement extends HTMLElement {
   private shadowRootRef!: ShadowRoot;
   private reactRoot: import("react-dom/client").Root | null = null;
   private container!: HTMLDivElement;
+  private config: any = {};
 
   static get observedAttributes() {
     return ["theme"];
@@ -17,6 +18,11 @@ class EkaMedAssistWidgetElement extends HTMLElement {
   constructor() {
     super();
     this.shadowRootRef = this.attachShadow({ mode: "open" });
+  }
+
+  // Method to set config from external widget loader
+  setConfig(config: any) {
+    this.config = config;
   }
 
   connectedCallback() {
@@ -89,6 +95,19 @@ class EkaMedAssistWidgetElement extends HTMLElement {
     if (!container) {
       return;
     }
+
+    // Create app config with proper callbacks
+    const appConfig = {
+      theme: this.getAttribute("theme") || "doctor-light",
+      onMinimize:
+        this.config.onMinimize ||
+        (() => this.dispatchEvent(new CustomEvent("minimize"))),
+      onClose:
+        this.config.onClose ||
+        (() => this.dispatchEvent(new CustomEvent("close"))),
+      isProduction: true, // Flag to indicate widget mode
+    };
+
     this.reactRoot = createRoot(container);
     this.reactRoot!.render(
       React.createElement(
@@ -100,17 +119,10 @@ class EkaMedAssistWidgetElement extends HTMLElement {
           React.createElement(
             ThemeProvider as any,
             {
-              defaultTheme: (this.getAttribute("theme") ||
-                "doctor-light") as any,
+              defaultTheme: appConfig.theme as any,
             },
             React.createElement(App as unknown as any, {
-              config: {
-                theme: this.getAttribute("theme") || "doctor-light",
-                onClose: () => this.dispatchEvent(new CustomEvent("close")),
-                onMinimize: () =>
-                  this.dispatchEvent(new CustomEvent("minimize")),
-                isProduction: true,
-              },
+              config: appConfig,
             })
           )
         )
