@@ -334,7 +334,7 @@
       return;
     }
 
-    // Initialize the React widget
+    // Initialize the widget (internally mounts a Web Component with Shadow DOM)
     widgetState.instance = window.EkaMedAssistWidget.init({
       theme: config.theme,
       onMinimize: function () {
@@ -349,7 +349,7 @@
 
     widgetState.isVisible = true;
     hideButton();
-    console.log("Widget mounted successfully");
+    console.log("Widget mounted successfully (Shadow DOM)");
   }
 
   // Toggle widget visibility
@@ -376,12 +376,9 @@
       if (!widgetState.instance) {
         mountWidget(config);
       } else {
-        // Re-show existing instance
-        var container = document.getElementById(
-          widgetState.instance.containerId
-        );
-        if (container) {
-          container.style.display = "block";
+        // Re-show existing instance: ensure the custom element is attached
+        if (widgetState.instance.container) {
+          widgetState.instance.container.style.display = "block";
         }
       }
       widgetState.isVisible = true;
@@ -392,10 +389,12 @@
   // Hide widget
   function hideWidget() {
     if (widgetState.instance && widgetState.isVisible) {
-      // Destroy the React instance completely
+      // Destroy the widget instance completely (removes the custom element)
       if (widgetState.instance.destroy) {
         widgetState.instance.destroy();
         widgetState.instance = null;
+        console.log("hii");
+        
       }
       widgetState.isVisible = false;
       showButton();

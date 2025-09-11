@@ -1,18 +1,197 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Widget Test</title>
-</head>
+    <style>
+      /* Global page styles to simulate hostile/external CSS */
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+        height: 100%;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto,
+          Helvetica, Arial, sans-serif;
+        background: linear-gradient(120deg, #0f172a 0%, #111827 100%);
+        color: #e5e7eb;
+      }
+      /* Intentionally aggressive styles to verify Shadow DOM isolation */
+      * {
+        letter-spacing: 0.02em;
+      }
+      button,
+      input,
+      select {
+        font-size: 16px;
+      }
 
-<body>
-    <h1>Test Page</h1>
-    <p>The chat button should appear automatically in the bottom-right corner.</p>
+      .container {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 40px 24px 120px;
+      }
+
+      .card {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+        backdrop-filter: saturate(140%) blur(8px);
+      }
+
+      .title {
+        font-size: 28px;
+        margin: 0 0 8px;
+        font-weight: 700;
+      }
+      .subtitle {
+        margin: 0 0 24px;
+        color: #9ca3af;
+      }
+
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+
+      .controls {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 12px;
+        margin: 16px 0 8px;
+      }
+
+      .btn {
+        appearance: none;
+        border: 1px solid rgba(255, 255, 255, 0.18);
+        background: rgba(255, 255, 255, 0.08);
+        color: #fff;
+        border-radius: 10px;
+        padding: 10px 14px;
+        cursor: pointer;
+        transition: transform 0.15s ease, background 0.2s ease, border 0.2s ease;
+      }
+      .btn:hover {
+        transform: translateY(-1px);
+        background: rgba(255, 255, 255, 0.14);
+      }
+      .btn:active {
+        transform: translateY(0);
+      }
+
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.08);
+        border: 1px solid rgba(255, 255, 255, 0.16);
+        color: #d1d5db;
+        font-size: 12px;
+      }
+
+      .demo-list {
+        display: grid;
+        gap: 10px;
+        margin-top: 8px;
+      }
+      .demo-item {
+        padding: 10px 12px;
+        border-radius: 10px;
+        background: rgba(255, 255, 255, 0.04);
+        border: 1px solid rgba(255, 255, 255, 0.12);
+      }
+
+      .note {
+        font-size: 12px;
+        color: #9ca3af;
+      }
+    </style>
+  </head>
+
+  <body>
+    <div class="container">
+      <div class="card">
+        <h1 class="title">Eka Med Assist Widget</h1>
+        <p class="subtitle">
+          Shadow DOM demo. External styles here won’t affect the widget.
+        </p>
+
+        <div class="row">
+          <div>
+            <div class="pill">Page Theme <span>Dark</span></div>
+            <div class="controls">
+              <button class="btn" onclick="window.EkaMedAssist.show()">
+                Show Widget
+              </button>
+              <button class="btn" onclick="window.EkaMedAssist.hide()">
+                Hide Widget
+              </button>
+              <button
+                class="btn"
+                onclick="window.EkaMedAssist.toggle(window.EkaMedAssist.config)">
+                Toggle Widget
+              </button>
+              <button class="btn" onclick="switchWidgetTheme()">
+                Switch Widget Theme
+              </button>
+            </div>
+
+            <div class="demo-list">
+              <div class="demo-item">
+                Global CSS uses gradients, glassmorphism, and spacing utilities.
+              </div>
+              <div class="demo-item">
+                Intentionally aggressive selectors applied to page elements
+                only.
+              </div>
+              <div class="demo-item">
+                Use controls to open/close and change the widget’s theme.
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="pill">Verify Isolation</div>
+            <div class="demo-list">
+              <div class="demo-item">
+                Large global fonts and letter-spacing should NOT affect chat UI.
+              </div>
+              <div class="demo-item">
+                Widget overlays/tooltips appear inside its Shadow DOM.
+              </div>
+              <div class="demo-item note">
+                If anything leaks, we need to route portals to the shadow root.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <!-- Widget automatically initializes when loaded -->
-    <script src="https://med-assist-agent.eka.care/apollo/widget-loader-100002.js"></script>
-</body>
+    <!-- <script src="https://med-assist-agent.eka.care/apollo/widget-loader-dev-1.0.8.js"></script> -->
 
+    <script>
+      function switchWidgetTheme() {
+        // Simple theme toggle between doctor-light and doctor-dark
+        const current = window.EkaMedAssist.config.theme || "doctor-light";
+        const next =
+          current === "doctor-light" ? "doctor-dark" : "doctor-light";
+        window.EkaMedAssist.config.theme = next;
+        // Re-mount with new theme
+        if (window.EkaMedAssist.hide) window.EkaMedAssist.hide();
+        setTimeout(() => {
+          if (window.EkaMedAssist.show)
+            window.EkaMedAssist.show(window.EkaMedAssist.config);
+        }, 50);
+      }
+    </script>
+
+    <script src="./widget-loader.js"></script>
+  </body>
 </html>

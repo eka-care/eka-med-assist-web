@@ -90,9 +90,15 @@ function App({ config }: AppProps = {}) {
   const handleCloseWidget = () => {
     // If we have an onClose callback from the widget loader, call it
     // The loader will handle hiding the widget and showing the button
+    console.log("called close wwidget");
+    
     if (config?.onClose) {
+      console.log("hi oncolse");
+      
       config.onClose();
     } else {
+      console.log("fallback");
+      
       // Fallback for standalone mode
       setIsWidgetOpen(false);
       setIsExpanded(false);
