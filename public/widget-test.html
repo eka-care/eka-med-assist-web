@@ -16,14 +16,196 @@
         background: linear-gradient(120deg, #0f172a 0%, #111827 100%);
         color: #e5e7eb;
       }
-      /* Intentionally aggressive styles to verify Shadow DOM isolation */
+
+      /* AGGRESSIVE CSS TO TEST WIDGET ISOLATION - These should NOT affect the widget */
+
+      /* Universal selector with aggressive styles */
       * {
-        letter-spacing: 0.02em;
+        letter-spacing: 0.02em !important;
+        box-sizing: border-box !important;
+        border-radius: 0 !important;
       }
+
+      /* Target all form elements */
       button,
       input,
-      select {
-        font-size: 16px;
+      select,
+      textarea {
+        font-size: 16px !important;
+        font-family: "Comic Sans MS", cursive !important;
+        background: linear-gradient(45deg, #ff0000, #00ff00) !important;
+        color: #ffff00 !important;
+        border: 3px solid #ff00ff !important;
+        padding: 20px !important;
+        margin: 10px !important;
+      }
+
+      /* Target all divs */
+      div {
+        background: rgba(255, 0, 255, 0.1) !important;
+        border: 2px dashed #ff0000 !important;
+        margin: 5px !important;
+        padding: 10px !important;
+      }
+
+      /* Target elements with common widget class names */
+      [class*="widget"],
+      [class*="chat"],
+      [class*="assist"],
+      [class*="modal"],
+      [class*="overlay"],
+      [class*="popup"],
+      [class*="tooltip"],
+      [id*="widget"],
+      [id*="chat"],
+      [id*="assist"],
+      [id*="modal"],
+      [id*="overlay"],
+      [id*="popup"],
+      [id*="tooltip"] {
+        background: #ff0000 !important;
+        color: #ffffff !important;
+        border: 5px solid #ffff00 !important;
+        font-size: 20px !important;
+        font-weight: bold !important;
+        transform: rotate(5deg) !important;
+        box-shadow: 0 0 20px #ff0000 !important;
+      }
+
+      /* Target positioned elements (common for widgets) */
+      [style*="position: fixed"],
+      [style*="position: absolute"],
+      [style*="z-index"] {
+        background: #00ff00 !important;
+        border: 4px solid #0000ff !important;
+        transform: scale(1.2) !important;
+        opacity: 0.8 !important;
+      }
+
+      /* Target iframes */
+      iframe {
+        border: 10px solid #ff00ff !important;
+        background: #ffff00 !important;
+        transform: skew(10deg, 5deg) !important;
+      }
+
+      /* Target all spans and paragraphs */
+      span,
+      p {
+        color: #ff0000 !important;
+        font-size: 18px !important;
+        text-decoration: underline !important;
+        background: rgba(255, 255, 0, 0.3) !important;
+      }
+
+      /* Target all headings */
+      h1,
+      h2,
+      h3,
+      h4,
+      h5,
+      h6 {
+        color: #00ff00 !important;
+        font-size: 24px !important;
+        text-shadow: 2px 2px 4px #ff0000 !important;
+        transform: rotate(-2deg) !important;
+      }
+
+      /* Target all links */
+      a {
+        color: #ff00ff !important;
+        text-decoration: none !important;
+        background: #0000ff !important;
+        padding: 5px !important;
+        border-radius: 50% !important;
+      }
+
+      /* Target all lists */
+      ul,
+      ol,
+      li {
+        background: #ffff00 !important;
+        color: #ff0000 !important;
+        border: 2px solid #0000ff !important;
+        margin: 5px !important;
+        padding: 10px !important;
+      }
+
+      /* Target all images */
+      img {
+        filter: hue-rotate(180deg) saturate(200%) !important;
+        border: 5px solid #ff0000 !important;
+        transform: scale(1.1) !important;
+      }
+
+      /* Target all inputs and textareas */
+      input[type="text"],
+      input[type="email"],
+      input[type="password"],
+      textarea {
+        background: repeating-linear-gradient(
+          45deg,
+          #ff0000,
+          #ff0000 10px,
+          #ffff00 10px,
+          #ffff00 20px
+        ) !important;
+        color: #0000ff !important;
+        font-size: 20px !important;
+        border: 5px solid #ff00ff !important;
+      }
+
+      /* Target all buttons */
+      button {
+        background: radial-gradient(
+          circle,
+          #ff0000,
+          #00ff00,
+          #0000ff
+        ) !important;
+        color: #ffffff !important;
+        font-size: 24px !important;
+        border: 6px solid #ffff00 !important;
+        transform: rotate(3deg) !important;
+        animation: aggressivePulse 1s infinite !important;
+      }
+
+      /* Aggressive animation */
+      @keyframes aggressivePulse {
+        0% {
+          transform: scale(1) rotate(3deg);
+        }
+        50% {
+          transform: scale(1.2) rotate(-3deg);
+        }
+        100% {
+          transform: scale(1) rotate(3deg);
+        }
+      }
+
+      /* Target elements with data attributes */
+      [data-test],
+      [data-widget],
+      [data-chat] {
+        background: #ff0000 !important;
+        color: #ffffff !important;
+        border: 3px solid #ffff00 !important;
+        font-size: 16px !important;
+        padding: 15px !important;
+      }
+
+      /* CSS Variables that could leak */
+      :root {
+        --widget-bg: #ff0000 !important;
+        --widget-color: #ffffff !important;
+        --widget-border: #ffff00 !important;
+      }
+
+      /* Target elements using CSS variables */
+      [style*="var(--"] {
+        background: var(--widget-bg) !important;
+        color: var(--widget-color) !important;
+        border: 3px solid var(--widget-border) !important;
       }
 
       .container {
@@ -116,9 +298,10 @@
   <body>
     <div class="container">
       <div class="card">
-        <h1 class="title">Eka Med Assist Widget</h1>
+        <h1 class="title">CSS Leakage Test Page</h1>
         <p class="subtitle">
-          Shadow DOM demo. External styles here won’t affect the widget.
+          Aggressive external CSS applied - if widget is affected, Shadow DOM
+          isolation failed!
         </p>
 
         <div class="row">
@@ -143,14 +326,19 @@
 
             <div class="demo-list">
               <div class="demo-item">
-                Global CSS uses gradients, glassmorphism, and spacing utilities.
+                🚨 EXTREME CSS: Universal selectors, !important rules, wildcard
+                selectors
               </div>
               <div class="demo-item">
-                Intentionally aggressive selectors applied to page elements
-                only.
+                🎨 Aggressive styling: Comic Sans fonts, rainbow backgrounds,
+                rotations
               </div>
               <div class="demo-item">
-                Use controls to open/close and change the widget’s theme.
+                🎯 Targets: widget/chat/assist classes, positioned elements,
+                form inputs
+              </div>
+              <div class="demo-item">
+                📱 Use controls to test widget behavior under CSS attack
               </div>
             </div>
           </div>
@@ -159,13 +347,19 @@
             <div class="pill">Verify Isolation</div>
             <div class="demo-list">
               <div class="demo-item">
-                Large global fonts and letter-spacing should NOT affect chat UI.
+                ❌ Comic Sans fonts should NOT appear in widget
               </div>
               <div class="demo-item">
-                Widget overlays/tooltips appear inside its Shadow DOM.
+                ❌ Rainbow backgrounds should NOT affect widget
+              </div>
+              <div class="demo-item">
+                ❌ Rotations and animations should NOT affect widget
+              </div>
+              <div class="demo-item">
+                ❌ Red borders around widget elements = CSS LEAKAGE!
               </div>
               <div class="demo-item note">
-                If anything leaks, we need to route portals to the shadow root.
+                ✅ Widget should look normal despite page CSS chaos
               </div>
             </div>
           </div>
