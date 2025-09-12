@@ -18,7 +18,7 @@
     style.textContent = `
       .eka-widget-container {
         position: fixed;
-        z-index: 999999;
+        z-index: 2147483647;
         font-family: system-ui, sans-serif;
         box-sizing: border-box;
         pointer-events: auto;
@@ -40,7 +40,7 @@
         border: none;
         cursor: pointer;
         box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-        z-index: 999999;
+        z-index: 2147483647;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -393,8 +393,6 @@
       if (widgetState.instance.destroy) {
         widgetState.instance.destroy();
         widgetState.instance = null;
-        console.log("hii");
-        
       }
       widgetState.isVisible = false;
       showButton();
