@@ -1,5 +1,5 @@
 import { MULTI_SELECT_ADDITIONAL_OPTION } from "@/configs/enums";
-import { TDoctorDetails } from "./widget";
+import { TCallbacks, TDoctorDetails } from "./widget";
 
 // WebSocket event types for chatbot
 export const SocketEvent = {
@@ -117,6 +117,7 @@ export interface ChatResponseMessage extends BaseMessage {
     text?: string;
     tool_use_id?: string;
     choices?: string[];
+    callbacks:TCallbacks;
     doctor_details?: TDoctorDetails;
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
   }; // S3 presigned URL
@@ -306,6 +307,7 @@ export interface CommonHandlerData {
   tool_use_id: string;
   data: {
     choices?: string[];
+    callbacks?: TCallbacks;
     doctor_details?: TDoctorDetails;
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     url?: string;

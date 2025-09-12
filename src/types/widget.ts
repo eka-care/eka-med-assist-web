@@ -79,7 +79,7 @@ export type TDoctor = {
   experience?: string; // optional
   profile_link?: string; // optional
   profile_pic?: string; //optional
-  languages?: string[]; //optional
+  languages?: string; //optional
   // Additional fields for API callbacks
   doctor_id: string;
   hospital_id?: string; // optional - for availability API calls
@@ -101,10 +101,15 @@ export type TSlotDetail = {
 export type TDoctorDetails = {
   doctor: TDoctor;
   availability?: TAvailability;
-  callbacks?: TCallbacks
 };
 
 export type TCallbacks = {
   tool_callback_availability_dates?: boolean;
   tool_callback_availability_slots?: boolean;
 };
+
+export enum CONNECTION_STATUS {
+  CONNECTING = "connecting",
+  DISCONNECTED ="disconnected",
+  CONNECTED ="connected"
+  }

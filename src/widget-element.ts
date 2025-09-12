@@ -10,6 +10,7 @@ class EkaMedAssistWidgetElement extends HTMLElement {
   private reactRoot: import("react-dom/client").Root | null = null;
   private container!: HTMLDivElement;
   private config: any = {};
+//   private cssLoaded: boolean = false;
 
   static get observedAttributes() {
     return ["theme"];
@@ -23,6 +24,63 @@ class EkaMedAssistWidgetElement extends HTMLElement {
   // Method to set config from external widget loader
   setConfig(config: any) {
     this.config = config;
+  }
+
+  private createLoadingStyles() {
+    return `
+      :host { all: initial; contain: content; }
+      :host, :host * { box-sizing: border-box; }
+      :host { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
+      :host([hidden]) { display: none; }
+      
+      /* Theme variables (define defaults; can be overridden via attributes/config) */
+      :host { 
+        --color-card: #ffffff; 
+        --color-foreground: #111827; 
+        --color-border: #e5e7eb; 
+        --color-muted-foreground: #6b7280;
+        --color-muted: #f9fafb;
+      }
+      
+      /* Loading state styles */
+      .widget-loading {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        width: 100%;
+        background: var(--color-card);
+        border-radius: 12px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+      }
+      
+      .loading-spinner {
+        width: 32px;
+        height: 32px;
+        border: 3px solid var(--color-muted);
+        border-top: 3px solid var(--color-foreground);
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+      
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+      
+      /* Full-screen portal root inside shadow for modals, tooltips, etc. */
+      #portal-root { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
+      
+      /* Hide content until CSS is loaded */
+      .widget-content {
+        opacity: 0;
+        transition: opacity 0.3s ease-in-out;
+      }
+      
+      .widget-content.loaded {
+        opacity: 1;
+      }
+    `;
   }
 
   connectedCallback() {
@@ -50,44 +108,58 @@ class EkaMedAssistWidgetElement extends HTMLElement {
       }
     };
 
-    // 1) Base isolation + theme vars
-    injectCSS(`
-        :host { all: initial; contain: content; }
-        :host, :host * { box-sizing: border-box; }
-        :host { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
-        :host([hidden]) { display: none; }
-        /* Theme variables (define defaults; can be overridden via attributes/config) */
-        :host { --color-card: #ffffff; --color-foreground: #111827; --color-border: #e5e7eb; --color-muted-foreground: #6b7280; }
-        /* Full-screen portal root inside shadow for modals, tooltips, etc. */
-        #portal-root { position: fixed; inset: 0; z-index: 2147483647; pointer-events: none; }
-      `);
+    // 1) Inject loading styles immediately
+    injectCSS(this.createLoadingStyles());
 
-    // 2) Inject compiled widget CSS (fetch bundled CSS and place into shadow)
-    // Using a runtime fetch keeps the Shadow DOM stylesheet up-to-date with deployments
-    try {
-      const cssUrl = new URL("./assets/widget.css", import.meta.url);
-      fetch(cssUrl)
-        .then((r) => r.text())
-        .then((css) => {
-          // Inject library styles first
-          injectCSS(css);
-          // Then enforce our desired font stack after library base resets
-          injectCSS(
-            `:host { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }`
-          );
-        })
-        .catch(() => {
-          /* no-op: widget can still render without CSS */
-        });
-    } catch (_e) {
-      // Ignore if URL resolution fails in certain bundling modes
-    }
-
+    // Create portal root
     const portalRoot = document.createElement("div");
     portalRoot.id = "portal-root";
 
-    this.shadowRootRef.append(this.container, portalRoot);
+    // Add loading container initially
+    const loadingContainer = document.createElement("div");
+    loadingContainer.className = "widget-loading";
+    loadingContainer.innerHTML = '<div class="loading-spinner"></div>';
 
+    this.shadowRootRef.append(loadingContainer, this.container, portalRoot);
+
+    // 2) Load main CSS asynchronously and then render React
+    this.loadCSSAndRender(injectCSS, portalRoot, loadingContainer);
+  }
+
+  private async loadCSSAndRender(
+    injectCSS: (cssText: string) => void,
+    portalRoot: HTMLElement,
+    loadingContainer: HTMLElement
+  ) {
+    try {
+      // Load CSS first
+      const cssUrl = new URL("./assets/widget.css", import.meta.url);
+      const response = await fetch(cssUrl);
+      const css = await response.text();
+      
+      // Inject library styles
+      injectCSS(css);
+      
+      // Enforce font stack after library base resets
+      injectCSS(
+        `:host { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }`
+      );
+      
+    //   this.cssLoaded = true;
+      
+      // Small delay to ensure CSS is parsed and applied
+      await new Promise(resolve => setTimeout(resolve, 50));
+      
+    } catch (error) {
+      console.warn('Failed to load widget CSS, proceeding with basic styles:', error);
+    //   this.cssLoaded = true; // Proceed even if CSS fails to load
+    }
+
+    // Now render React app
+    this.renderReactApp(portalRoot, loadingContainer);
+  }
+
+  private renderReactApp(portalRoot: HTMLElement, loadingContainer: HTMLElement) {
     // Provide shadow container for portals via context
     const PortalContext = React.createContext(portalRoot as HTMLElement | null);
 
@@ -107,6 +179,9 @@ class EkaMedAssistWidgetElement extends HTMLElement {
         (() => this.dispatchEvent(new CustomEvent("close"))),
       isProduction: true, // Flag to indicate widget mode
     };
+
+    // Add loaded class to container for smooth transition
+    container.className = "widget-content";
 
     this.reactRoot = createRoot(container);
     this.reactRoot!.render(
@@ -128,6 +203,12 @@ class EkaMedAssistWidgetElement extends HTMLElement {
         )
       )
     );
+
+    // Remove loading container and show content with transition
+    setTimeout(() => {
+      loadingContainer.remove();
+      container.classList.add('loaded');
+    }, 100);
 
     // Optionally expose portal container globally for libraries that read document.body
     (this.shadowRootRef as any).__EKA_PORTAL_ROOT__ = portalRoot;

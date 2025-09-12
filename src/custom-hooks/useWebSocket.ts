@@ -123,6 +123,7 @@ export function useWebSocket(
               data: {
                 choices: message.data.choices,
                 doctor_details: message.data.doctor_details,
+                callbacks: message.data.callbacks,
                 additional_option: message.data.additional_option,
                 url: message.data.url,
               },
