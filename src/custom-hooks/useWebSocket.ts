@@ -19,6 +19,7 @@ import {
 
 import type { AudioData } from "@/services/audioService";
 import { WebSocketService } from "@/services/WebSocketService";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 export function useWebSocket(
   config: WebSocketConfig | null,
@@ -50,16 +51,16 @@ export function useWebSocket(
   const setSessionToken = useMedAssistStore((state) => state.setSessionToken);
   const isAudioStreaming = useRef(false);
   const {
-    isConnectionEstablished,
-    setConnectionEstablished,
     setIsStreaming,
     isStreaming,
+    connectionStatus,
+    setConnectionStatus
   } = useMedAssistStore();
 
   useEffect(() => {
     if (!config || !config.sessionId || !config.auth?.token) {
       console.log("No config provided", config);
-      setConnectionEstablished(false);
+      setConnectionStatus(CONNECTION_STATUS.CONNECTING)
       return;
     }
     if (wsRef.current?.isConnected()) {
@@ -76,7 +77,7 @@ export function useWebSocket(
       WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
       (connected: boolean) => {
         console.log("WebSocket connection:", connected);
-        setConnectionEstablished(connected);
+        setConnectionStatus(CONNECTION_STATUS.CONNECTED)
         if (connected) {
           setShowRetryButton(false);
           setStartNewConnection(false);
@@ -383,7 +384,8 @@ export function useWebSocket(
       .catch((error) => {
         console.error("Failed to connect to WebSocket:", error);
         setError(ERROR_MESSAGES.CONNECTION_LOST);
-        setConnectionEstablished(false);
+        setConnectionStatus(CONNECTION_STATUS.DISCONNECTED)
+        // setConnectionEstablished(false);
       });
 
     // Cleanup function
@@ -392,9 +394,9 @@ export function useWebSocket(
         wsRef.current.disconnect();
         wsRef.current = null;
       }
-      setConnectionEstablished(false);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED)
     };
-  }, [config?.sessionId, config?.auth?.token, setConnectionEstablished]);
+  }, [config?.sessionId, config?.auth?.token, setConnectionStatus]);
 
   // Send chat message (alias for sendTextMessage)
   const sendChatMessage = (message: string, tool_use_id?: string) => {
@@ -455,14 +457,14 @@ export function useWebSocket(
 
   // Send file upload request
   const sendFileUploadRequest = () => {
-    if (wsRef.current && isConnectionEstablished) {
+    if (wsRef.current &&  connectionStatus === CONNECTION_STATUS.CONNECTED) {
       wsRef.current.sendFileUploadRequest();
     }
   };
 
   // Send file upload completion
   const sendFileUploadComplete = (s3Url: string) => {
-    if (wsRef.current && isConnectionEstablished) {
+    if (wsRef.current &&  connectionStatus === CONNECTION_STATUS.CONNECTED) {
       wsRef.current.sendFileUploadComplete(s3Url);
     }
   };
@@ -495,7 +497,7 @@ export function useWebSocket(
 
   // Regenerate response for a specific chat
   const regenerateResponse = (originalUserMessage: string) => {
-    if (wsRef.current && isConnectionEstablished) {
+    if (wsRef.current && connectionStatus === CONNECTION_STATUS.CONNECTED) {
       // Clear streaming state when regenerating
       setIsStreaming(false);
       wsRef.current.regenerateResponse(originalUserMessage);

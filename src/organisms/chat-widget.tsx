@@ -14,6 +14,7 @@ import ApolloAssistIcon from "../components/ApollossistIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 interface ChatWidgetProps {
   title?: string;
@@ -53,7 +54,7 @@ export function ChatWidget({
     useState<boolean>(false);
   const [isSessionValidated, setIsSessionValidated] = useState<boolean>(false);
   const {
-    isConnectionEstablished,
+    connectionStatus,
     showRetryButton,
     startNewConnection,
     error,
@@ -71,7 +72,7 @@ export function ChatWidget({
   } = useMedAssistStore();
 
   const [disableInput, setDisableInput] = useState<boolean>(
-    !isConnectionEstablished || !isOnline
+    connectionStatus !== CONNECTION_STATUS.CONNECTED || !isOnline
   );
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
@@ -91,6 +92,7 @@ export function ChatWidget({
           console.log("isValid", isValid);
           if (!isValid) {
             console.log("Session is invalid, starting new session");
+            clearSession();
             await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
@@ -101,6 +103,7 @@ export function ChatWidget({
         } catch (error) {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
+          clearSession();
           await onStartSession?.(true);
           //For new sessions, we don't need validation
           setIsSessionValidated(true);
@@ -299,7 +302,7 @@ export function ChatWidget({
   ]);
 
   useEffect(() => {
-    if (isConnectionEstablished && isOnline) {
+    if (connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage?.isBot && lastMessage?.commonContentData) {
         console.log("disabling input", lastMessage);
@@ -311,7 +314,7 @@ export function ChatWidget({
       setDisableInput(true);
       setIsWaitingForResponse(false); // Clear waiting state when connection is lost
     }
-  }, [isConnectionEstablished, isOnline, messages]);
+  }, [connectionStatus, isOnline, messages]);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -360,52 +363,13 @@ export function ChatWidget({
 
   const showErrorMessage = useMemo(() => {
     return (
-      isConnectionEstablished &&
+      connectionStatus === CONNECTION_STATUS.CONNECTED &&
       isOnline &&
       !error &&
       !showRetryButton &&
       !startNewConnection
     );
-  }, [
-    isConnectionEstablished,
-    isOnline,
-    error,
-    showRetryButton,
-    startNewConnection,
-  ]);
-
-  // // CHANGED: Now handles AudioData instead of Blob
-  // const handleAudioStream = (audioData: AudioData) => {
-  //   console.log("called on Audio stream in chat widget V2");
-  //   if (isStreaming) {
-  //     console.log("Cannot send voice while streaming");
-  //     return;
-  //   }
-  //   if (!isOnline) {
-  //     setError(ERROR_MESSAGES.OFFLINE);
-  //     setIsWaitingForResponse(false);
-  //     return;
-  //   }
-
-  //   if (!isConnectionEstablished) {
-  //     setError(ERROR_MESSAGES.CONNECTION_LOST);
-  //     setIsWaitingForResponse(false);
-  //     return;
-  //   }
-  //   // Clear any errors and tips when starting audio streaming
-  //   clearError();
-  //   setTips(null);
-
-  //   console.log("Audio stream received:", audioData);
-
-  //   if (isConnectionEstablished) {
-  //     // Send full audio data to WebSocket
-  //     console.log("called on sendAudioData of socket in chat widget V2");
-  //     sendAudioData(audioData);
-  //   } else {
-  //     console.log("WebSocket not connected, cannot stream audio");
-  //   }
-  // };
+  }, [connectionStatus, isOnline, error, showRetryButton, startNewConnection]);
 
   const handleSendMessage = async (content: string, tool_use_id?: string) => {
     // Block sending if currently streaming
@@ -420,7 +384,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -489,7 +453,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -522,7 +486,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -591,7 +555,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -650,7 +614,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -756,7 +720,7 @@ export function ChatWidget({
   };
 
   const handleRetry = async () => {
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       if (wsService) {
         clearError();
         wsService.reconnect(true, "manual reconnect");
@@ -799,7 +763,8 @@ export function ChatWidget({
         isExpanded={isExpanded}
         isMobile={isMobile}
         onStartSession={handleStartNewSession}
-        isConnected={isConnectionEstablished && isOnline}
+        connectionStatus={connectionStatus}
+        isOnline={isOnline}
       />
 
       {/* Loading State */}
@@ -841,7 +806,9 @@ export function ChatWidget({
                   handleQuickAction={handleQuickAction}
                   quickActions={quickActions}
                   isQuickActionsDisabled={
-                    !isConnectionEstablished || isStreaming || !isOnline
+                    connectionStatus !== CONNECTION_STATUS.CONNECTED ||
+                    isStreaming ||
+                    !isOnline
                   }
                   isStreaming={
                     message.isBot &&
@@ -894,7 +861,9 @@ export function ChatWidget({
               startNewConnection={startNewConnection}
               clearError={clearError}
               error={error}
-              isConnected={isConnectionEstablished && isOnline}
+              isConnected={
+                connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
+              }
             />
           )}
 

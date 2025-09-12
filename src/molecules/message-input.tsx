@@ -6,6 +6,8 @@ import formatTime from "@/utils/formatTime";
 import useSessionStore from "@/stores/medAssistStore";
 import type { AudioData } from "@/services/audioService";
 import { ErrorMessageUI } from "@/types/socket";
+import useMedAssistStore from "@/stores/medAssistStore";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -63,9 +65,7 @@ export function MessageInput({
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLInputElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
-  const isConnectionEstablished = useSessionStore(
-    (state) => state.isConnectionEstablished
-  );
+  const connectionStatus = useMedAssistStore((state) => state.connectionStatus);
   const isStreaming = useSessionStore((state) => state.isStreaming);
   const error = useSessionStore((state) => state.error);
   const {
@@ -97,7 +97,7 @@ export function MessageInput({
     if (
       !isStreaming &&
       !disabled &&
-      isConnectionEstablished &&
+      connectionStatus === CONNECTION_STATUS.CONNECTED &&
       messageInputRef.current
     ) {
       // Small delay to ensure DOM is ready
@@ -220,14 +220,13 @@ export function MessageInput({
     return message.trim() || uploadedFiles.length > 0;
   }, [message, uploadedFiles]);
 
-
   // Check if input should be disabled (either disabled prop, streaming, or sending)
   const isInputDisabled =
-    !isConnectionEstablished ||
+    connectionStatus !== CONNECTION_STATUS.CONNECTED ||
     disabled ||
     isStreaming ||
     isSending ||
-    (!!error && !error.title.length && isConnectionEstablished); //enable if a valid error comes
+    (!!error && !error.title.length &&  connectionStatus === CONNECTION_STATUS.CONNECTED); //enable if a valid error comes
 
   // Start recording with AudioService
   const startRecording = async () => {
@@ -526,7 +525,7 @@ export function MessageInput({
               onKeyPress={handleKeyPress}
               // onFocus={onFocus}
               // onBlur={onBlur}
-              autoFocus={!disabled && isConnectionEstablished && !isStreaming}
+              autoFocus={!disabled &&  connectionStatus === CONNECTION_STATUS.CONNECTED && !isStreaming}
               placeholder={
                 isStreaming
                   ? "Please wait for response..."

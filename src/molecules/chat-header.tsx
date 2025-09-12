@@ -2,6 +2,7 @@ import { Button } from "@ui/index";
 import { MoreHorizontal, Maximize2, X } from "lucide-react";
 import { Separator } from "@ui/index";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 interface ChatHeaderProps {
   title: string;
@@ -13,6 +14,8 @@ interface ChatHeaderProps {
   isExpanded?: boolean;
   isMobile?: boolean;
   isConnected?: boolean;
+  connectionStatus: CONNECTION_STATUS;
+  isOnline: boolean;
 }
 
 export function ChatHeader({
@@ -24,7 +27,9 @@ export function ChatHeader({
   // onClearSession,
   isExpanded = false,
   isMobile = false,
-  isConnected = false,
+  // isConnected = false,
+  connectionStatus,
+  isOnline,
 }: ChatHeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -85,15 +90,27 @@ export function ChatHeader({
 
         <div
           className={`flex items-center justify-center gap-2 px-2 py-1 ${
-            isConnected
+            connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
               ? "bg-green-100 text-green-800 "
+              : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
+              ? "bg-yellow-100 text-yellow-800"
               : "bg-red-100 text-red-800"
           } text-xs font-medium rounded-full`}>
           <div
             className={`w-2 h-2 ${
-              isConnected ? "bg-green-500 " : "bg-red-500"
+              connectionStatus == CONNECTION_STATUS.CONNECTED && isOnline
+                ? "bg-green-500"
+                : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
+                ? "bg-yellow-500"
+                : "bg-red-500"
             } rounded-full`}></div>
-          <span>{isConnected ? "Connected" : "Disconnected"}</span>
+          <span>
+            {connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
+              ? "Connected"
+              : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
+              ? "Connecting"
+              : "Disconnected"}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-1">

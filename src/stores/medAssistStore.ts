@@ -2,19 +2,20 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TMedAssistStore } from "./types";
 import refreshSession from "@/api/get-refresh-session";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 const storeInitialState = {
   sessionId: "",
   sessionToken: "",
-  isConnectionEstablished: false,
   isStreaming: false,
   error: null,
   isTimeoutError: false,
   startNewConnection: false,
   showRetryButton: false,
   chats: {},
-  inlineText:null,
+  inlineText: null,
   isRefreshingSession: false,
+  ConnectionStatus: CONNECTION_STATUS.CONNECTING,
 };
 
 const useMedAssistStore = create<TMedAssistStore>()(
@@ -26,9 +27,8 @@ const useMedAssistStore = create<TMedAssistStore>()(
       sessionToken: "",
       setSessionToken: (sessionToken) => set({ sessionToken }),
 
-      isConnectionEstablished: false,
-      setConnectionEstablished: (established: boolean) =>
-        set({ isConnectionEstablished: established }),
+      connectionStatus: CONNECTION_STATUS.CONNECTING,
+      setConnectionStatus: (status) => set({ connectionStatus: status }),
 
       isStreaming: false,
       setIsStreaming: (streaming) => set({ isStreaming: streaming }),
@@ -38,8 +38,8 @@ const useMedAssistStore = create<TMedAssistStore>()(
         set({ startNewConnection }),
 
       inlineText: null,
-      setInlineText: (inlineText)=> set({inlineText}),
-      
+      setInlineText: (inlineText) => set({ inlineText }),
+
       chats: {},
 
       addMessageToSession: (sessionId, message) =>
@@ -143,7 +143,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
             set({
               sessionId: "",
               sessionToken: "",
-              isConnectionEstablished: false,
+              connectionStatus: CONNECTION_STATUS.CONNECTING,
             });
             console.log("Session expired or not found, cleared session");
           }
@@ -160,8 +160,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
         chats: state.chats,
         sessionId: state.sessionId,
         sessionToken: state.sessionToken,
-        isConnectionEstablished: state.isConnectionEstablished,
-        // Note: error and isTimeoutError are not persisted as they're temporary states
+        connectionStatus: state.connectionStatus,
       }),
       onRehydrateStorage: () => (state) => {
         // Optional: handle rehydration completion

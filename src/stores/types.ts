@@ -1,5 +1,6 @@
 import { Message } from "@/types";
 import { ErrorMessageUI } from "@/types/socket";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 export type TMedAssistStore = {
   sessionId: string;
@@ -8,8 +9,8 @@ export type TMedAssistStore = {
   sessionToken: string;
   setSessionToken: (sessionToken: string) => void;
 
-  isConnectionEstablished: boolean;
-  setConnectionEstablished: (established: boolean) => void;
+  connectionStatus: CONNECTION_STATUS;
+  setConnectionStatus: (status: CONNECTION_STATUS) => void;
 
   isStreaming: boolean;
   setIsStreaming: (streaming: boolean) => void;
