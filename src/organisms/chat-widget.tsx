@@ -15,6 +15,8 @@ import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
 import { CONNECTION_STATUS } from "@/types/widget";
+import { getAvailabilityDates } from "@/api/get-availability-dates";
+import { getAvailabilitySlots } from "@/api/get-availability-slots";
 
 interface ChatWidgetProps {
   title?: string;
@@ -466,7 +468,28 @@ export function ChatWidget({
 
     // Clear tips when sending final audio stream
     setTips(null);
+
     // Mark the bot message as responded if it has pills or multiselect
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      // Find the last bot message and mark it as responded if it has interactive elements
+      for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
+          updatedMessages[i] = {
+            ...updatedMessages[i],
+            isResponded: true,
+          };
+          updateMessageInSession(
+            sessionId,
+            updatedMessages[i].id,
+            updatedMessages[i]
+          );
+          break;
+        }
+      }
+      return updatedMessages;
+    });
+
     try {
       // Send the full audio data
       await sendAudioData(audioData);
@@ -509,6 +532,11 @@ export function ChatWidget({
             ...updatedMessages[i],
             isResponded: true,
           };
+          updateMessageInSession(
+            sessionId,
+            updatedMessages[i].id,
+            updatedMessages[i]
+          );
           break;
         }
       }
@@ -745,6 +773,67 @@ export function ChatWidget({
     }
   };
 
+  // New handlers for appointment-card to use
+  const handleGetAvailabilityDatesForAppointment = async (doctorData: {
+    doctor_id: string;
+    hospital_id?: string;
+    region_id?: string;
+  }) => {
+    if (!doctorData?.doctor_id) {
+      setDisableInput(false);
+      return { success: false, data: null };
+    }
+    try {
+      const response = await getAvailabilityDates(sessionId, {
+        doctor_id: doctorData.doctor_id,
+        hospital_id: doctorData.hospital_id || "",
+        region_id: doctorData.region_id || "",
+      });
+      if (!response?.available_dates?.length) {
+        console.error("Available dates are not coming in response", response);
+        setDisableInput(false);
+        return { success: false, data: null };
+      }
+      return { success: true, data: response };
+    } catch (error) {
+      console.error("Error loading availability dates:", error);
+      setDisableInput(false);
+      return { success: false, data: null };
+    }
+  };
+
+  const handleGetAvailableSlotsForAppointment = async (
+    appointment_date: string,
+    doctorData: {
+      doctor_id: string;
+      hospital_id?: string;
+      region_id?: string;
+    }
+  ) => {
+    if (!doctorData?.doctor_id || !appointment_date) {
+      setDisableInput(false);
+      return { success: false, data: null };
+    }
+    try {
+      const response = await getAvailabilitySlots(sessionId, {
+        doctor_id: doctorData.doctor_id,
+        appointment_date: appointment_date,
+        hospital_id: doctorData.hospital_id || "",
+        region_id: doctorData.region_id || "",
+      });
+      if (!response?.slots?.length) {
+        console.error("Available slots are not coming in response", response);
+        setDisableInput(false);
+        return { success: false, data: null };
+      }
+      return { success: true, data: response };
+    } catch (error) {
+      console.error("Error loading slots for date:", error);
+      setDisableInput(false);
+      return { success: false, data: null };
+    }
+  };
+
   // Mobile full-screen styles
   const containerStyles = isMobile
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
@@ -823,6 +912,12 @@ export function ChatWidget({
                     message.isBot && index === messages.length - 1
                       ? progressMessage
                       : null
+                  }
+                  getAvailabilityDatesForAppointment={
+                    handleGetAvailabilityDatesForAppointment
+                  }
+                  getAvailableSlotsForAppointment={
+                    handleGetAvailableSlotsForAppointment
                   }
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null

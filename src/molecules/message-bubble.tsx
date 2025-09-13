@@ -88,6 +88,19 @@ interface MessageBubbleProps {
   files?: File[]; // Add files prop for file previews
   tips?: string[] | null;
   onTipsExpire?: () => void;
+  getAvailabilityDatesForAppointment: (doctorData: {
+    doctor_id: string;
+    hospital_id?: string;
+    region_id?: string;
+  }) => Promise<{ success: boolean; data: any }>;
+  getAvailableSlotsForAppointment: (
+    appointment_date: string,
+    doctorData: {
+      doctor_id: string;
+      hospital_id?: string;
+      region_id?: string;
+    }
+  ) => Promise<{ success: boolean; data: any }>;
 }
 
 export function MessageBubble({
@@ -110,6 +123,8 @@ export function MessageBubble({
   onTipsExpire,
   isResponded = false,
   files,
+  getAvailabilityDatesForAppointment,
+  getAvailableSlotsForAppointment,
 }: MessageBubbleProps) {
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
@@ -334,6 +349,12 @@ export function MessageBubble({
                       );
                     }}
                     disabled={isResponded}
+                    getAvailabilityDatesForAppointment={
+                      getAvailabilityDatesForAppointment
+                    }
+                    getAvailableSlotsForAppointment={
+                      getAvailableSlotsForAppointment
+                    }
                   />
                 )}
             </>

@@ -16,8 +16,6 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { TAvailability, TCallbacks, TDoctor } from "@/types/widget";
-import { getAvailabilityDates } from "@/api/get-availability-dates";
-import { getAvailabilitySlots } from "@/api/get-availability-slots";
 import useSessionStore from "@/stores/medAssistStore";
 
 type Props = {
@@ -27,6 +25,19 @@ type Props = {
   onSelect?: () => void;
   onBook?: (info: { date: string; time: string }) => void;
   disabled?: boolean;
+  getAvailabilityDatesForAppointment: (doctorData: {
+    doctor_id: string;
+    hospital_id?: string;
+    region_id?: string;
+  }) => Promise<{ success: boolean; data: any }>;
+  getAvailableSlotsForAppointment: (
+    appointment_date: string,
+    doctorData: {
+      doctor_id: string;
+      hospital_id?: string;
+      region_id?: string;
+    }
+  ) => Promise<{ success: boolean; data: any }>;
 };
 
 export function AppointmentCard({
@@ -36,6 +47,8 @@ export function AppointmentCard({
   onSelect,
   onBook,
   disabled = false,
+  getAvailabilityDatesForAppointment,
+  getAvailableSlotsForAppointment,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -57,7 +70,6 @@ export function AppointmentCard({
   // This will extend the existing availability data with more future dates
   useEffect(() => {
     console.log("hi from apoin useffct");
-    
     if (
       callbacks?.tool_callback_availability_dates &&
       doctor.doctor_id &&
@@ -298,10 +310,7 @@ export function AppointmentCard({
 
   // Function to load availability dates
   const loadAvailabilityDates = async () => {
-    if (
-      !doctor.doctor_id ||
-      !sessionId
-    ) {
+    if (!doctor.doctor_id || !sessionId) {
       console.warn(
         "Missing required parameters for loading availability dates"
       );
@@ -312,11 +321,21 @@ export function AppointmentCard({
     setError(null);
 
     try {
-      const response = await getAvailabilityDates(sessionId, {
+      // Use the handler from chat-widget if available, otherwise fall back to direct API call
+      let response;
+
+      const result = await getAvailabilityDatesForAppointment({
         doctor_id: doctor.doctor_id,
         hospital_id: doctor?.hospital_id || "",
         region_id: doctor?.region_id || "",
       });
+
+      if (!result.success) {
+        console.error("Failed to load availability dates via handler");
+        //setError("Failed to load availability dates");
+        return;
+      }
+      response = result.data;
 
       // Convert available dates to slots_details format
       const callbackSlotsDetails = response.available_dates.map(
@@ -331,14 +350,16 @@ export function AppointmentCard({
       const mergedSlotsDetails = [...existingSlots];
 
       // Add callback dates that don't already exist
-      callbackSlotsDetails.forEach((callbackSlot) => {
-        const exists = existingSlots.some(
-          (existingSlot) => existingSlot.date === callbackSlot.date
-        );
-        if (!exists) {
-          mergedSlotsDetails.push(callbackSlot);
+      callbackSlotsDetails.forEach(
+        (callbackSlot: { date: string; slots: string[] }) => {
+          const exists = existingSlots.some(
+            (existingSlot) => existingSlot.date === callbackSlot.date
+          );
+          if (!exists) {
+            mergedSlotsDetails.push(callbackSlot);
+          }
         }
-      });
+      );
 
       // Sort by date to maintain chronological order
       mergedSlotsDetails.sort(
@@ -373,12 +394,21 @@ export function AppointmentCard({
     setError(null);
 
     try {
-      const response = await getAvailabilitySlots(sessionId, {
+      // Use the handler from chat-widget if available, otherwise fall back to direct API call
+      let response;
+
+      const result = await getAvailableSlotsForAppointment(date, {
         doctor_id: doctor.doctor_id,
-        appointment_date: date,
         hospital_id: doctor?.hospital_id || "",
         region_id: doctor?.region_id || "",
       });
+
+      if (!result.success) {
+        console.error("Failed to load slots via handler");
+        setError("Failed to load slots for this date");
+        return;
+      }
+      response = result.data;
 
       // Update the slots for the specific date
       setCallbackAvailability((prev) => {
