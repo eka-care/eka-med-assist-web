@@ -256,12 +256,15 @@ export function ChatWidget({
           }
         }
 
-        if (lastBotMessageIndex !== -1) {
+        if (
+          lastBotMessageIndex !== -1 &&
+          !prev[lastBotMessageIndex].isResponded
+        ) {
           console.log(
-            "Bot message found, updating with common content data",
+            "Bot message found and not responded, updating with common content data",
             commonContentData
           );
-          // Update the last bot message with common content data
+          // Update the last bot message with common content data only if it hasn't been responded to
           const updatedMessages = [...prev];
           updatedMessages[lastBotMessageIndex] = {
             ...updatedMessages[lastBotMessageIndex],
@@ -270,10 +273,12 @@ export function ChatWidget({
           return updatedMessages;
         } else {
           console.log(
-            "No bot message found, creating a new one",
+            lastBotMessageIndex === -1
+              ? "No bot message found, creating a new one"
+              : "Last bot message already responded, creating a new one",
             commonContentData
           );
-          // If no bot message found, create a new one (fallback)
+          // If no bot message found or the last bot message has been responded to, create a new one
           const newMessage: Message = {
             id: Date.now().toString(),
             content: "Here are some options:",
