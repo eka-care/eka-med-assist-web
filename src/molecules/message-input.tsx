@@ -8,6 +8,7 @@ import type { AudioData } from "@/services/audioService";
 import { ErrorMessageUI } from "@/types/socket";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { CONNECTION_STATUS } from "@/types/widget";
+import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -78,6 +79,7 @@ export function MessageInput({
     reinitialize,
   } = useAudioService();
 
+  const { isOnline } = useNetworkStatus();
   // Cleanup on unmount
   useEffect(() => {
     return () => {
@@ -221,14 +223,21 @@ export function MessageInput({
   }, [message, uploadedFiles]);
 
   // Check if input should be disabled (either disabled prop, streaming, or sending)
-  const isInputDisabled =
-    connectionStatus !== CONNECTION_STATUS.CONNECTED ||
-    disabled ||
-    isStreaming ||
-    isSending ||
-    (!!error &&
-      !error?.title?.length &&
-      connectionStatus === CONNECTION_STATUS.CONNECTED); //enable if a valid error comes
+  const isInputDisabled = useMemo(() => {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED || !isOnline) {
+      return true;
+    }
+    if (
+      !!error &&
+      error?.title &&
+      connectionStatus === CONNECTION_STATUS.CONNECTED
+    ) {
+      console.log("input enabled bcus of valid error");
+      return false;
+    }
+    // Otherwise, check other conditions
+    return disabled || isStreaming || isSending;
+  }, [error, connectionStatus, disabled, isStreaming, isSending, isOnline]);
 
   // Start recording with AudioService
   const startRecording = async () => {

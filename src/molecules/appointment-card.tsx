@@ -60,7 +60,6 @@ export function AppointmentCard({
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [callbackAvailability, setCallbackAvailability] =
     useState<TAvailability | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [userHasSelectedDate, setUserHasSelectedDate] = useState(false);
 
   // Get session data from store
@@ -318,7 +317,6 @@ export function AppointmentCard({
     }
 
     setLoadingDates(true);
-    setError(null);
 
     try {
       // Use the handler from chat-widget if available, otherwise fall back to direct API call
@@ -332,7 +330,6 @@ export function AppointmentCard({
 
       if (!result.success) {
         console.error("Failed to load availability dates via handler");
-        //setError("Failed to load availability dates");
         return;
       }
       response = result.data;
@@ -372,7 +369,6 @@ export function AppointmentCard({
       });
     } catch (err) {
       console.error("Error loading availability dates:", err);
-      setError("Failed to load availability dates");
     } finally {
       setLoadingDates(false);
     }
@@ -391,7 +387,6 @@ export function AppointmentCard({
     }
 
     setLoadingSlots(true);
-    setError(null);
 
     try {
       // Use the handler from chat-widget if available, otherwise fall back to direct API call
@@ -405,7 +400,6 @@ export function AppointmentCard({
 
       if (!result.success) {
         console.error("Failed to load slots via handler");
-        setError("Failed to load slots for this date");
         return;
       }
       response = result.data;
@@ -437,7 +431,6 @@ export function AppointmentCard({
       });
     } catch (err) {
       console.error("Error loading slots for date:", err);
-      setError("Failed to load slots for this date");
     } finally {
       setLoadingSlots(false);
     }
@@ -700,9 +693,6 @@ export function AppointmentCard({
               </>
             ) : (
               <div className="px-1 pb-2 pt-1">
-                {error ? (
-                  <p className="text-sm text-red-500 mb-2">{error}</p>
-                ) : null}
                 <p className="text-sm text-slate-500">
                   No availability provided.
                 </p>

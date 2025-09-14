@@ -260,8 +260,8 @@ export function useWebSocket(
           break;
         }
         case SOCKET_ERROR_CODES.TIMEOUT: {
-          setError(ERROR_MESSAGES.TIMEOUT);
           setShowRetryButton(true);
+          setError(ERROR_MESSAGES.TIMEOUT);
           break;
         }
         default: {
