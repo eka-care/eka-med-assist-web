@@ -178,7 +178,7 @@ export function ChatWidget({
         if (
           lastMessage &&
           lastMessage.isBot &&
-          botMessage.length > lastMessage.content.length
+          botMessage?.length > lastMessage?.content?.length
         ) {
           // Update the existing bot message with progressive text
           const updatedMessages = [...prev];
@@ -550,7 +550,7 @@ export function ChatWidget({
       content:
         message ||
         `📎 ${
-          fileArray.length > 1 ? `${fileArray.length} files` : "File"
+          fileArray?.length > 1 ? `${fileArray.length} files` : "File"
         } uploaded`, // Cleaner text
       isBot: false,
       files: fileArray,

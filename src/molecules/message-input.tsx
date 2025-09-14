@@ -226,7 +226,9 @@ export function MessageInput({
     disabled ||
     isStreaming ||
     isSending ||
-    (!!error && !error.title.length &&  connectionStatus === CONNECTION_STATUS.CONNECTED); //enable if a valid error comes
+    (!!error &&
+      !error?.title?.length &&
+      connectionStatus === CONNECTION_STATUS.CONNECTED); //enable if a valid error comes
 
   // Start recording with AudioService
   const startRecording = async () => {
@@ -525,7 +527,11 @@ export function MessageInput({
               onKeyPress={handleKeyPress}
               // onFocus={onFocus}
               // onBlur={onBlur}
-              autoFocus={!disabled &&  connectionStatus === CONNECTION_STATUS.CONNECTED && !isStreaming}
+              autoFocus={
+                !disabled &&
+                connectionStatus === CONNECTION_STATUS.CONNECTED &&
+                !isStreaming
+              }
               placeholder={
                 isStreaming
                   ? "Please wait for response..."

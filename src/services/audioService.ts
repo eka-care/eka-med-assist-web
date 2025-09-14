@@ -291,7 +291,7 @@ export class AudioService {
 
     this.mediaRecorder.onstop = async () => {
       try {
-        if (this.audioChunks.length > 0) {
+        if (this.audioChunks?.length) {
           // Create blob from audio chunks
           const audioBlob = new Blob(this.audioChunks, {
             type: this.config.mimeType,
