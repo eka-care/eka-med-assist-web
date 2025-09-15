@@ -16,9 +16,9 @@ yarn install
 yarn build
 
 cd dist
-aws s3 cp widget.js s3://$BUCKET_NAME/main/prod/apollo/widget-$tag.js   --cache-control "public,max-age=31536000,immutable" \
+aws s3 cp widget.js s3://$BUCKET_NAME/main/pre-prod/apollo/widget-$tag.js   --cache-control "public,max-age=31536000,immutable" \
   --content-type "application/javascript"
-aws s3 cp assets/widget.css s3://$BUCKET_NAME/main/prod/apollo/widget-$tag.css   --cache-control "public,max-age=31536000,immutable" \
+aws s3 cp assets/widget.css s3://$BUCKET_NAME/main/pre-prod/apollo/widget-$tag.css   --cache-control "public,max-age=31536000,immutable" \
   --content-type "text/css"
 
 
@@ -34,15 +34,15 @@ find assets/ -type f | while read file; do
     json) mime="application/json" ;;
     *) mime="application/octet-stream" ;;
   esac
-  aws s3 cp "$file" "s3://$BUCKET_NAME/main/prod/apollo/assets/${file#assets/}" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
+  aws s3 cp "$file" "s3://$BUCKET_NAME/main/pre-prod/apollo/assets/${file#assets/}" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
 done  
-#aws s3 sync assets/ s3://$BUCKET_NAME/main/prod/apollo/assets/ --cache-control "public,max-age=31536000,immutable"
+#aws s3 sync assets/ s3://$BUCKET_NAME/main/pre-prod/apollo/assets/ --cache-control "public,max-age=31536000,immutable"
 
 echo "Uploaded widget.js, assets/widget.css and entire assets folder to S3"
 
 # Save S3 URLs in variables
-WIDGET_JS_URL="https://cdn.ekacare.co/prod/apollo/widget-$tag.js"
-WIDGET_CSS_URL="https://cdn.ekacare.co/prod/apollo/widget-$tag.css"
+WIDGET_JS_URL="https://cdn.ekacare.co/pre-prod/apollo/widget-$tag.js"
+WIDGET_CSS_URL="https://cdn.ekacare.co/pre-prod/apollo/widget-$tag.css"
 
 echo "widget.js $WIDGET_JS_URL"
 echo "assets/widget.css $WIDGET_CSS_URL"
@@ -55,7 +55,7 @@ sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
 yarn build
 
 cd dist
-aws s3 cp widget-loader.js s3://$BUCKET_NAME/main/prod/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \
+aws s3 cp widget-loader.js s3://$BUCKET_NAME/main/pre-prod/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \
   --content-type "application/javascript"
 
 echo "Uploaded widget-loader.js to S3"
@@ -63,7 +63,7 @@ echo "Uploaded widget-loader.js to S3"
 
 # Update widget-test.html with the latest tag
 cd ../
-sed -i '' "s|src=\"[^\"]*\"|src=\"https://cdn.ekacare.co/prod/apollo/widget-loader.js\"|g" public/widget-test.html
+sed -i '' "s|src=\"[^\"]*\"|src=\"https://cdn.ekacare.co/pre-prod/apollo/widget-loader.js\"|g" public/widget-test.html
 
 echo "Updated widget-test.html with latest tag: $tag"
 
@@ -75,8 +75,8 @@ echo "✅ Deployment completed successfully!"
 
 
 export  CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q
-aws cloudfront create-invalidation  --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/prod/*"
+aws cloudfront create-invalidation  --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/pre-prod/*"
 
-echo CDN_URL is https://cdn.ekacare.co/prod/apollo/widget-loader.js
-echo https://cdn.ekacare.co/prod/apollo/widget-$tag.js
-echo https://cdn.ekacare.co/prod/apollo/widget-$tag.css
+echo CDN_URL is https://cdn.ekacare.co/pre-prod/apollo/widget-loader.js
+echo https://cdn.ekacare.co/pre-prod/apollo/widget-$tag.js
+echo https://cdn.ekacare.co/pre-prod/apollo/widget-$tag.css
