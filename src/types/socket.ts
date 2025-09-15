@@ -269,8 +269,8 @@ export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
     description: "You're offline. Please check your internet connection.",
   },
   CONNECTION_LOST: {
-    title: "Trying to reconnect...",
-    description: "Please wait while we try to reconnect",
+    title: "Trying to connect...",
+    description: "Please wait while we try to connect",
   },
   CONNECTION_ATTEMPTS_EXCEEDED: {
     title: "Failed to connect",

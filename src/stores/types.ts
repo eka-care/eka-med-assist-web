@@ -45,6 +45,16 @@ export type TMedAssistStore = {
 
   clearSession: () => void;
 
+  // Timeout management
+  streamingTimeoutId: NodeJS.Timeout | null;
+  setStreamingTimeoutId: (timeoutId: NodeJS.Timeout | null) => void;
+  clearStreamingTimeout: () => void;
+  responseTimeoutId: NodeJS.Timeout | null;
+  setResponseTimeoutId: (timeoutId: NodeJS.Timeout | null) => void;
+  clearResponseTimeout: () => void;
+  lastStreamingActivity: number | null;
+  setLastStreamingActivity: (timestamp: number | null) => void;
+
   // Session refresh functionality
   refreshSession: () => Promise<boolean>;
   isRefreshingSession: boolean;

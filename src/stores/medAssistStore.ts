@@ -16,6 +16,9 @@ const storeInitialState = {
   inlineText: null,
   isRefreshingSession: false,
   ConnectionStatus: CONNECTION_STATUS.CONNECTING,
+  streamingTimeoutId: null,
+  responseTimeoutId: null,
+  lastStreamingActivity: null,
 };
 
 const useMedAssistStore = create<TMedAssistStore>()(
@@ -93,6 +96,33 @@ const useMedAssistStore = create<TMedAssistStore>()(
         set({ isTimeoutError: isTimeout }),
 
       clearSession: () => set(storeInitialState),
+
+      // Timeout management
+      streamingTimeoutId: null,
+      setStreamingTimeoutId: (timeoutId) =>
+        set({ streamingTimeoutId: timeoutId }),
+      clearStreamingTimeout: () => {
+        const state = get();
+        if (state.streamingTimeoutId) {
+          clearTimeout(state.streamingTimeoutId);
+          set({ streamingTimeoutId: null });
+        }
+      },
+
+      responseTimeoutId: null,
+      setResponseTimeoutId: (timeoutId) =>
+        set({ responseTimeoutId: timeoutId }),
+      clearResponseTimeout: () => {
+        const state = get();
+        if (state.responseTimeoutId) {
+          clearTimeout(state.responseTimeoutId);
+          set({ responseTimeoutId: null });
+        }
+      },
+
+      lastStreamingActivity: null,
+      setLastStreamingActivity: (timestamp) =>
+        set({ lastStreamingActivity: timestamp }),
 
       // Session refresh functionality
       isRefreshingSession: false,

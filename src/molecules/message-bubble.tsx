@@ -330,15 +330,6 @@ export function MessageBubble({
                       commonContentData.data.doctor_details?.availability
                     }
                     callbacks={commonContentData.data.callbacks}
-                    onSelect={() => {
-                      onContentClick?.(
-                        `Can you give me availability dates and slots of ${
-                          commonContentData?.data?.doctor_details?.doctor
-                            .name || "the doctor"
-                        }`,
-                        commonContentData.tool_use_id
-                      );
-                    }}
                     onBook={(info: { date: string; time: string }) => {
                       onContentClick?.(
                         `I want to book an appointment for ${

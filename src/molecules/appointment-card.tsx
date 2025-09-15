@@ -22,7 +22,6 @@ type Props = {
   doctor: TDoctor;
   availability?: TAvailability;
   callbacks: TCallbacks | undefined;
-  onSelect?: () => void;
   onBook?: (info: { date: string; time: string }) => void;
   disabled?: boolean;
   getAvailabilityDatesForAppointment: (doctorData: {
@@ -44,7 +43,6 @@ export function AppointmentCard({
   doctor,
   availability,
   callbacks,
-  onSelect,
   onBook,
   disabled = false,
   getAvailabilityDatesForAppointment,
@@ -546,12 +544,11 @@ export function AppointmentCard({
             )}
           </Button>
         ) : (
-          <Button
-            type="button"
-            onClick={onSelect}
-            className="mt-3 w-full bg-blue-600 text-white hover:bg-blue-700">
-            Select this doctor
-          </Button>
+          <div className="mt-3 w-full flex items-center justify-center py-3 px-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <span className="text-sm text-gray-500 font-medium">
+              No details available
+            </span>
+          </div>
         )}
 
         {/* Collapsible content */}

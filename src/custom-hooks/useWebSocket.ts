@@ -27,7 +27,7 @@ export function useWebSocket(
   onProgressMessage?: (message: string) => void,
   onTipsMessage?: (tips: string[]) => void,
   onCommonContent?: CommonContentCallback,
-  onInlineText?:(inlineMessage: string) => void
+  onInlineText?: (inlineMessage: string) => void
 ) {
   const wsRef = useRef<WebSocketService | null>(null);
   const retryAttempts = useRef(0);
@@ -54,13 +54,16 @@ export function useWebSocket(
     setIsStreaming,
     isStreaming,
     connectionStatus,
-    setConnectionStatus
+    setConnectionStatus,
+    clearResponseTimeout,
+    clearStreamingTimeout,
+    setLastStreamingActivity,
   } = useMedAssistStore();
 
   useEffect(() => {
     if (!config || !config.sessionId || !config.auth?.token) {
       console.log("No config provided", config);
-      setConnectionStatus(CONNECTION_STATUS.CONNECTING)
+      setConnectionStatus(CONNECTION_STATUS.CONNECTING);
       return;
     }
     if (wsRef.current?.isConnected()) {
@@ -77,7 +80,7 @@ export function useWebSocket(
       WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
       (connected: boolean) => {
         console.log("WebSocket connection:", connected);
-        setConnectionStatus(CONNECTION_STATUS.CONNECTED)
+        setConnectionStatus(CONNECTION_STATUS.CONNECTED);
         if (connected) {
           setShowRetryButton(false);
           setStartNewConnection(false);
@@ -138,7 +141,13 @@ export function useWebSocket(
         ) {
           //just is streaming is not live inside event callbacks
           const currentStreaming = useMedAssistStore.getState().isStreaming;
-          if (!currentStreaming) setIsStreaming(true);
+          if (!currentStreaming) {
+            setIsStreaming(true);
+            // Clear response timeout when streaming starts
+            clearResponseTimeout();
+          }
+          // Update streaming activity timestamp
+          setLastStreamingActivity(Date.now());
           if (onTextMessage) {
             onTextMessage(message.data.text);
           }
@@ -153,7 +162,13 @@ export function useWebSocket(
           message.data.text
         ) {
           const currentStreaming = useMedAssistStore.getState().isStreaming;
-          if (!currentStreaming) setIsStreaming(true);
+          if (!currentStreaming) {
+            setIsStreaming(true);
+            // Clear response timeout when streaming starts
+            clearResponseTimeout();
+          }
+          // Update streaming activity timestamp
+          setLastStreamingActivity(Date.now());
           //handle inline text
           if (onInlineText) {
             onInlineText(message.data.text);
@@ -163,7 +178,6 @@ export function useWebSocket(
               setIsStreaming(false);
             }
           }, 0);
-      
         }
       }
     );
@@ -174,7 +188,11 @@ export function useWebSocket(
         const currentStreaming = useMedAssistStore.getState().isStreaming;
         if (!currentStreaming) {
           setIsStreaming(true);
+          // Clear response timeout when streaming starts
+          clearResponseTimeout();
         }
+        // Update streaming activity timestamp
+        setLastStreamingActivity(Date.now());
         if (
           message.ct === ContentType.TEXT &&
           message.data &&
@@ -191,7 +209,11 @@ export function useWebSocket(
     wsRef.current?.on("stream_chunk", (accumulatedText: string) => {
       if (!isStreaming) {
         setIsStreaming(true);
+        // Clear response timeout when streaming starts
+        clearResponseTimeout();
       }
+      // Update streaming activity timestamp
+      setLastStreamingActivity(Date.now());
       if (onTextMessage) {
         // Call the callback with the accumulated text
         onTextMessage(accumulatedText);
@@ -202,6 +224,8 @@ export function useWebSocket(
       WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
       (_: EndOfStreamMessage) => {
         setIsStreaming(false);
+        // Clear streaming timeout when streaming ends properly
+        clearStreamingTimeout();
 
         // Clear the last sent message data when response is complete
         lastSentMessageRef.current = null;
@@ -260,8 +284,8 @@ export function useWebSocket(
           break;
         }
         case SOCKET_ERROR_CODES.TIMEOUT: {
-          setShowRetryButton(true);
           setError(ERROR_MESSAGES.TIMEOUT);
+          setShowRetryButton(true);
           break;
         }
         default: {
@@ -284,12 +308,16 @@ export function useWebSocket(
 
     // Handle progress messages
     wsRef.current?.on("progress_message", (progressMessage: string) => {
+      // Update streaming activity timestamp for progress messages
+      setLastStreamingActivity(Date.now());
       if (onProgressMessage) {
         onProgressMessage(progressMessage);
       }
     });
 
     wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.TIPS, (tips: string[]) => {
+      // Update streaming activity timestamp for tips
+      setLastStreamingActivity(Date.now());
       if (onTipsMessage) {
         onTipsMessage(tips);
       }
@@ -309,6 +337,8 @@ export function useWebSocket(
     wsRef.current?.on("message", (message: any) => {
       if (message.metadata?.isStreaming === false) {
         setIsStreaming(false);
+        // Clear streaming timeout when streaming ends
+        clearStreamingTimeout();
       }
     });
 
@@ -369,24 +399,19 @@ export function useWebSocket(
     );
 
     // Handle start new session event
-    wsRef.current?.on(
-      WEBSOCKET_CUSTOM_EVENTS.START_NEW_SESSION,
-      (_: Error) => {
-        setShowRetryButton(false);
-        setStartNewConnection(true);
-        setError(ERROR_MESSAGES.SESSION_INACTIVE);
-      }
-    );
+    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.START_NEW_SESSION, (_: Error) => {
+      setShowRetryButton(false);
+      setStartNewConnection(true);
+      setError(ERROR_MESSAGES.SESSION_INACTIVE);
+    });
 
     // Connect to WebSocket
-    service
-      .connect()
-      .catch((error) => {
-        console.error("Failed to connect to WebSocket:", error);
-        setError(ERROR_MESSAGES.CONNECTION_LOST);
-        setConnectionStatus(CONNECTION_STATUS.DISCONNECTED)
-        // setConnectionEstablished(false);
-      });
+    service.connect().catch((error) => {
+      console.error("Failed to connect to WebSocket:", error);
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      // setConnectionEstablished(false);
+    });
 
     // Cleanup function
     return () => {
@@ -394,7 +419,7 @@ export function useWebSocket(
         wsRef.current.disconnect();
         wsRef.current = null;
       }
-      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED)
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
     };
   }, [config?.sessionId, config?.auth?.token, setConnectionStatus]);
 
@@ -457,14 +482,14 @@ export function useWebSocket(
 
   // Send file upload request
   const sendFileUploadRequest = () => {
-    if (wsRef.current &&  connectionStatus === CONNECTION_STATUS.CONNECTED) {
+    if (wsRef.current && connectionStatus === CONNECTION_STATUS.CONNECTED) {
       wsRef.current.sendFileUploadRequest();
     }
   };
 
   // Send file upload completion
   const sendFileUploadComplete = (s3Url: string) => {
-    if (wsRef.current &&  connectionStatus === CONNECTION_STATUS.CONNECTED) {
+    if (wsRef.current && connectionStatus === CONNECTION_STATUS.CONNECTED) {
       wsRef.current.sendFileUploadComplete(s3Url);
     }
   };

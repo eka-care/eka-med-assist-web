@@ -71,6 +71,11 @@ export function ChatWidget({
     updateMessageInSession,
     setInlineText,
     inlineText,
+    setResponseTimeoutId,
+    clearResponseTimeout,
+    setStreamingTimeoutId,
+    clearStreamingTimeout,
+    setLastStreamingActivity,
   } = useMedAssistStore();
 
   const [disableInput, setDisableInput] = useState<boolean>(
@@ -365,8 +370,78 @@ export function ChatWidget({
   useEffect(() => {
     if (error) {
       setIsWaitingForResponse(false);
+      setDisableInput(false);
+      // Clear any pending timeouts when there's an error
+      clearResponseTimeout();
+      clearStreamingTimeout();
     }
   }, [error]);
+
+  // Timeout logic for waiting for response
+  useEffect(() => {
+    if (isWaitingForResponse && !isStreaming) {
+      // Set a 5-second timeout for waiting for response
+      const timeoutId = setTimeout(() => {
+        console.log("Response timeout: No response received within 5 seconds");
+        setError({
+          title: "Response timeout. The server didn't respond in time.",
+          description: "Please try again or check your connection.",
+        });
+        setIsWaitingForResponse(false);
+        setDisableInput(false); // Enable input for retry
+      }, 5000);
+
+      setResponseTimeoutId(timeoutId);
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearResponseTimeout();
+      };
+    } else {
+      // Clear timeout if not waiting for response
+      clearResponseTimeout();
+    }
+  }, [isWaitingForResponse, isStreaming]);
+
+  // Timeout logic for streaming interruption
+  useEffect(() => {
+    if (isStreaming) {
+      // Update last streaming activity timestamp
+      setLastStreamingActivity(Date.now());
+
+      // Set a 5-second timeout for streaming interruption
+      const timeoutId = setTimeout(() => {
+        const currentState = useMedAssistStore.getState();
+        // Only trigger timeout if we're still streaming AND no activity in the last 5 seconds
+        if (currentState.isStreaming && currentState.lastStreamingActivity) {
+          const timeSinceLastActivity =
+            Date.now() - currentState.lastStreamingActivity;
+          if (timeSinceLastActivity >= 5000) {
+            console.log(
+              "Streaming timeout: No streaming activity for 5 seconds"
+            );
+            setError({
+              title: "Streaming interrupted. The response was cut off.",
+              description: "Please try again or check your connection.",
+            });
+            setIsWaitingForResponse(false);
+            setDisableInput(false); // Enable input for retry
+          }
+        }
+      }, 5000);
+
+      setStreamingTimeoutId(timeoutId);
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearStreamingTimeout();
+      };
+    } else {
+      // Clear timeout if not streaming
+      clearStreamingTimeout();
+      setLastStreamingActivity(null);
+    }
+  }, [isStreaming]);
 
   const showErrorMessage = useMemo(() => {
     return (
