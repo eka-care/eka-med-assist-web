@@ -28,7 +28,7 @@ class EkaMedAssistWidgetElement extends HTMLElement {
 
   private createLoadingStyles() {
     return `
-      :host { all: initial; contain: content; }
+      :host { contain: content; }
       :host, :host * { box-sizing: border-box; }
       :host { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }
       :host([hidden]) { display: none; }
@@ -90,7 +90,7 @@ class EkaMedAssistWidgetElement extends HTMLElement {
     // Container for React
     this.container = document.createElement("div");
     this.container.id = "root";
-    this.container.style.cssText = "all: initial; display: contents;";
+    this.container.style.cssText = "display: contents;";
 
     // Styles: adopt via Constructable Stylesheets if supported
     const injectCSS = (cssText: string) => {
