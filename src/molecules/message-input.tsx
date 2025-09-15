@@ -9,6 +9,7 @@ import { ErrorMessageUI } from "@/types/socket";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { CONNECTION_STATUS } from "@/types/widget";
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
+import { TMobileVerificationStatus } from "@/organisms/chat-widget";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -38,6 +39,7 @@ interface MessageInputProps {
   placeholder?: string;
   disabled?: boolean;
   setError: (error: ErrorMessageUI) => void;
+  mobileVerificationStatus: TMobileVerificationStatus;
 }
 
 export function MessageInput({
@@ -49,6 +51,7 @@ export function MessageInput({
   placeholder = "Message Apollo Assist...",
   disabled = false,
   setError,
+  mobileVerificationStatus,
 }: MessageInputProps) {
   const [message, setMessage] = useState("");
   const [isListening, setIsListening] = useState(false);
@@ -222,6 +225,35 @@ export function MessageInput({
     return message.trim() || uploadedFiles.length > 0;
   }, [message, uploadedFiles]);
 
+  const mobVerificationPlaceholder = useMemo(() => {
+    if (!mobileVerificationStatus.active) {
+      return null;
+    } else if (
+      mobileVerificationStatus.active &&
+      mobileVerificationStatus.isSending &&
+      !mobileVerificationStatus.isOtpSent
+    ) {
+      return "Sending OTP to your mobile number...";
+    } else if (
+      mobileVerificationStatus.active &&
+      mobileVerificationStatus.isSending &&
+      mobileVerificationStatus.isOtpSent
+    ) {
+      return "Verifying OTP...";
+    } else if (
+      mobileVerificationStatus.active &&
+      !mobileVerificationStatus.isOtpSent
+    ) {
+      return "Enter your mobile number...";
+    } else if (
+      mobileVerificationStatus.active &&
+      mobileVerificationStatus.isOtpSent &&
+      !mobileVerificationStatus.isSending
+    ) {
+      return "Enter 6-digit OTP...";
+    }
+    return null;
+  }, [mobileVerificationStatus]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)
   const isInputDisabled = useMemo(() => {
     if (connectionStatus !== CONNECTION_STATUS.CONNECTED || !isOnline) {
@@ -235,9 +267,28 @@ export function MessageInput({
       console.log("input enabled bcus of valid error");
       return false;
     }
+    // Only disable input if mobile verification is actively sending (not just active)
+    if (mobileVerificationStatus.isSending) {
+      console.log("input disabled bcus of mobile verification is sending");
+      return true;
+    }
+    console.log(
+      "input enabled bcus of mobile verification is not sending",
+      disabled,
+      isStreaming,
+      isSending
+    );
     // Otherwise, check other conditions
     return disabled || isStreaming || isSending;
-  }, [error, connectionStatus, disabled, isStreaming, isSending, isOnline]);
+  }, [
+    error,
+    connectionStatus,
+    disabled,
+    isStreaming,
+    isSending,
+    isOnline,
+    mobileVerificationStatus.isSending,
+  ]);
 
   // Start recording with AudioService
   const startRecording = async () => {
@@ -360,7 +411,9 @@ export function MessageInput({
       !isSending
     ) {
       try {
-        setIsSending(true); // Disable send button immediately
+        if (!mobileVerificationStatus.active) {
+          setIsSending(true); // Disable send button immediately
+        }
 
         // Send text message
         if (message.trim() && uploadedFiles.length === 0) {
@@ -542,7 +595,9 @@ export function MessageInput({
                 !isStreaming
               }
               placeholder={
-                isStreaming
+                mobVerificationPlaceholder
+                  ? mobVerificationPlaceholder
+                  : isStreaming
                   ? "Please wait for response..."
                   : isSending
                   ? recordingPhase === RECODING_PHASE.PROCESSING

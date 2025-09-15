@@ -36,6 +36,7 @@ export enum ContentType {
   DOCTOR_CARD = "doctor_card",
   TIPS = "tips",
   INLINE_TEXT = "inline_text",
+  MOBILE_VERIFICATION = "mobile_verification",
 }
 
 // export type ContentTypeType = (typeof ContentType)[keyof typeof ContentType];
@@ -110,16 +111,18 @@ export interface ChatResponseMessage extends BaseMessage {
     | typeof ContentType.MULTI
     | typeof ContentType.DOCTOR_CARD
     | typeof ContentType.TEXT
-    | typeof ContentType.INLINE_TEXT;
+    | typeof ContentType.INLINE_TEXT
+    | typeof ContentType.MOBILE_VERIFICATION;
   data: {
     url?: string;
     exp?: number;
     text?: string;
     tool_use_id?: string;
     choices?: string[];
-    callbacks:TCallbacks;
+    callbacks: TCallbacks;
     doctor_details?: TDoctorDetails;
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
+    mobile_number?: string;
   }; // S3 presigned URL
   // ct: typeof ContentType.FILE;
   // data: { url: string; exp?: number }; // S3 presigned URL
@@ -311,6 +314,7 @@ export interface CommonHandlerData {
     doctor_details?: TDoctorDetails;
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     url?: string;
+    mobile_number?: string;
   };
 }
 

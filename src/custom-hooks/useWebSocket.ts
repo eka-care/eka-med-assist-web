@@ -116,7 +116,8 @@ export function useWebSocket(
         } else if (
           (message.ct === ContentType.PILL ||
             message.ct === ContentType.MULTI ||
-            message.ct === ContentType.DOCTOR_CARD) &&
+            message.ct === ContentType.DOCTOR_CARD ||
+            message.ct === ContentType.MOBILE_VERIFICATION) &&
           message.data.tool_use_id
         ) {
           // Call the common callback to handle all content types
@@ -130,6 +131,7 @@ export function useWebSocket(
                 callbacks: message.data.callbacks,
                 additional_option: message.data.additional_option,
                 url: message.data.url,
+                mobile_number: message.data.mobile_number,
               },
             };
             onCommonContent(commonData);
@@ -310,6 +312,12 @@ export function useWebSocket(
     wsRef.current?.on("progress_message", (progressMessage: string) => {
       // Update streaming activity timestamp for progress messages
       setLastStreamingActivity(Date.now());
+      const currentStreaming = useMedAssistStore.getState().isStreaming;
+      if (!currentStreaming) {
+        setIsStreaming(true);
+        // Clear response timeout when streaming starts
+        clearResponseTimeout();
+      }
       if (onProgressMessage) {
         onProgressMessage(progressMessage);
       }

@@ -106,6 +106,7 @@ export type TDoctorDetails = {
 export type TCallbacks = {
   tool_callback_availability_dates?: boolean;
   tool_callback_availability_slots?: boolean;
+  tool_callback_mobile_verification?: boolean;
 };
 
 export enum CONNECTION_STATUS {
