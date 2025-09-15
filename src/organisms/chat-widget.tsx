@@ -14,7 +14,7 @@ import ApolloAssistIcon from "../components/ApollossistIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
-import { CONNECTION_STATUS } from "@/types/widget";
+import { CONNECTION_STATUS, RESPONSE_TIMEOUT, STREAMING_TIMEOUT } from "@/types/widget";
 import { getAvailabilityDates } from "@/api/get-availability-dates";
 import { getAvailabilitySlots } from "@/api/get-availability-slots";
 
@@ -389,7 +389,7 @@ export function ChatWidget({
         });
         setIsWaitingForResponse(false);
         setDisableInput(false); // Enable input for retry
-      }, 5000);
+      }, RESPONSE_TIMEOUT);
 
       setResponseTimeoutId(timeoutId);
 
@@ -428,7 +428,7 @@ export function ChatWidget({
             setDisableInput(false); // Enable input for retry
           }
         }
-      }, 5000);
+      }, STREAMING_TIMEOUT);
 
       setStreamingTimeoutId(timeoutId);
 

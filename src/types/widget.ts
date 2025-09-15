@@ -113,3 +113,6 @@ export enum CONNECTION_STATUS {
   DISCONNECTED ="disconnected",
   CONNECTED ="connected"
   }
+
+  export const RESPONSE_TIMEOUT = 10000;
+  export const STREAMING_TIMEOUT = 5000;
