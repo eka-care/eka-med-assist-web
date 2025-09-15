@@ -14,7 +14,11 @@ import ApolloAssistIcon from "../components/ApollossistIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
-import { CONNECTION_STATUS, RESPONSE_TIMEOUT, STREAMING_TIMEOUT } from "@/types/widget";
+import {
+  CONNECTION_STATUS,
+  RESPONSE_TIMEOUT,
+  STREAMING_TIMEOUT,
+} from "@/types/widget";
 import { getAvailabilityDates } from "@/api/get-availability-dates";
 import { getAvailabilitySlots } from "@/api/get-availability-slots";
 
@@ -78,9 +82,6 @@ export function ChatWidget({
     setLastStreamingActivity,
   } = useMedAssistStore();
 
-  const [disableInput, setDisableInput] = useState<boolean>(
-    connectionStatus !== CONNECTION_STATUS.CONNECTED || !isOnline
-  );
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
     console.log("ChatWidget mounted - checking session");
@@ -203,26 +204,7 @@ export function ChatWidget({
           // If the incoming text is shorter or equal, it might be a duplicate, skip
           return prev;
         } else {
-          console.log("Creating new bot message because:", {
-            hasLastMessage: !!lastMessage,
-            isLastMessageBot: lastMessage?.isBot,
-            botMessageLength: botMessage.length,
-            lastMessageLength: lastMessage?.content?.length || 0,
-          });
-          // Check if we need to replace a regenerating message
-          // const regeneratingMessageIndex = prev.findIndex(
-          //   (msg) => msg.isRegenerating
-          // );
-          // if (regeneratingMessageIndex !== -1) {
-          //   // Replace the regenerating message
-          //   const updatedMessages = [...prev];
-          //   updatedMessages[regeneratingMessageIndex] = {
-          //     ...updatedMessages[regeneratingMessageIndex],
-          //     content: botMessage,
-          //     isRegenerating: false,
-          //   }; // Will be stored when streaming ends
-          //   return updatedMessages;
-          // } else {
+
           // Create a new bot message
           const newMessage: Message = {
             id: Date.now().toString(),
@@ -252,7 +234,6 @@ export function ChatWidget({
 
       // Handle common content messages - merge with existing bot message
       console.log("Common content message received:", commonContentData);
-      setDisableInput(true);
       setMessages((prev) => {
         // Find the last bot message to attach content to it
         let lastBotMessageIndex = -1;
@@ -313,21 +294,6 @@ export function ChatWidget({
     { id: "emergency", label: "I have an emergency" },
   ]);
 
-  useEffect(() => {
-    if (connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline) {
-      const lastMessage = messages[messages.length - 1];
-      if (lastMessage?.isBot && lastMessage?.commonContentData) {
-        console.log("disabling input", lastMessage);
-        setDisableInput(true);
-      } else {
-        setDisableInput(false);
-      }
-    } else {
-      setDisableInput(true);
-      setIsWaitingForResponse(false); // Clear waiting state when connection is lost
-    }
-  }, [connectionStatus, isOnline, messages]);
-
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
@@ -370,7 +336,6 @@ export function ChatWidget({
   useEffect(() => {
     if (error) {
       setIsWaitingForResponse(false);
-      setDisableInput(false);
       // Clear any pending timeouts when there's an error
       clearResponseTimeout();
       clearStreamingTimeout();
@@ -388,7 +353,6 @@ export function ChatWidget({
           description: "Please try again or check your connection.",
         });
         setIsWaitingForResponse(false);
-        setDisableInput(false); // Enable input for retry
       }, RESPONSE_TIMEOUT);
 
       setResponseTimeoutId(timeoutId);
@@ -425,7 +389,6 @@ export function ChatWidget({
               description: "Please try again or check your connection.",
             });
             setIsWaitingForResponse(false);
-            setDisableInput(false); // Enable input for retry
           }
         }
       }, STREAMING_TIMEOUT);
@@ -516,9 +479,6 @@ export function ChatWidget({
       // Set waiting state immediately when message is sent
       setIsWaitingForResponse(true);
       addMessageToSession(sessionId, newMessage);
-      if (disableInput) {
-        setDisableInput(false);
-      }
     } catch (error) {
       console.error("Failed to send message:", error);
       setError({ title: "Failed to send message. Please try again." });
@@ -675,30 +635,31 @@ export function ChatWidget({
     setProgressMessage(null);
     setTips(null);
 
-    // Mark the bot message as responded if it has pills or multiselect
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      // Find the last bot message and mark it as responded if it has interactive elements
-      for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
-          updatedMessages[i] = {
-            ...updatedMessages[i],
-            isResponded: true,
-            isStored: true,
-          };
-
-          addMessageToSession(sessionId, updatedMessages[i]);
-          break;
-        }
-      }
-      return updatedMessages;
-    });
-
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       try {
         await handleSendMessage(action.label);
-        setDisableInput(true);
+        // Mark the bot message as responded if it has pills or multiselect
+        // setMessages((prev) => {
+        //   const updatedMessages = [...prev];
+        //   // Find the last bot message and mark it as responded if it has interactive elements
+        //   for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        //     if (
+        //       updatedMessages[i].isBot &&
+        //       updatedMessages[i].commonContentData
+        //     ) {
+        //       updatedMessages[i] = {
+        //         ...updatedMessages[i],
+        //         isResponded: true,
+        //         isStored: true,
+        //       };
+
+        //       addMessageToSession(sessionId, updatedMessages[i]);
+        //       break;
+        //     }
+        //   }
+        //   return updatedMessages;
+        // });
       } catch (error) {
         console.error("Failed to send quick action:", error);
         // Error is already handled in handleSendMessage
@@ -855,7 +816,6 @@ export function ChatWidget({
     region_id?: string;
   }) => {
     if (!doctorData?.doctor_id) {
-      setDisableInput(false);
       return { success: false, data: null };
     }
     try {
@@ -866,13 +826,11 @@ export function ChatWidget({
       });
       if (!response?.available_dates?.length) {
         console.error("Available dates are not coming in response", response);
-        setDisableInput(false);
         return { success: false, data: null };
       }
       return { success: true, data: response };
     } catch (error) {
       console.error("Error loading availability dates:", error);
-      setDisableInput(false);
       return { success: false, data: null };
     }
   };
@@ -886,7 +844,6 @@ export function ChatWidget({
     }
   ) => {
     if (!doctorData?.doctor_id || !appointment_date) {
-      setDisableInput(false);
       return { success: false, data: null };
     }
     try {
@@ -898,13 +855,11 @@ export function ChatWidget({
       });
       if (!response?.slots?.length) {
         console.error("Available slots are not coming in response", response);
-        setDisableInput(false);
         return { success: false, data: null };
       }
       return { success: true, data: response };
     } catch (error) {
       console.error("Error loading slots for date:", error);
-      setDisableInput(false);
       return { success: false, data: null };
     }
   };
@@ -1047,7 +1002,7 @@ export function ChatWidget({
               onFinalAudioStream={handleFinalAudioStream}
               inlineText={inlineText || ""}
               onFileUpload={handleFileUpload}
-              disabled={disableInput}
+              disabled={isWaitingForResponse}
               setError={setError}
             />
           </div>
