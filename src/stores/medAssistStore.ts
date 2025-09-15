@@ -43,6 +43,10 @@ const useMedAssistStore = create<TMedAssistStore>()(
       inlineText: null,
       setInlineText: (inlineText) => set({ inlineText }),
 
+      isBotIconAnimating: false,
+      setIsBotIconAnimating: (isBotIconAnimating) =>
+        set({ isBotIconAnimating }),
+
       chats: {},
 
       addMessageToSession: (sessionId, message) =>

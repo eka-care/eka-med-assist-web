@@ -80,11 +80,12 @@ export function ChatWidget({
     setStreamingTimeoutId,
     clearStreamingTimeout,
     setLastStreamingActivity,
+    isBotIconAnimating,
+    setIsBotIconAnimating,
   } = useMedAssistStore();
 
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
-    console.log("ChatWidget mounted - checking session");
     if (!sessionId && !sessionToken && onStartSession) {
       console.log("No session found, starting new session...");
       onStartSession();
@@ -204,7 +205,6 @@ export function ChatWidget({
           // If the incoming text is shorter or equal, it might be a duplicate, skip
           return prev;
         } else {
-
           // Create a new bot message
           const newMessage: Message = {
             id: Date.now().toString(),
@@ -405,6 +405,12 @@ export function ChatWidget({
       setLastStreamingActivity(null);
     }
   }, [isStreaming]);
+
+  // Control bot icon animation based on progress message and waiting for response
+  useEffect(() => {
+    const shouldAnimate = !!progressMessage || isWaitingForResponse;
+    setIsBotIconAnimating(shouldAnimate);
+  }, [progressMessage, isWaitingForResponse]);
 
   const showErrorMessage = useMemo(() => {
     return (
@@ -968,7 +974,10 @@ export function ChatWidget({
                 <div className="px-4 py-2">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0">
-                      <ApolloAssistIcon size={32} />
+                      <ApolloAssistIcon
+                        size={32}
+                        isAnimating={isBotIconAnimating}
+                      />
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">

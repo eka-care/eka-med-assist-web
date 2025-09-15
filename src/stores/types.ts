@@ -26,6 +26,9 @@ export type TMedAssistStore = {
 
   chats: { [sessionId: string]: Message[] };
 
+  isBotIconAnimating: boolean;
+  setIsBotIconAnimating: (isBotIconAnimating: boolean) => void;
+
   // Message actions
   addMessageToSession: (sessionId: string, message: Message) => void;
   updateMessageInSession: (

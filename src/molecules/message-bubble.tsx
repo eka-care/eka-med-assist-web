@@ -13,6 +13,7 @@ import AppointmentCard from "./appointment-card";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
+import useMedAssistStore from "@/stores/medAssistStore";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -126,6 +127,7 @@ export function MessageBubble({
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
 }: MessageBubbleProps) {
+  const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
   // Reset selected values when new commonContentData comes in
@@ -184,7 +186,7 @@ export function MessageBubble({
         }`}>
         {isBot && (
           <div className="flex-shrink-0">
-            <ApolloAssistIcon size={32} />
+            <ApolloAssistIcon size={32} isAnimating={isBotIconAnimating} />
           </div>
         )}
 
