@@ -50,6 +50,9 @@ function minifyWidgetLoader() {
 // This app always runs as a widget, so build it as a library
 export default defineConfig({
   plugins: [react(), tailwindcss(), minifyWidgetLoader()],
+  esbuild: {
+    drop: ["console", "debugger"],
+  },
   define: {
     "process.env": {},
     "process.env.NODE_ENV": JSON.stringify("production"),
