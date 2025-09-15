@@ -1,0 +1,117 @@
+name: Build and Deploy
+
+on:
+  push:
+    tags:
+      - pre-prod-*
+
+jobs:
+  build-and-upload:
+    runs-on: prod-runner-server
+    steps:
+      - name: Checkout code with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.REPO_READ_ONLY_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Yarn
+        run: npm install -g yarn     
+          
+      - name: Get the version
+        id: get_version
+        run: echo VERSION=$(echo $GITHUB_REF | cut -d / -f 3) >> $GITHUB_OUTPUT
+      
+      - name: install yarn dependencies
+        run: |
+          yarn add tw-animate-css
+          yarn add @radix-ui/react-accordion @radix-ui/react-avatar @radix-ui/react-checkbox @radix-ui/react-dialog @radix-ui/react-dropdown-menu @radix-ui/react-label @radix-ui/react-popover @radix-ui/react-radio-group @radix-ui/react-scroll-area @radix-ui/react-select @radix-ui/react-separator @radix-ui/react-switch @radix-ui/react-tabs @radix-ui/react-tooltip cmdk react-hook-form sonner next-themes
+        
+      - name: Install Submodule Dependencies
+        run: |
+              cd packages/ui/base
+              yarn install --frozen-lockfile
+              yarn build 
+
+      - name: Build project
+        run: | 
+              yarn install --frozen-lockfile
+              yarn build
+
+      - name: Update widget-loader.js and widget-test.html URLs
+        env:
+          TAG: ${{ steps.get_version.outputs.VERSION }}
+        run: |
+          WIDGET_JS_URL="https://cdn.ekacare.co/pre-prod/apollo/widget-$TAG.js"
+          WIDGET_CSS_URL="https://cdn.ekacare.co/pre-prod/apollo/widget-$TAG.css"
+          sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
+          sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+          sed -i '' "s|src=\"[^\"]*\"|src=\"https://cdn.ekacare.co/pre-prod/apollo/widget-loader.js\"|g" public/widget-test.html
+          echo "Updated widget-loader.js and widget-test.html with latest tag: $TAG"
+        
+      - name: iam role for the github runner
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::559615561845:role/github-runner-role
+          role-session-name: runner-role
+          aws-region: ${{ secrets.PROD_AWS_Region }}
+
+      - name: Copy widget.js and widget.css to S3
+        env:
+          TAG: ${{ steps.get_version.outputs.VERSION }}
+          BUCKET_NAME: m-prod-medassist
+        run: |
+          aws s3 cp dist/widget.js s3://$BUCKET_NAME/main/pre-prod/apollo/widget-$TAG.js --cache-control "public,max-age=31536000,immutable" --content-type "application/javascript"
+          aws s3 cp dist/assets/widget.css s3://$BUCKET_NAME/main/pre-prod/apollo/widget-$TAG.css --cache-control "public,max-age=31536000,immutable" --content-type "text/css"
+
+      - name: Copy assets to S3
+        env:
+          TAG: ${{ steps.get_version.outputs.VERSION }}
+          BUCKET_NAME: m-prod-medassist
+        run: |
+          for file in dist/assets/*; do
+            ext="${file##*.}"
+            case "$ext" in
+              css) mime="text/css" ;;
+              js) mime="application/javascript" ;;
+              png) mime="image/png" ;;
+              jpg|jpeg) mime="image/jpeg" ;;
+              svg) mime="image/svg+xml" ;;
+              gif) mime="image/gif" ;;
+              json) mime="application/json" ;;
+              *) mime="application/octet-stream" ;;
+            esac
+            aws s3 cp "$file" "s3://$BUCKET_NAME/main/pre-prod/apollo/assets/$(basename $file)" --content-type "$mime" --cache-control "public,max-age=31536000,immutable"
+          done
+
+      - name: Copy widget-loader.js to S3
+        env:
+          BUCKET_NAME: m-prod-medassist
+        run: |
+          aws s3 cp dist/widget-loader.js s3://$BUCKET_NAME/main/pre-prod/apollo/widget-loader.js --cache-control "public,max-age=30,immutable" --content-type "application/javascript"
+
+  invalidate-cache:
+    needs: build-and-upload
+    runs-on: prod-runner-server
+    steps:
+
+      - name: iam role for the github runner
+        uses: aws-actions/configure-aws-credentials@e3dd6a429d7300a6a4c196c26e071d42e0343502
+        with:
+          role-to-assume: arn:aws:iam::559615561845:role/github-runner-role
+          role-session-name: runner-role
+          aws-region: ${{ secrets.PROD_AWS_Region }}
+          
+      - name: Invalidate CloudFront cache
+        env:
+          DISTRIBUTION_ID: E28HK05OKVJUSV
+          AWS_REGION: ${{ secrets.PROD_AWS_REGION }}          
+        run: |
+          aws cloudfront create-invalidation \
+            --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} \
+            --paths "/pre-prod/*"
