@@ -12,5 +12,4 @@ const DEVELOPMENT_CONFIG = {
 
 // Use build mode instead of environment variable to avoid local .env dependency
 // This can be overridden at build time with: vite build --mode prod
-console.log("import.meta.env.MODE", import.meta.env.MODE);
 export const config = import.meta.env.MODE === "prod" ? PRODUCTION_CONFIG : DEVELOPMENT_CONFIG;
