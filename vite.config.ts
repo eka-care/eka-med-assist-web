@@ -6,7 +6,7 @@ import { minify } from "terser";
 import { defineConfig } from "vite";
 
 // Custom plugin to minify widget-loader.js using Terser and inject version-aware URLs
-function processWidgetLoader(isProduction = true, mode = 'development', version = 'latest') {
+function processWidgetLoader(isProduction = true, mode = 'dev', version = 'latest') {
     return {
         name: "process-widget-loader",
         async writeBundle() {
@@ -23,11 +23,11 @@ function processWidgetLoader(isProduction = true, mode = 'development', version 
 
                 // Replace hardcoded URLs with dynamic ones
                 content = content.replace(
-                    /scriptUrl: "https:\/\/cdn\.ekacare\.co\/apollo\/prod-0\.0\.0\/widget\.js"/,
+                    /scriptUrl: "[^"]*"/,
                     `scriptUrl: "${baseUrl}widget.js"`
                 );
                 content = content.replace(
-                    /cssUrl: "https:\/\/cdn\.ekacare\.co\/apollo\/prod-0\.0\.0\/assets\/widget\.css"/,
+                    /cssUrl: "[^"]*"/,
                     `cssUrl: "${baseUrl}assets/widget.css"`
                 );
 
@@ -68,7 +68,7 @@ function processWidgetLoader(isProduction = true, mode = 'development', version 
 
 // This app always runs as a widget, so build it as a library
 export default defineConfig(({ mode }) => {
-    const isProduction = mode === 'production';
+    const isProduction = mode === 'prod';
     const version = process.env.VITE_VERSION || 'latest';
 
     // CDN base URL for production builds
@@ -77,101 +77,101 @@ export default defineConfig(({ mode }) => {
         : '/';
 
     return {
-    base,
-    plugins: [react(), tailwindcss(), processWidgetLoader(isProduction, mode, version)],
-    esbuild: {
-        // Only drop console logs in production builds, keep them in development
-        drop: isProduction ? ["console", "debugger"] : [],
-    },
-    define: {
-        "process.env": {},
-        "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
-    },
-    build: {
-        outDir: "dist",
-        lib: {
-            entry: path.resolve(__dirname, "src/main.tsx"),
-            name: "EkaMedAssistWidget",
-            fileName: "widget",
-            formats: ["iife"],
+        base,
+        plugins: [react(), tailwindcss(), processWidgetLoader(isProduction, mode, version)],
+        esbuild: {
+            // Only drop console logs in production builds, keep them in development
+            drop: isProduction ? ["console", "debugger"] : [],
         },
-        rollupOptions: {
-            // Bundle everything together - no external dependencies
-            external: [],
-            output: {
-                format: "iife",
+        define: {
+            "process.env": {},
+            "process.env.NODE_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+        },
+        build: {
+            outDir: "dist",
+            lib: {
+                entry: path.resolve(__dirname, "src/main.tsx"),
                 name: "EkaMedAssistWidget",
-                entryFileNames: "widget.js",
-                chunkFileNames: "assets/[name].js",
-                assetFileNames: "assets/[name].[ext]",
-                // Ensure all dependencies are bundled
-                manualChunks: undefined,
-                // Better compression
-                compact: isProduction,
+                fileName: "widget",
+                formats: ["iife"],
             },
-            // Improve tree shaking
-            treeshake: isProduction ? {
-                moduleSideEffects: false,
-                propertyReadSideEffects: false,
-                unknownGlobalSideEffects: false,
-            } : false,
+            rollupOptions: {
+                // Bundle everything together - no external dependencies
+                external: [],
+                output: {
+                    format: "iife",
+                    name: "EkaMedAssistWidget",
+                    entryFileNames: "widget.js",
+                    chunkFileNames: "assets/[name].js",
+                    assetFileNames: "assets/[name].[ext]",
+                    // Ensure all dependencies are bundled
+                    manualChunks: undefined,
+                    // Better compression
+                    compact: isProduction,
+                },
+                // Improve tree shaking
+                treeshake: isProduction ? {
+                    moduleSideEffects: false,
+                    propertyReadSideEffects: false,
+                    unknownGlobalSideEffects: false,
+                } : false,
+            },
+            // Bundle all dependencies
+            ssr: false,
+            target: "es2015",
+            // Use terser for production minification with optimization, esbuild for development
+            minify: isProduction ? 'terser' : 'esbuild',
+            terserOptions: isProduction ? {
+                compress: {
+                    drop_console: true,
+                    drop_debugger: true,
+                    pure_funcs: ['console.log', 'console.info', 'console.debug'],
+                    unused: true,
+                    dead_code: true,
+                },
+                mangle: {
+                    safari10: true, // Better compression for Safari 10+
+                },
+                format: {
+                    comments: false, // Remove all comments
+                },
+            } : undefined,
+            sourcemap: false,
+            // Ensure CSS is extracted and bundled
+            cssCodeSplit: false,
+            // Bundle size optimization
+            chunkSizeWarningLimit: 1000,
+            // Faster builds with better caching in production
+            reportCompressedSize: isProduction,
         },
-        // Bundle all dependencies
-        ssr: false,
-        target: "es2015",
-        // Use terser for production minification with optimization, esbuild for development
-        minify: isProduction ? 'terser' : 'esbuild',
-        terserOptions: isProduction ? {
-            compress: {
-                drop_console: true,
-                drop_debugger: true,
-                pure_funcs: ['console.log', 'console.info', 'console.debug'],
-                unused: true,
-                dead_code: true,
+        resolve: {
+            alias: {
+                "@/components": path.resolve(
+                    __dirname,
+                    "./packages/ui/base/src/shadcn-ui/components"
+                ),
+                "@ui": path.resolve(__dirname, "./packages/ui/base/src"),
+                "@atoms": path.resolve(__dirname, "./src/atoms/index.ts"),
+                "@eka-ui": path.resolve(__dirname, "./packages/ui/base/src/eka-ui"),
+                "@/lib/utils": path.resolve(
+                    __dirname,
+                    "./packages/ui/base/src/shadcn-ui/lib/utils"
+                ),
+                "@": path.resolve(__dirname, "./src"),
+                "@/hooks": path.resolve(
+                    __dirname,
+                    "./packages/ui/base/src/shadcn-ui/hooks"
+                ),
+                "@ui-components": path.resolve(
+                    __dirname,
+                    "./packages/ui/base/src/shadcn-ui/components/ui"
+                ),
             },
-            mangle: {
-                safari10: true, // Better compression for Safari 10+
-            },
-            format: {
-                comments: false, // Remove all comments
-            },
-        } : undefined,
-        sourcemap: false,
-        // Ensure CSS is extracted and bundled
-        cssCodeSplit: false,
-        // Bundle size optimization
-        chunkSizeWarningLimit: 1000,
-        // Faster builds with better caching in production
-        reportCompressedSize: isProduction,
-    },
-    resolve: {
-        alias: {
-            "@/components": path.resolve(
-                __dirname,
-                "./packages/ui/base/src/shadcn-ui/components"
-            ),
-            "@ui": path.resolve(__dirname, "./packages/ui/base/src"),
-            "@atoms": path.resolve(__dirname, "./src/atoms/index.ts"),
-            "@eka-ui": path.resolve(__dirname, "./packages/ui/base/src/eka-ui"),
-            "@/lib/utils": path.resolve(
-                __dirname,
-                "./packages/ui/base/src/shadcn-ui/lib/utils"
-            ),
-            "@": path.resolve(__dirname, "./src"),
-            "@/hooks": path.resolve(
-                __dirname,
-                "./packages/ui/base/src/shadcn-ui/hooks"
-            ),
-            "@ui-components": path.resolve(
-                __dirname,
-                "./packages/ui/base/src/shadcn-ui/components/ui"
-            ),
         },
-    },
-    optimizeDeps: {
-        include: ["react", "react-dom", "zustand"],
-        // Force optimization for better tree shaking in production
-        force: isProduction,
-    },
+        optimizeDeps: {
+            include: ["react", "react-dom", "zustand"],
+            // Force optimization for better tree shaking in production
+            force: isProduction,
+        },
     };
 });

@@ -14,7 +14,7 @@ echo "🚀 Deploying Eka Medical Assistant Widget to AWS Prod..."
 
 rm -rf dist/
 yarn install
-yarn build
+VITE_VERSION=$tag yarn build --mode prod
 
 
 cd dist
@@ -46,12 +46,12 @@ WIDGET_JS_URL="$WIDGET_VERSION_URL/widget.js"
 WIDGET_CSS_URL="$WIDGET_VERSION_URL/assets/widget.css"
 WIDGET_LOADER_JS_URL="$WIDGET_CDN_URL/widget-loader.js"
 
-cd ../
-# now update the widget-loader.js with the new urls
-sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
-sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+# cd ../
+# # now update the widget-loader.js with the new urls
+# sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
+# sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
 
-yarn build
+# yarn build
 
 cd dist
 aws s3 cp widget-loader.js s3://$BUCKET_NAME/main/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \

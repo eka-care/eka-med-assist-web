@@ -4,7 +4,7 @@
 
 ### Development Build (with logs, larger bundle)
 ```bash
-yarn build --mode development
+yarn build --mode dev
 ```
 - **Bundle Size**: ~2.6MB (unminified)
 - **Logs**: Enabled (console.log preserved for debugging)
@@ -13,12 +13,12 @@ yarn build --mode development
 
 ### Production Build (optimized for CDN)
 ```bash
-VITE_VERSION=1.2.0 yarn build --mode production
+VITE_VERSION=1.2.0 yarn build --mode prod
 ```
 - **Bundle Size**: ~702KB raw, ~284KB gzipped
 - **CSS**: ~116KB raw, ~18KB gzipped
 - **Logs**: Disabled (all console.log removed)
-- **Asset URLs**: `https://cdn.ekacare.co/apollo/production-1.2.0/assets/`
+- **Asset URLs**: `https://cdn.ekacare.co/apollo/prod-1.2.0/assets/`
 - **Minification**: Terser with advanced optimization
 - **Tree Shaking**: Enabled with aggressive dead code elimination
 
@@ -52,7 +52,7 @@ VITE_VERSION=1.2.0-rc1 yarn build --mode staging
 ```bash
 # Deploy to CDN structure:
 apollo/
-├── production-1.2.0/
+├── prod-1.2.0/
 │   ├── widget.js          (702KB → 284KB gzipped)
 │   ├── widget-loader.js   (minified with correct URLs)
 │   └── assets/
@@ -86,24 +86,24 @@ apollo/
 yarn dev
 
 # Development build (testing)
-yarn build --mode development
+yarn build --mode dev
 
 # Production release
-VITE_VERSION=2.1.0 yarn build --mode production
+VITE_VERSION=2.1.0 yarn build --mode prod
 
 # Beta release
-VITE_VERSION=2.1.0-beta yarn build --mode production
+VITE_VERSION=2.1.0-beta yarn build --mode prod
 ```
 
 ## CDN Deployment Commands
 
 ```bash
 # Example deployment flow
-VITE_VERSION=2.1.0 yarn build --mode production
+VITE_VERSION=2.1.0 yarn build --mode prod
 
 # Upload to CDN (pseudo-command)
-aws s3 sync dist/ s3://cdn-bucket/apollo/production-2.1.0/ --gzip
+aws s3 sync dist/ s3://cdn-bucket/apollo/prod-2.1.0/ --gzip
 
 # Widget can now be loaded from:
-# https://cdn.ekacare.co/apollo/production-2.1.0/widget-loader.js
+# https://cdn.ekacare.co/apollo/prod-2.1.0/widget-loader.js
 ```
