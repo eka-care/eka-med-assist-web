@@ -1,3 +1,4 @@
+import { ASSETS } from "@/configs/assets";
 import React, { ErrorInfo, useEffect, useState } from "react";
 
 interface ErrorScreenProps {
@@ -56,11 +57,11 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({
                 {/* Robot Illustration */}
                 <div>
                     <img
-                        src={`./assets/error.png`}
+                        src={ASSETS.ERROR}
                         alt="Error Robot"
                         className={`${isMobile
-                                ? "w-32 h-48" // Smaller on mobile: 128px × 192px
-                                : "w-[203px] h-[304px]" // Full size on desktop
+                            ? "w-32 h-48" // Smaller on mobile: 128px × 192px
+                            : "w-[203px] h-[304px]" // Full size on desktop
                             } flex-shrink-0 mx-auto aspect-[201/301]`}
                     />
                 </div>
