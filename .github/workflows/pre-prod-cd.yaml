@@ -93,7 +93,7 @@ jobs:
         env:
           BUCKET_NAME: m-prod-medassist
         run: |
-          aws s3 cp dist/widget-loader.js s3://$BUCKET_NAME/main/pre-prod/apollo/widget-loader.js --cache-control "public,max-age=30,immutable" --content-type "application/javascript"
+          aws s3 cp dist/widget-loader.js s3://$BUCKET_NAME/main/prod/apollo/widget-loader.js --cache-control "public,max-age=30,immutable" --content-type "application/javascript"
 
   invalidate-cache:
     needs: build-and-upload
