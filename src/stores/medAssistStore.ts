@@ -2,18 +2,23 @@ import { create } from "zustand";
 import { persist, createJSONStorage } from "zustand/middleware";
 import type { TMedAssistStore } from "./types";
 import refreshSession from "@/api/get-refresh-session";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 const storeInitialState = {
   sessionId: "",
   sessionToken: "",
-  isConnectionEstablished: false,
   isStreaming: false,
   error: null,
   isTimeoutError: false,
   startNewConnection: false,
   showRetryButton: false,
   chats: {},
+  inlineText: null,
   isRefreshingSession: false,
+  ConnectionStatus: CONNECTION_STATUS.CONNECTING,
+  streamingTimeoutId: null,
+  responseTimeoutId: null,
+  lastStreamingActivity: null,
 };
 
 const useMedAssistStore = create<TMedAssistStore>()(
@@ -25,9 +30,8 @@ const useMedAssistStore = create<TMedAssistStore>()(
       sessionToken: "",
       setSessionToken: (sessionToken) => set({ sessionToken }),
 
-      isConnectionEstablished: false,
-      setConnectionEstablished: (established: boolean) =>
-        set({ isConnectionEstablished: established }),
+      connectionStatus: CONNECTION_STATUS.CONNECTING,
+      setConnectionStatus: (status) => set({ connectionStatus: status }),
 
       isStreaming: false,
       setIsStreaming: (streaming) => set({ isStreaming: streaming }),
@@ -35,6 +39,13 @@ const useMedAssistStore = create<TMedAssistStore>()(
       startNewConnection: false,
       setStartNewConnection: (startNewConnection) =>
         set({ startNewConnection }),
+
+      inlineText: null,
+      setInlineText: (inlineText) => set({ inlineText }),
+
+      isBotIconAnimating: false,
+      setIsBotIconAnimating: (isBotIconAnimating) =>
+        set({ isBotIconAnimating }),
 
       chats: {},
 
@@ -90,6 +101,33 @@ const useMedAssistStore = create<TMedAssistStore>()(
 
       clearSession: () => set(storeInitialState),
 
+      // Timeout management
+      streamingTimeoutId: null,
+      setStreamingTimeoutId: (timeoutId) =>
+        set({ streamingTimeoutId: timeoutId }),
+      clearStreamingTimeout: () => {
+        const state = get();
+        if (state.streamingTimeoutId) {
+          clearTimeout(state.streamingTimeoutId);
+          set({ streamingTimeoutId: null });
+        }
+      },
+
+      responseTimeoutId: null,
+      setResponseTimeoutId: (timeoutId) =>
+        set({ responseTimeoutId: timeoutId }),
+      clearResponseTimeout: () => {
+        const state = get();
+        if (state.responseTimeoutId) {
+          clearTimeout(state.responseTimeoutId);
+          set({ responseTimeoutId: null });
+        }
+      },
+
+      lastStreamingActivity: null,
+      setLastStreamingActivity: (timestamp) =>
+        set({ lastStreamingActivity: timestamp }),
+
       // Session refresh functionality
       isRefreshingSession: false,
       refreshSession: async (): Promise<boolean> => {
@@ -139,7 +177,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
             set({
               sessionId: "",
               sessionToken: "",
-              isConnectionEstablished: false,
+              connectionStatus: CONNECTION_STATUS.CONNECTING,
             });
             console.log("Session expired or not found, cleared session");
           }
@@ -156,8 +194,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
         chats: state.chats,
         sessionId: state.sessionId,
         sessionToken: state.sessionToken,
-        isConnectionEstablished: state.isConnectionEstablished,
-        // Note: error and isTimeoutError are not persisted as they're temporary states
+        connectionStatus: state.connectionStatus,
       }),
       onRehydrateStorage: () => (state) => {
         // Optional: handle rehydration completion

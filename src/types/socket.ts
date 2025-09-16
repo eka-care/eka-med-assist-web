@@ -1,5 +1,5 @@
 import { MULTI_SELECT_ADDITIONAL_OPTION } from "@/configs/enums";
-import { TDoctorDetails } from "./widget";
+import { TCallbacks, TDoctorDetails } from "./widget";
 
 // WebSocket event types for chatbot
 export const SocketEvent = {
@@ -8,6 +8,7 @@ export const SocketEvent = {
   PONG: "pong",
   CHAT: "chat",
   STREAM: "stream",
+  AUTH: "auth",
   END_OF_STREAM: "eos",
   SYNC: "sync",
   ERROR: "err",
@@ -34,6 +35,8 @@ export enum ContentType {
   MULTI = "multi",
   DOCTOR_CARD = "doctor_card",
   TIPS = "tips",
+  INLINE_TEXT = "inline_text",
+  MOBILE_VERIFICATION = "mobile_verification",
 }
 
 // export type ContentTypeType = (typeof ContentType)[keyof typeof ContentType];
@@ -72,6 +75,11 @@ export interface ChatRequest extends BaseMessage {
 }
 
 // Client to Server: Audio stream
+export interface AuthRequest extends BaseMessage {
+  ev: typeof SocketEvent.AUTH;
+  _id: string;
+  data: { token: string };
+}
 
 export interface AudioStreamRequest extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
@@ -101,14 +109,20 @@ export interface ChatResponseMessage extends BaseMessage {
     | typeof ContentType.FILE
     | typeof ContentType.PILL
     | typeof ContentType.MULTI
-    | typeof ContentType.DOCTOR_CARD;
+    | typeof ContentType.DOCTOR_CARD
+    | typeof ContentType.TEXT
+    | typeof ContentType.INLINE_TEXT
+    | typeof ContentType.MOBILE_VERIFICATION;
   data: {
     url?: string;
     exp?: number;
+    text?: string;
     tool_use_id?: string;
     choices?: string[];
+    callbacks: TCallbacks;
     doctor_details?: TDoctorDetails;
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
+    mobile_number?: string;
   }; // S3 presigned URL
   // ct: typeof ContentType.FILE;
   // data: { url: string; exp?: number }; // S3 presigned URL
@@ -258,8 +272,8 @@ export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
     description: "You're offline. Please check your internet connection.",
   },
   CONNECTION_LOST: {
-    title: "Trying to reconnect...",
-    description: "Please wait while we try to reconnect",
+    title: "Trying to connect...",
+    description: "Please wait while we try to connect",
   },
   CONNECTION_ATTEMPTS_EXCEEDED: {
     title: "Failed to connect",
@@ -296,9 +310,11 @@ export interface CommonHandlerData {
   tool_use_id: string;
   data: {
     choices?: string[];
+    callbacks?: TCallbacks;
     doctor_details?: TDoctorDetails;
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     url?: string;
+    mobile_number?: string;
   };
 }
 

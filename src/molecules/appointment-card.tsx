@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import {
   ArrowRight,
   Building2,
-  Calendar,
+  // Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -15,25 +15,38 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TAvailability, TDoctor } from "@/types/widget";
-import { getAvailabilityDates } from "@/api/get-availability-dates";
-import { getAvailabilitySlots } from "@/api/get-availability-slots";
+import { TAvailability, TCallbacks, TDoctor } from "@/types/widget";
 import useSessionStore from "@/stores/medAssistStore";
 
 type Props = {
   doctor: TDoctor;
   availability?: TAvailability;
-  onSelect?: () => void;
+  callbacks: TCallbacks | undefined;
   onBook?: (info: { date: string; time: string }) => void;
   disabled?: boolean;
+  getAvailabilityDatesForAppointment: (doctorData: {
+    doctor_id: string;
+    hospital_id?: string;
+    region_id?: string;
+  }) => Promise<{ success: boolean; data: any }>;
+  getAvailableSlotsForAppointment: (
+    appointment_date: string,
+    doctorData: {
+      doctor_id: string;
+      hospital_id?: string;
+      region_id?: string;
+    }
+  ) => Promise<{ success: boolean; data: any }>;
 };
 
 export function AppointmentCard({
   doctor,
   availability,
-  onSelect,
+  callbacks,
   onBook,
   disabled = false,
+  getAvailabilityDatesForAppointment,
+  getAvailableSlotsForAppointment,
 }: Props) {
   const [open, setOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -41,21 +54,39 @@ export function AppointmentCard({
   const [calendarOffset, setCalendarOffset] = useState(0);
 
   // New state for callback-based availability
-  const [loadingDates, setLoadingDates] = useState(false);
+  const [loadingDates, setLoadingDates] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
   const [callbackAvailability, setCallbackAvailability] =
     useState<TAvailability | null>(null);
-  const [error, setError] = useState<string | null>(null);
   const [userHasSelectedDate, setUserHasSelectedDate] = useState(false);
 
   // Get session data from store
   const sessionId = useSessionStore((state) => state.sessionId);
 
+  // Load additional availability dates when component mounts if callbacks are enabled
+  // This will extend the existing availability data with more future dates
+  useEffect(() => {
+    console.log("hi from apoin useffct");
+    if (
+      callbacks?.tool_callback_availability_dates &&
+      doctor.doctor_id &&
+      // doctor.hospital_id &&
+      // doctor.region_id &&
+      sessionId &&
+      !callbackAvailability
+    ) {
+      loadAvailabilityDates();
+    }
+  }, [callbacks?.tool_callback_availability_dates, callbackAvailability]);
+
   // Use callback availability if it has more data, otherwise use provided availability
   const currentAvailability = callbackAvailability || availability;
+  console.log("curent availability", currentAvailability);
 
   // Get the first date from availability to start the calendar
   const firstDate = useMemo(() => {
+    console.log("current availabilty", currentAvailability);
+
     if (!currentAvailability?.slots_details?.length) return new Date();
     const firstSlot = currentAvailability.slots_details[0];
     return new Date(firstSlot.date);
@@ -63,6 +94,8 @@ export function AppointmentCard({
 
   // Auto-select date based on selected_date or first available date (only on initial load)
   useEffect(() => {
+    console.log("current availabilty in useeffect", currentAvailability);
+
     if (currentAvailability?.slots_details?.length && !userHasSelectedDate) {
       let targetDateIndex = 0;
 
@@ -110,7 +143,7 @@ export function AppointmentCard({
       const selectedSlot = currentAvailability.slots_details[targetDateIndex];
       if (
         (!selectedSlot?.slots || selectedSlot.slots.length === 0) &&
-        currentAvailability?.callbacks?.tool_callback_availability_slots &&
+        callbacks?.tool_callback_availability_slots &&
         doctor.doctor_id &&
         doctor.hospital_id &&
         doctor.region_id &&
@@ -193,7 +226,7 @@ export function AppointmentCard({
     return days;
   }, [firstDate, calendarOffset, currentAvailability]);
 
-  const activeDay = currentAvailability?.slots_details[activeIndex];
+  const activeDay = currentAvailability?.slots_details?.[activeIndex];
 
   const initials =
     doctor.name
@@ -243,7 +276,7 @@ export function AppointmentCard({
     // 2. This date doesn't have slots already loaded
     // 3. We have all required parameters
     if (
-      currentAvailability?.callbacks?.tool_callback_availability_slots &&
+      callbacks?.tool_callback_availability_slots &&
       (!selectedDateData?.slots || selectedDateData.slots.length === 0) &&
       doctor.doctor_id &&
       doctor.hospital_id &&
@@ -274,12 +307,7 @@ export function AppointmentCard({
 
   // Function to load availability dates
   const loadAvailabilityDates = async () => {
-    if (
-      !doctor.doctor_id ||
-      !doctor.hospital_id ||
-      !doctor.region_id ||
-      !sessionId
-    ) {
+    if (!doctor.doctor_id || !sessionId) {
       console.warn(
         "Missing required parameters for loading availability dates"
       );
@@ -287,14 +315,22 @@ export function AppointmentCard({
     }
 
     setLoadingDates(true);
-    setError(null);
 
     try {
-      const response = await getAvailabilityDates(sessionId, {
+      // Use the handler from chat-widget if available, otherwise fall back to direct API call
+      let response;
+
+      const result = await getAvailabilityDatesForAppointment({
         doctor_id: doctor.doctor_id,
-        hospital_id: doctor.hospital_id,
-        region_id: doctor.region_id,
+        hospital_id: doctor?.hospital_id || "",
+        region_id: doctor?.region_id || "",
       });
+
+      if (!result.success) {
+        console.error("Failed to load availability dates via handler");
+        return;
+      }
+      response = result.data;
 
       // Convert available dates to slots_details format
       const callbackSlotsDetails = response.available_dates.map(
@@ -309,30 +345,28 @@ export function AppointmentCard({
       const mergedSlotsDetails = [...existingSlots];
 
       // Add callback dates that don't already exist
-      callbackSlotsDetails.forEach((callbackSlot) => {
-        const exists = existingSlots.some(
-          (existingSlot) => existingSlot.date === callbackSlot.date
-        );
-        if (!exists) {
-          mergedSlotsDetails.push(callbackSlot);
+      callbackSlotsDetails.forEach(
+        (callbackSlot: { date: string; slots: string[] }) => {
+          const exists = existingSlots.some(
+            (existingSlot) => existingSlot.date === callbackSlot.date
+          );
+          if (!exists) {
+            mergedSlotsDetails.push(callbackSlot);
+          }
         }
-      });
+      );
 
       // Sort by date to maintain chronological order
       mergedSlotsDetails.sort(
         (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
       );
+      console.log("merged slots", mergedSlotsDetails);
 
       setCallbackAvailability({
         slots_details: mergedSlotsDetails,
-        callbacks: {
-          tool_callback_availability_dates: true,
-          tool_callback_availability_slots: true,
-        },
       });
     } catch (err) {
       console.error("Error loading availability dates:", err);
-      setError("Failed to load availability dates");
     } finally {
       setLoadingDates(false);
     }
@@ -351,54 +385,54 @@ export function AppointmentCard({
     }
 
     setLoadingSlots(true);
-    setError(null);
 
     try {
-      const response = await getAvailabilitySlots(sessionId, {
+      // Use the handler from chat-widget if available, otherwise fall back to direct API call
+      let response;
+
+      const result = await getAvailableSlotsForAppointment(date, {
         doctor_id: doctor.doctor_id,
-        hospital_id: doctor.hospital_id,
-        region_id: doctor.region_id,
-        appointment_date: date,
+        hospital_id: doctor?.hospital_id || "",
+        region_id: doctor?.region_id || "",
       });
+
+      if (!result.success) {
+        console.error("Failed to load slots via handler");
+        return;
+      }
+      response = result.data;
 
       // Update the slots for the specific date
       setCallbackAvailability((prev) => {
-        if (!prev) return null;
+        //if no previous availability ,initialize with fetched date
+        if (!prev || !prev.slots_details?.length)
+          return {
+            slots_details: [{ date, slots: response.slots }],
+          };
 
         const updatedSlotsDetails = prev.slots_details.map((slot) =>
           slot.date === date ? { ...slot, slots: response.slots } : slot
         );
+        //if date not present in list, append it
+        const exists = prev.slots_details.some((s) => s.date === date);
+        const finalSlotDetails = exists
+          ? updatedSlotsDetails
+          : [...updatedSlotsDetails, { date, slots: response.slots }];
+        finalSlotDetails.sort(
+          (a, b) => new Date(a.date).getTime() - new Date(b.date).getTime()
+        );
 
         return {
           ...prev,
-          slots_details: updatedSlotsDetails,
+          slots_details: finalSlotDetails,
         };
       });
     } catch (err) {
       console.error("Error loading slots for date:", err);
-      setError("Failed to load slots for this date");
     } finally {
       setLoadingSlots(false);
     }
   };
-
-  // Load additional availability dates when component mounts if callbacks are enabled
-  // This will extend the existing availability data with more future dates
-  useEffect(() => {
-    if (
-      availability?.callbacks?.tool_callback_availability_dates &&
-      doctor.doctor_id &&
-      doctor.hospital_id &&
-      doctor.region_id &&
-      sessionId &&
-      !callbackAvailability
-    ) {
-      loadAvailabilityDates();
-    }
-  }, [
-    availability?.callbacks?.tool_callback_availability_dates,
-    callbackAvailability,
-  ]);
 
   return (
     <Card
@@ -465,12 +499,10 @@ export function AppointmentCard({
             </div>
           )}
 
-          {doctor.languages?.length ? (
+          {doctor.languages ? (
             <div className="flex items-center gap-2 text-sm text-slate-900">
               <Languages className="h-4 w-4 text-blue-600" aria-hidden />
-              <span className="text-slate-500">
-                {doctor.languages.join(", ")}
-              </span>
+              <span className="text-slate-500">{doctor.languages}</span>
             </div>
           ) : null}
 
@@ -481,7 +513,9 @@ export function AppointmentCard({
         </div>
 
         {/* Conditional buttons */}
-        {currentAvailability?.slots_details?.length ? (
+        {currentAvailability?.slots_details?.length ||
+        callbacks?.tool_callback_availability_dates ||
+        loadingDates ? (
           <Button
             type="button"
             variant="outline"
@@ -510,12 +544,11 @@ export function AppointmentCard({
             )}
           </Button>
         ) : (
-          <Button
-            type="button"
-            onClick={onSelect}
-            className="mt-3 w-full bg-blue-600 text-white hover:bg-blue-700">
-            Select this doctor
-          </Button>
+          <div className="mt-3 w-full flex items-center justify-center py-3 px-4 bg-gray-50 border border-gray-200 rounded-lg">
+            <span className="text-sm text-gray-500 font-medium">
+              No details available
+            </span>
+          </div>
         )}
 
         {/* Collapsible content */}
@@ -625,11 +658,11 @@ export function AppointmentCard({
                                 ? "border-blue-600 bg-blue-600 text-white"
                                 : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
                             ].join(" ")}>
-                            <Calendar
+                            {/* <Calendar
                               className={`h-3.5 w-3.5 flex-shrink-0${
                                 selected ? "text-white" : "text-blue-600"
                               }`}
-                            />
+                            /> */}
                             <span className="truncate">{t}</span>
                           </Button>
                         );
@@ -657,9 +690,6 @@ export function AppointmentCard({
               </>
             ) : (
               <div className="px-1 pb-2 pt-1">
-                {error ? (
-                  <p className="text-sm text-red-500 mb-2">{error}</p>
-                ) : null}
                 <p className="text-sm text-slate-500">
                   No availability provided.
                 </p>

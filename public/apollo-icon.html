@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Apollo Assist Icon</title>
+    <style>
+      :root {
+        --apollo-blue: #2582a1;
+        --apollo-yellow: #fdb931;
+      }
+
+      body {
+        margin: 0;
+        padding: 0;
+        background: transparent;
+        overflow: hidden;
+      }
+
+      .apollo-icon-container {
+        width: 100%;
+        height: 100%;
+        position: relative;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        overflow: hidden;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .apollo-circle {
+        position: absolute;
+        border-radius: 50%;
+        overflow: hidden;
+      }
+
+      .apollo-circle .pulse {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        will-change: transform;
+      }
+
+      .layer {
+        position: absolute;
+        inset: 0;
+        border-radius: 50%;
+        background-size: 200% 200%;
+        will-change: opacity, transform, background-position;
+      }
+
+      .apollo-circle.blue {
+        width: 80px;
+        height: 80px;
+        left: 60px;
+        top: 90px;
+      }
+
+      .apollo-circle.yellow {
+        width: 60px;
+        height: 60px;
+        left: 40px;
+        top: 50px;
+      }
+
+      .apollo-circle.blue .layer.a {
+        background-image: linear-gradient(
+          0deg,
+          var(--apollo-blue),
+          var(--apollo-yellow)
+        );
+        animation: spinBlue 16s linear infinite, fadeA 16s ease-in-out infinite;
+      }
+
+      .apollo-circle.blue .layer.b {
+        background-image: linear-gradient(
+          0deg,
+          var(--apollo-yellow),
+          var(--apollo-blue)
+        );
+        animation: spinBlue 16s linear infinite, fadeB 16s ease-in-out infinite;
+      }
+
+      .apollo-circle.yellow .layer.a {
+        background-image: linear-gradient(
+          0deg,
+          var(--apollo-yellow),
+          var(--apollo-blue)
+        );
+        animation: spinYellow 17s linear infinite 0.8s,
+          fadeB 16s ease-in-out infinite 0.8s;
+      }
+
+      .apollo-circle.yellow .layer.b {
+        background-image: linear-gradient(
+          0deg,
+          var(--apollo-blue),
+          var(--apollo-yellow)
+        );
+        animation: spinYellow 17s linear infinite 0.8s,
+          fadeA 16s ease-in-out infinite 0.8s;
+      }
+
+      @keyframes spinBlue {
+        0% {
+          transform: rotate(0deg);
+        }
+        22% {
+          transform: rotate(147deg);
+        }
+        38% {
+          transform: rotate(311deg);
+        }
+        61% {
+          transform: rotate(73deg);
+        }
+        79% {
+          transform: rotate(222deg);
+        }
+        100% {
+          transform: rotate(360deg);
+        }
+      }
+
+      @keyframes spinYellow {
+        0% {
+          transform: rotate(0deg);
+        }
+        18% {
+          transform: rotate(260deg);
+        }
+        36% {
+          transform: rotate(105deg);
+        }
+        59% {
+          transform: rotate(330deg);
+        }
+        83% {
+          transform: rotate(185deg);
+        }
+        100% {
+          transform: rotate(540deg);
+        }
+      }
+
+      @keyframes fadeA {
+        0%,
+        35% {
+          opacity: 1;
+        }
+        45%,
+        65% {
+          opacity: 0;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
+
+      @keyframes fadeB {
+        0%,
+        35% {
+          opacity: 0;
+        }
+        45%,
+        65% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+        }
+      }
+
+      .apollo-circle.blue .pulse {
+        animation: pulseBlue 16s ease-in-out infinite;
+      }
+
+      .apollo-circle.yellow .pulse {
+        animation: pulseYellow 16s ease-in-out infinite 0.8s;
+      }
+
+      @keyframes pulseBlue {
+        0%,
+        35% {
+          transform: scale(1);
+        }
+        45% {
+          transform: scale(1.02);
+        }
+        55% {
+          transform: scale(0.98);
+        }
+        70%,
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      @keyframes pulseYellow {
+        0%,
+        20% {
+          transform: scale(1);
+        }
+        35% {
+          transform: scale(1.06);
+        }
+        55% {
+          transform: scale(0.97);
+        }
+        70%,
+        100% {
+          transform: scale(1);
+        }
+      }
+
+      /* Size variants for different use cases */
+      .apollo-icon-container.size-16 {
+        width: 16px;
+        height: 16px;
+      }
+
+      .apollo-icon-container.size-16 .apollo-circle.blue {
+        width: 6.4px;
+        height: 6.4px;
+        left: 4.8px;
+        top: 7.2px;
+      }
+
+      .apollo-icon-container.size-16 .apollo-circle.yellow {
+        width: 4.8px;
+        height: 4.8px;
+        left: 3.2px;
+        top: 4px;
+      }
+
+      .apollo-icon-container.size-24 {
+        width: 24px;
+        height: 24px;
+      }
+
+      .apollo-icon-container.size-24 .apollo-circle.blue {
+        width: 9.6px;
+        height: 9.6px;
+        left: 7.2px;
+        top: 10.8px;
+      }
+
+      .apollo-icon-container.size-24 .apollo-circle.yellow {
+        width: 7.2px;
+        height: 7.2px;
+        left: 4.8px;
+        top: 6px;
+      }
+
+      .apollo-icon-container.size-32 {
+        width: 32px;
+        height: 32px;
+      }
+
+      .apollo-icon-container.size-32 .apollo-circle.blue {
+        width: 12.8px;
+        height: 12.8px;
+        left: 9.6px;
+        top: 14.4px;
+      }
+
+      .apollo-icon-container.size-32 .apollo-circle.yellow {
+        width: 9.6px;
+        height: 9.6px;
+        left: 6.4px;
+        top: 8px;
+      }
+
+      .apollo-icon-container.size-40 {
+        width: 40px;
+        height: 40px;
+      }
+
+      .apollo-icon-container.size-40 .apollo-circle.blue {
+        width: 16px;
+        height: 16px;
+        left: 12px;
+        top: 18px;
+      }
+
+      .apollo-icon-container.size-40 .apollo-circle.yellow {
+        width: 12px;
+        height: 12px;
+        left: 8px;
+        top: 10px;
+      }
+
+      .apollo-icon-container.size-56 {
+        width: 56px;
+        height: 56px;
+      }
+
+      .apollo-icon-container.size-56 .apollo-circle.blue {
+        width: 22.4px;
+        height: 22.4px;
+        left: 16.8px;
+        top: 25.2px;
+      }
+
+      .apollo-icon-container.size-56 .apollo-circle.yellow {
+        width: 16.8px;
+        height: 16.8px;
+        left: 11.2px;
+        top: 14px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="apollo-icon-container" id="apollo-icon">
+      <div class="apollo-circle blue">
+        <div class="pulse">
+          <div class="layer a"></div>
+          <div class="layer b"></div>
+        </div>
+      </div>
+
+      <div class="apollo-circle yellow">
+        <div class="pulse">
+          <div class="layer a"></div>
+          <div class="layer b"></div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Function to set the size of the icon
+      function setSize(size) {
+        const container = document.getElementById("apollo-icon");
+        container.className = `apollo-icon-container size-${size}`;
+      }
+
+      // Function to get the HTML content for embedding
+      function getIconHTML(size = 24) {
+        return `
+                <div class="apollo-icon-container size-${size}">
+                    <div class="apollo-circle blue">
+                        <div class="pulse">
+                            <div class="layer a"></div>
+                            <div class="layer b"></div>
+                        </div>
+                    </div>
+                    <div class="apollo-circle yellow">
+                        <div class="pulse">
+                            <div class="layer a"></div>
+                            <div class="layer b"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+      }
+
+      // Function to get the CSS for embedding
+      function getIconCSS() {
+        return document.querySelector("style").textContent;
+      }
+
+      // Make functions available globally
+      window.ApolloIcon = {
+        setSize,
+        getIconHTML,
+        getIconCSS,
+      };
+
+      // Set default size from URL parameter
+      const urlParams = new URLSearchParams(window.location.search);
+      const size = urlParams.get("size") || "24";
+      setSize(size);
+    </script>
+  </body>
+</html>

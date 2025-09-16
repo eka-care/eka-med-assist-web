@@ -1,7 +1,8 @@
 import { Button } from "@ui/index";
 import { MoreHorizontal, Maximize2, X } from "lucide-react";
 import { Separator } from "@ui/index";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 interface ChatHeaderProps {
   title: string;
@@ -13,6 +14,8 @@ interface ChatHeaderProps {
   isExpanded?: boolean;
   isMobile?: boolean;
   isConnected?: boolean;
+  connectionStatus: CONNECTION_STATUS;
+  isOnline: boolean;
 }
 
 export function ChatHeader({
@@ -24,14 +27,16 @@ export function ChatHeader({
   // onClearSession,
   isExpanded = false,
   isMobile = false,
-  isConnected = false,
+  // isConnected = false,
+  connectionStatus,
+  isOnline,
 }: ChatHeaderProps) {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   // Close dropdown when clicking outside
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
+    function handleClickOutside(event: Event) {
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
@@ -40,11 +45,38 @@ export function ChatHeader({
       }
     }
 
-    document.addEventListener("mousedown", handleClickOutside);
+    // In Shadow DOM, we need to listen on the shadow root or document
+    const shadowRoot = dropdownRef.current?.getRootNode() as ShadowRoot;
+    const eventTarget =
+      shadowRoot instanceof ShadowRoot ? shadowRoot : document;
+
+    eventTarget.addEventListener("mousedown", handleClickOutside);
     return () => {
-      document.removeEventListener("mousedown", handleClickOutside);
+      eventTarget.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  const handleDropdownToggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDropdownOpen((prev) => !prev);
+    },
+    [isDropdownOpen]
+  );
+
+  const handleStartSession = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDropdownOpen(false);
+      // Add a small delay to ensure state update completes
+      setTimeout(() => {
+        onStartSession();
+      }, 0);
+    },
+    [onStartSession]
+  );
 
   return (
     <div
@@ -56,12 +88,29 @@ export function ChatHeader({
           {title}
         </h2>
 
-        <div className={`flex items-center justify-center gap-2 px-2 py-1 ${isConnected? "bg-green-100 text-green-800 ": "bg-red-100 text-red-800"} text-xs font-medium rounded-full`}>
+        <div
+          className={`flex items-center justify-center gap-2 px-2 py-1 ${
+            connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
+              ? "bg-green-100 text-green-800 "
+              : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
+              ? "bg-yellow-100 text-yellow-800"
+              : "bg-red-100 text-red-800"
+          } text-xs font-medium rounded-full`}>
           <div
             className={`w-2 h-2 ${
-              isConnected ? "bg-green-500 " : "bg-red-500"
+              connectionStatus == CONNECTION_STATUS.CONNECTED && isOnline
+                ? "bg-green-500"
+                : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
+                ? "bg-yellow-500"
+                : "bg-red-500"
             } rounded-full`}></div>
-          <span>{isConnected ? "Connected" : "Disconnected"}</span>
+          <span>
+            {connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
+              ? "Connected"
+              : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
+              ? "Connecting"
+              : "Disconnected"}
+          </span>
         </div>
       </div>
       <div className="flex items-center gap-1">
@@ -71,27 +120,22 @@ export function ChatHeader({
             variant="ghost"
             size="sm"
             className="h-8 w-8 p-0 hover:bg-[var(--color-muted)] rounded-full"
-            onClick={() => {
-              console.log(
-                "Dropdown button clicked, current state:",
-                isDropdownOpen
-              );
-              setIsDropdownOpen(!isDropdownOpen);
-            }}>
+            onClick={handleDropdownToggle}>
             <MoreHorizontal className="h-4 w-4 text-[var(--color-muted-foreground)]" />
           </Button>
 
           {/* Dropdown content */}
           {isDropdownOpen && (
-            <div className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[9999]">
+            <div
+              className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[9999]"
+              onMouseDown={(e) => {
+                // Prevent the outside click handler from firing
+                e.stopPropagation();
+              }}>
               <div className="py-1">
                 <button
                   className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 focus:bg-gray-100 focus:outline-none"
-                  onClick={() => {
-                    console.log("Start New Session clicked");
-                    onStartSession();
-                    setIsDropdownOpen(false);
-                  }}>
+                  onClick={handleStartSession}>
                   Start New Session
                 </button>
                 {/* <button

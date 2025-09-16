@@ -5,17 +5,26 @@ import { type CommonHandlerData } from "@/types/socket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
-// import getCurrentTimestamp from "@/utils/getCurrentTimestamp";
 import { Card } from "@ui/index";
 import { ChatHeader } from "../molecules/chat-header";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ConnectionStatus } from "../molecules/connection-status";
-// import { TipsDisplay } from "../molecules/tips-display";
-import { DocAssistIcon } from "@ui/index";
+import ApolloAssistIcon from "../components/ApollossistIcon";
 import { Message } from "@/types";
 import { config } from "@/configs/constants";
 import { getSessionDetails } from "@/api/get-session-details";
+import {
+  CONNECTION_STATUS,
+  RESPONSE_TIMEOUT,
+  STREAMING_TIMEOUT,
+} from "@/types/widget";
+import { getAvailabilityDates } from "@/api/get-availability-dates";
+import { getAvailabilitySlots } from "@/api/get-availability-slots";
+import {
+  callMobileVerificationAPI,
+  IMobileVerificationResponse,
+} from "@/api/post-mobile-verification";
 
 interface ChatWidgetProps {
   title?: string;
@@ -28,7 +37,14 @@ interface ChatWidgetProps {
   isLoading?: boolean;
   isOnline?: boolean;
 }
-
+export type TMobileVerificationStatus = {
+  active: boolean;
+  isOtpSent: boolean;
+  isSending: boolean;
+  error: string | null;
+  mobile_number: string | null;
+  message: string | null;
+};
 export function ChatWidget({
   title = "Apollo Assist",
   className = "",
@@ -53,8 +69,18 @@ export function ChatWidget({
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
   const [isWaitingForResponse, setIsWaitingForResponse] =
     useState<boolean>(false);
+  const [isSessionValidated, setIsSessionValidated] = useState<boolean>(false);
+  const [mobileVerificationStatus, setMobileVerificationStatus] =
+    useState<TMobileVerificationStatus>({
+      active: false,
+      isOtpSent: false,
+      isSending: false,
+      error: null,
+      mobile_number: null,
+      message: null,
+    });
   const {
-    isConnectionEstablished,
+    connectionStatus,
     showRetryButton,
     startNewConnection,
     error,
@@ -67,43 +93,53 @@ export function ChatWidget({
     getMessagesForSession,
     addMessageToSession,
     updateMessageInSession,
-    // setShowRetryButton,
-    // setStartNewConnection,
+    setInlineText,
+    inlineText,
+    setResponseTimeoutId,
+    clearResponseTimeout,
+    setStreamingTimeoutId,
+    clearStreamingTimeout,
+    setLastStreamingActivity,
+    isBotIconAnimating,
+    setIsBotIconAnimating,
   } = useMedAssistStore();
 
-  const [disableInput, setDisableInput] = useState<boolean>(
-    !isConnectionEstablished || !isOnline
-  );
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
-    console.log("ChatWidget mounted - checking session", {
-      sessionId,
-      sessionToken,
-    });
     if (!sessionId && !sessionToken && onStartSession) {
       console.log("No session found, starting new session...");
       onStartSession();
+      // For new sessions, we don't need validation
+      setIsSessionValidated(true);
     } else if (sessionId && sessionToken) {
-      console.log("Session already exists:", { sessionId, sessionToken });
+      console.log("Session already exists:");
 
-      // Check if session is still valid
-      getSessionDetails(sessionId)
-        .then((isValid) => {
+      // Check if session is still valid - AWAIT this before proceeding
+      const validateSession = async () => {
+        try {
+          const isValid = await getSessionDetails(sessionId);
           console.log("isValid", isValid);
           if (!isValid) {
             console.log("Session is invalid, starting new session");
-            // setShowRetryButton(false);
-            // setStartNewConnection(true);
-            onStartSession?.(true);
+            clearSession();
+            await onStartSession?.(true);
+            //For new sessions, we don't need validation
+            setIsSessionValidated(true);
+          } else {
+            console.log("Session is valid, allowing WebSocket connection");
+            setIsSessionValidated(true);
           }
-        })
-        .catch((error) => {
+        } catch (error) {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
-          onStartSession?.(true);
-          // setShowRetryButton(false);
-          // setStartNewConnection(true);
-        });
+          clearSession();
+          await onStartSession?.(true);
+          //For new sessions, we don't need validation
+          setIsSessionValidated(true);
+        }
+      };
+
+      validateSession();
     }
   }, []); // Only run on mount
 
@@ -126,24 +162,31 @@ export function ChatWidget({
 
         addMessageToSession(sessionId, welcomeMessage);
         setMessages([welcomeMessage]);
+        console.log("cleared inline text");
       }
     }
   }, [sessionId]);
-  // Create socket configuration when session data is available
-  const socketConfig: WebSocketConfig | null =
-    sessionId && sessionToken
-      ? {
-          sessionId,
-          auth: { token: sessionToken },
-        }
-      : null;
+  // Create socket configuration when session data is available AND validated
+  const socketConfig: WebSocketConfig | null = useMemo(() => {
+    if (sessionId && sessionToken && isSessionValidated) {
+      console.log(
+        "Creating WebSocket config with validated session:",
+        sessionId
+      );
+      return {
+        sessionId,
+        auth: { token: sessionToken },
+      };
+    }
+    console.log("WebSocket config not created - session not validated yet");
+    return null;
+  }, [sessionId, sessionToken, isSessionValidated]);
 
   // Use WebSocketV2 hook
   const {
     webSocketService: wsService,
     setFilesForUpload,
     sendFileUploadRequest,
-    sendEndOfAudioStream: sendAudioEndOfStream,
     sendAudioData,
     regenerateResponse,
     sendChatMessage,
@@ -157,13 +200,12 @@ export function ChatWidget({
       setMessages((prev) => {
         // Check if there's already a bot message at the end
         const lastMessage = prev[prev.length - 1];
-        console.log("lastMessage", lastMessage);
 
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
           lastMessage &&
           lastMessage.isBot &&
-          botMessage.length > lastMessage.content.length
+          botMessage?.length > lastMessage?.content?.length
         ) {
           // Update the existing bot message with progressive text
           const updatedMessages = [...prev];
@@ -181,34 +223,8 @@ export function ChatWidget({
           botMessage.length <= lastMessage.content.length
         ) {
           // If the incoming text is shorter or equal, it might be a duplicate, skip
-          console.log(
-            "Skipping duplicate or shorter text:",
-            botMessage,
-            "vs",
-            lastMessage.content
-          );
           return prev;
         } else {
-          console.log("Creating new bot message because:", {
-            hasLastMessage: !!lastMessage,
-            isLastMessageBot: lastMessage?.isBot,
-            botMessageLength: botMessage.length,
-            lastMessageLength: lastMessage?.content?.length || 0,
-          });
-          // Check if we need to replace a regenerating message
-          // const regeneratingMessageIndex = prev.findIndex(
-          //   (msg) => msg.isRegenerating
-          // );
-          // if (regeneratingMessageIndex !== -1) {
-          //   // Replace the regenerating message
-          //   const updatedMessages = [...prev];
-          //   updatedMessages[regeneratingMessageIndex] = {
-          //     ...updatedMessages[regeneratingMessageIndex],
-          //     content: botMessage,
-          //     isRegenerating: false,
-          //   }; // Will be stored when streaming ends
-          //   return updatedMessages;
-          // } else {
           // Create a new bot message
           const newMessage: Message = {
             id: Date.now().toString(),
@@ -225,7 +241,6 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
 
       // Handle progress messages
-      console.log("Progress message received:", progressMsg);
       setProgressMessage(progressMsg);
     },
     (tips: string[]) => {
@@ -233,13 +248,12 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
       setTips(tips);
     },
-    (commonContentData: CommonHandlerData) => {
+    async (commonContentData: CommonHandlerData) => {
       // Clear waiting state when we receive common content data
       setIsWaitingForResponse(false);
 
       // Handle common content messages - merge with existing bot message
       console.log("Common content message received:", commonContentData);
-      setDisableInput(true);
       setMessages((prev) => {
         // Find the last bot message to attach content to it
         let lastBotMessageIndex = -1;
@@ -250,12 +264,15 @@ export function ChatWidget({
           }
         }
 
-        if (lastBotMessageIndex !== -1) {
+        if (
+          lastBotMessageIndex !== -1 &&
+          !prev[lastBotMessageIndex].isResponded
+        ) {
           console.log(
-            "Bot message found, updating with common content data",
+            "Bot message found and not responded, updating with common content data",
             commonContentData
           );
-          // Update the last bot message with common content data
+          // Update the last bot message with common content data only if it hasn't been responded to
           const updatedMessages = [...prev];
           updatedMessages[lastBotMessageIndex] = {
             ...updatedMessages[lastBotMessageIndex],
@@ -264,13 +281,15 @@ export function ChatWidget({
           return updatedMessages;
         } else {
           console.log(
-            "No bot message found, creating a new one",
+            lastBotMessageIndex === -1
+              ? "No bot message found, creating a new one"
+              : "Last bot message already responded, creating a new one",
             commonContentData
           );
-          // If no bot message found, create a new one (fallback)
+          // If no bot message found or the last bot message has been responded to, create a new one
           const newMessage: Message = {
             id: Date.now().toString(),
-            content: "Here are some options:",
+            content: "",
             isBot: true,
             commonContentData: commonContentData,
             isStored: true,
@@ -283,6 +302,111 @@ export function ChatWidget({
           return [...prev, newMessage];
         }
       });
+      // Handle mobile verification content type
+      if (
+        commonContentData.type === "mobile_verification" &&
+        commonContentData?.data?.callbacks?.tool_callback_mobile_verification
+      ) {
+        console.log("Mobile verification message received:", commonContentData);
+
+        if (commonContentData?.data?.mobile_number) {
+          // Mobile number provided - disable input and send OTP automatically
+          setMobileVerificationStatus({
+            active: true,
+            isOtpSent: false,
+            isSending: true,
+            mobile_number: commonContentData?.data?.mobile_number || null,
+            error: null,
+            message: null,
+          });
+          setProgressMessage("Sending OTP to your mobile number...");
+
+          let responseMessage = "";
+          let isSuccess = false;
+
+          try {
+            const response = await handleMobileVerification(
+              commonContentData?.data?.mobile_number
+            );
+
+            if (response?.success && response?.data?.message) {
+              responseMessage =
+                response?.data?.message ||
+                "OTP sent successfully to your mobile number, please enter 6 digit OTP";
+              isSuccess = true;
+            } else {
+              responseMessage =
+                (response?.data as any)?.error?.msg ||
+                "Failed to send OTP. Please try again.";
+              isSuccess = false;
+            }
+          } catch (error) {
+            responseMessage = "Failed to send OTP. Please try again.";
+            isSuccess = false;
+          } finally {
+            setProgressMessage(null);
+
+            setMobileVerificationStatus({
+              active: isSuccess,
+              isSending: false,
+              isOtpSent: isSuccess,
+              mobile_number: isSuccess
+                ? commonContentData?.data?.mobile_number || null
+                : null,
+              error: isSuccess ? null : responseMessage,
+              message: isSuccess ? responseMessage : null,
+            });
+
+            // Update messages with the response
+            setMessages((prev) => {
+              const updatedMessages = [...prev];
+              const lastMessageIndex = updatedMessages.length - 1;
+
+              if (
+                updatedMessages.length > 0 &&
+                updatedMessages[lastMessageIndex].isBot
+              ) {
+                const existingContent =
+                  updatedMessages[lastMessageIndex].content;
+                const newContent = `${existingContent}\n\n${responseMessage}`;
+
+                updatedMessages[updatedMessages.length - 1] = {
+                  ...updatedMessages[updatedMessages.length - 1],
+                  content: newContent,
+                };
+                updateMessageInSession(
+                  sessionId,
+                  updatedMessages[updatedMessages.length - 1].id,
+                  updatedMessages[updatedMessages.length - 1]
+                );
+              } else {
+                const newMessage: Message = {
+                  id: Date.now().toString(),
+                  content: responseMessage,
+                  isBot: true,
+                  isStored: true,
+                };
+                updatedMessages.push(newMessage);
+                addMessageToSession(sessionId, newMessage);
+              }
+              return updatedMessages;
+            });
+          }
+        } else {
+          // No mobile number provided - ask user to enter mobile number
+          setMobileVerificationStatus({
+            active: true,
+            isOtpSent: false,
+            isSending: false,
+            mobile_number: null,
+            error: null,
+            message: "Please enter your mobile number to receive OTP",
+          });
+        }
+      }
+    },
+    (inlineMessage) => {
+      setInlineText(inlineMessage);
     }
   );
 
@@ -292,28 +416,9 @@ export function ChatWidget({
     { id: "emergency", label: "I have an emergency" },
   ]);
 
-  useEffect(() => {
-    console.log("hi chat widget");
-
-    if (isConnectionEstablished && isOnline) {
-      const lastMessage = messages[messages.length - 1];
-      console.log("lastMessage", lastMessage);
-      if (lastMessage?.isBot && lastMessage?.commonContentData) {
-        console.log("disabling input", lastMessage);
-        setDisableInput(true);
-      } else {
-        setDisableInput(false);
-      }
-    } else {
-      setDisableInput(true);
-      setIsWaitingForResponse(false); // Clear waiting state when connection is lost
-    }
-  }, [isConnectionEstablished, isOnline, messages]);
-
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
   const scrollToBottom = () => {
-    console.log("scrollToBottom called");
     if (scrollAreaRef.current) {
       // Use setTimeout to ensure DOM is fully updated
       setTimeout(() => {
@@ -338,10 +443,6 @@ export function ChatWidget({
     if (!isStreaming && sessionId && messages.length > 0) {
       const lastMessage = messages[messages.length - 1];
       if (lastMessage.isBot && !lastMessage.isStored) {
-        console.log(
-          "Adding bot message to session store",
-          messages[messages.length - 1]
-        );
         // Mark as stored to prevent duplicate storage
         const updatedMessage = { ...lastMessage, isStored: true };
         setMessages((prev) =>
@@ -357,57 +458,98 @@ export function ChatWidget({
   useEffect(() => {
     if (error) {
       setIsWaitingForResponse(false);
+      // Clear any pending timeouts when there's an error
+      clearResponseTimeout();
+      clearStreamingTimeout();
     }
   }, [error]);
 
+  // Timeout logic for waiting for response
+  useEffect(() => {
+    if (isWaitingForResponse && !isStreaming) {
+      // Set a 5-second timeout for waiting for response
+      const timeoutId = setTimeout(() => {
+        console.log("Response timeout: No response received within 5 seconds");
+        setError({
+          title: "Response timeout. The server didn't respond in time.",
+          description: "Please try again or check your connection.",
+        });
+        setIsWaitingForResponse(false);
+      }, RESPONSE_TIMEOUT);
+
+      setResponseTimeoutId(timeoutId);
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearResponseTimeout();
+      };
+    } else {
+      // Clear timeout if not waiting for response
+      clearResponseTimeout();
+    }
+  }, [isWaitingForResponse, isStreaming]);
+
+  // Timeout logic for streaming interruption
+  useEffect(() => {
+    if (isStreaming) {
+      // Update last streaming activity timestamp
+      setLastStreamingActivity(Date.now());
+
+      // Set a 5-second timeout for streaming interruption
+      const timeoutId = setTimeout(() => {
+        const currentState = useMedAssistStore.getState();
+        // Only trigger timeout if we're still streaming AND no activity in the last 5 seconds
+        if (currentState.isStreaming && currentState.lastStreamingActivity) {
+          const timeSinceLastActivity =
+            Date.now() - currentState.lastStreamingActivity;
+          if (timeSinceLastActivity >= 5000) {
+            console.log(
+              "Streaming timeout: No streaming activity for 5 seconds"
+            );
+            setError({
+              title: "Streaming interrupted. The response was cut off.",
+              description: "Please try again or check your connection.",
+            });
+            setIsWaitingForResponse(false);
+          }
+        }
+      }, STREAMING_TIMEOUT);
+
+      setStreamingTimeoutId(timeoutId);
+
+      return () => {
+        clearTimeout(timeoutId);
+        clearStreamingTimeout();
+      };
+    } else {
+      // Clear timeout if not streaming
+      clearStreamingTimeout();
+      setLastStreamingActivity(null);
+    }
+  }, [isStreaming]);
+
+  // Control bot icon animation based on progress message and waiting for response
+  useEffect(() => {
+    const shouldAnimate = !!progressMessage || isWaitingForResponse;
+    setIsBotIconAnimating(shouldAnimate);
+  }, [progressMessage, isWaitingForResponse]);
+
+  // Clear mobile verification when session changes
+  useEffect(() => {
+    if (!sessionId) {
+      clearMobileVerification();
+    }
+  }, [sessionId]);
+
   const showErrorMessage = useMemo(() => {
     return (
-      isConnectionEstablished &&
+      connectionStatus === CONNECTION_STATUS.CONNECTED &&
       isOnline &&
       !error &&
       !showRetryButton &&
       !startNewConnection
     );
-  }, [
-    isConnectionEstablished,
-    isOnline,
-    error,
-    showRetryButton,
-    startNewConnection,
-  ]);
-
-  // CHANGED: Now handles AudioData instead of Blob
-  const handleAudioStream = (audioData: AudioData) => {
-    console.log("called on Audio stream in chat widget V2");
-    if (isStreaming) {
-      console.log("Cannot send voice while streaming");
-      return;
-    }
-    if (!isOnline) {
-      setError(ERROR_MESSAGES.OFFLINE);
-      setIsWaitingForResponse(false);
-      return;
-    }
-
-    if (!isConnectionEstablished) {
-      setError(ERROR_MESSAGES.CONNECTION_LOST);
-      setIsWaitingForResponse(false);
-      return;
-    }
-    // Clear any errors and tips when starting audio streaming
-    clearError();
-    setTips(null);
-
-    console.log("Audio stream received:", audioData);
-
-    if (isConnectionEstablished) {
-      // Send full audio data to WebSocket
-      console.log("called on sendAudioData of socket in chat widget V2");
-      sendAudioData(audioData);
-    } else {
-      console.log("WebSocket not connected, cannot stream audio");
-    }
-  };
+  }, [connectionStatus, isOnline, error, showRetryButton, startNewConnection]);
 
   const handleSendMessage = async (content: string, tool_use_id?: string) => {
     // Block sending if currently streaming
@@ -422,7 +564,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -435,7 +577,102 @@ export function ChatWidget({
     setTips(null);
 
     try {
-      await sendChatMessage(content, tool_use_id);
+      let response: {
+        success: boolean;
+        data: IMobileVerificationResponse | null;
+      } | null = null;
+
+      // Handle mobile verification flow
+      if (mobileVerificationStatus.active) {
+        if (!mobileVerificationStatus.isOtpSent) {
+          // User is entering mobile number
+          const mobileNumber =
+            mobileVerificationStatus.mobile_number || content;
+          response = await handleMobileVerification(mobileNumber);
+
+          if (response?.success) {
+            setMobileVerificationStatus((prev) => ({
+              ...prev,
+              active: true,
+              isSending: false,
+              isOtpSent: true,
+              mobile_number: mobileNumber,
+              error: null,
+              message:
+                response?.data?.message ||
+                "OTP sent successfully, please enter 6 digit OTP",
+            }));
+          } else {
+            setMobileVerificationStatus((prev) => ({
+              ...prev,
+              active: false,
+              isSending: false,
+              isOtpSent: false,
+              mobile_number: null,
+              error:
+                response?.data?.error?.msg ||
+                "Failed to send OTP. Please try again.",
+              message: null,
+            }));
+          }
+        } else if (
+          mobileVerificationStatus.isOtpSent &&
+          mobileVerificationStatus.mobile_number
+        ) {
+          // User is entering OTP
+          response = await handleOtpVerification(
+            content,
+            mobileVerificationStatus.mobile_number
+          );
+
+          if (response?.success) {
+            setMobileVerificationStatus({
+              active: false,
+              isSending: false,
+              isOtpSent: false,
+              mobile_number: null,
+              error: null,
+              message: null,
+            });
+          } else {
+            clearMobileVerification();
+          }
+        }
+
+        // Add user message
+        const userMessage: Message = {
+          id: Date.now().toString(),
+          content,
+          isBot: false,
+          originalUserMessage: content,
+          isStored: true,
+        };
+        setMessages((prev) => [...prev, userMessage]);
+        addMessageToSession(sessionId, userMessage);
+
+        // Add bot response if we have one
+        if (response) {
+          const botMessage: Message = {
+            id: (Date.now() + 1).toString(),
+            content: response?.success
+              ? response?.data?.message || "Success!"
+              : response?.data?.error?.msg || "Failed. Please try again.",
+            isBot: true,
+            isStored: true,
+          };
+          setMessages((prev) => [...prev, botMessage]);
+          addMessageToSession(sessionId, botMessage);
+        }
+
+        return;
+      } else {
+        // Normal chat flow - clear mobile verification if active
+        if (mobileVerificationStatus.active) {
+          clearMobileVerification();
+        }
+        await sendChatMessage(content, tool_use_id);
+      }
+
       // Mark the bot message as responded if it has pills or multiselect
       setMessages((prev) => {
         const updatedMessages = [...prev];
@@ -472,12 +709,7 @@ export function ChatWidget({
 
       // Set waiting state immediately when message is sent
       setIsWaitingForResponse(true);
-      console.log("Adding message to session store", newMessage);
       addMessageToSession(sessionId, newMessage);
-      if (disableInput) {
-        setDisableInput(false);
-      }
-      console.log("Message sent successfully");
     } catch (error) {
       console.error("Failed to send message:", error);
       setError({ title: "Failed to send message. Please try again." });
@@ -488,14 +720,13 @@ export function ChatWidget({
 
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
-    console.log("Final audio stream received:", audioData);
     if (!isOnline) {
       setError(ERROR_MESSAGES.OFFLINE);
       setIsWaitingForResponse(false);
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -503,6 +734,7 @@ export function ChatWidget({
 
     // Clear tips when sending final audio stream
     setTips(null);
+
     // Mark the bot message as responded if it has pills or multiselect
     setMessages((prev) => {
       const updatedMessages = [...prev];
@@ -513,38 +745,28 @@ export function ChatWidget({
             ...updatedMessages[i],
             isResponded: true,
           };
+          updateMessageInSession(
+            sessionId,
+            updatedMessages[i].id,
+            updatedMessages[i]
+          );
           break;
         }
       }
       return updatedMessages;
     });
 
-    // Create user message with audio data
-    const newMessage: Message = {
-      id: Date.now().toString(),
-      content: "🎤 Voice message sent", // Cleaner, simpler text
-      isBot: false,
-      audioData: audioData, // Store the audio data
-      isStored: false,
-    };
-
-    setMessages((prev) => [...prev, newMessage]);
-
     try {
-      // Set waiting state immediately when audio is sent
-      setIsWaitingForResponse(true);
-
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
-      await sendAudioEndOfStream();
-      console.log("Adding audio message to session store", newMessage);
-      addMessageToSession(sessionId, { ...newMessage, isStored: true });
-      console.log("Audio sent successfully");
+      if (mobileVerificationStatus.active) {
+        clearMobileVerification();
+        return;
+      }
     } catch (error) {
       console.error("Failed to send audio:", error);
       setError({ title: "Failed to send audio message. Please try again." });
-      setIsWaitingForResponse(false); // Clear waiting state on error
       throw error;
     }
   };
@@ -562,7 +784,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -580,6 +802,11 @@ export function ChatWidget({
             ...updatedMessages[i],
             isResponded: true,
           };
+          updateMessageInSession(
+            sessionId,
+            updatedMessages[i].id,
+            updatedMessages[i]
+          );
           break;
         }
       }
@@ -593,7 +820,7 @@ export function ChatWidget({
       content:
         message ||
         `📎 ${
-          fileArray.length > 1 ? `${fileArray.length} files` : "File"
+          fileArray?.length > 1 ? `${fileArray.length} files` : "File"
         } uploaded`, // Cleaner text
       isBot: false,
       files: fileArray,
@@ -609,9 +836,11 @@ export function ChatWidget({
       // Set files for upload when presigned URL is received
       setFilesForUpload(fileArray, message);
       await sendFileUploadRequest();
-      console.log("Adding file message to session store", newMessage);
       addMessageToSession(sessionId, newMessage);
-      console.log("File upload request sent successfully");
+      if (mobileVerificationStatus.active) {
+        clearMobileVerification();
+        return;
+      }
     } catch (error) {
       console.error("Failed to upload file:", error);
       setError({ title: "Failed to upload file. Please try again." });
@@ -633,7 +862,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -645,33 +874,31 @@ export function ChatWidget({
     setProgressMessage(null);
     setTips(null);
 
-    // Mark the bot message as responded if it has pills or multiselect
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      // Find the last bot message and mark it as responded if it has interactive elements
-      for (let i = updatedMessages.length - 1; i >= 0; i--) {
-        if (updatedMessages[i].isBot && updatedMessages[i].commonContentData) {
-          updatedMessages[i] = {
-            ...updatedMessages[i],
-            isResponded: true,
-            isStored: true,
-          };
-          console.log(
-            "Adding quick action message to session store",
-            messages[0]
-          );
-
-          addMessageToSession(sessionId, updatedMessages[i]);
-          break;
-        }
-      }
-      return updatedMessages;
-    });
-
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       try {
         await handleSendMessage(action.label);
+        // Mark the bot message as responded if it has pills or multiselect
+        // setMessages((prev) => {
+        //   const updatedMessages = [...prev];
+        //   // Find the last bot message and mark it as responded if it has interactive elements
+        //   for (let i = updatedMessages.length - 1; i >= 0; i--) {
+        //     if (
+        //       updatedMessages[i].isBot &&
+        //       updatedMessages[i].commonContentData
+        //     ) {
+        //       updatedMessages[i] = {
+        //         ...updatedMessages[i],
+        //         isResponded: true,
+        //         isStored: true,
+        //       };
+
+        //       addMessageToSession(sessionId, updatedMessages[i]);
+        //       break;
+        //     }
+        //   }
+        //   return updatedMessages;
+        // });
       } catch (error) {
         console.error("Failed to send quick action:", error);
         // Error is already handled in handleSendMessage
@@ -695,7 +922,7 @@ export function ChatWidget({
       return;
     }
 
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       setError(ERROR_MESSAGES.CONNECTION_LOST);
       setIsWaitingForResponse(false);
       return;
@@ -801,7 +1028,7 @@ export function ChatWidget({
   };
 
   const handleRetry = async () => {
-    if (!isConnectionEstablished) {
+    if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
       if (wsService) {
         clearError();
         wsService.reconnect(true, "manual reconnect");
@@ -821,13 +1048,145 @@ export function ChatWidget({
     }
   };
 
+  const handleOtpVerification = async (otp: string, mobile_number: string) => {
+    try {
+      const response = await callMobileVerificationAPI({
+        mobile_number: mobile_number.trim(),
+        otp: otp.trim(),
+        session_id: sessionId,
+      });
+      if (response.error) {
+        return { success: false, data: { error: response.error } };
+      } else if (response.status === "success") {
+        return { success: true, data: response };
+      }
+      return {
+        success: false,
+        data: { error: { msg: "Invalid response from server" } },
+      };
+    } catch (error) {
+      console.error("OTP verification error:", error);
+      return {
+        success: false,
+        data: {
+          error: {
+            msg:
+              error instanceof Error
+                ? error.message
+                : "Failed to verify OTP. Please try again.",
+          },
+        },
+      };
+    }
+  };
+
+  const handleMobileVerification = async (
+    mobileNumber: string
+  ): Promise<{
+    success: boolean;
+    data: null | IMobileVerificationResponse;
+  }> => {
+    try {
+      const response = await callMobileVerificationAPI({
+        mobile_number: mobileNumber.trim(),
+        session_id: sessionId,
+      });
+      if (response.error) {
+        return { success: false, data: { error: response.error } };
+      } else if (response.status === "success") {
+        return { success: true, data: response };
+      }
+      return {
+        success: false,
+        data: { error: { msg: "Invalid response from server" } },
+      };
+    } catch (error) {
+      console.error("Mobile verification error:", error);
+      return {
+        success: false,
+        data: {
+          error: {
+            msg:
+              error instanceof Error
+                ? error.message
+                : "Failed to send OTP. Please try again.",
+          },
+        },
+      };
+    }
+  };
+
+  const clearMobileVerification = () => {
+    setMobileVerificationStatus({
+      active: false,
+      isOtpSent: false,
+      isSending: false,
+      mobile_number: null,
+      error: null,
+      message: null,
+    });
+  };
+  // New handlers for appointment-card to use
+  const handleGetAvailabilityDatesForAppointment = async (doctorData: {
+    doctor_id: string;
+    hospital_id?: string;
+    region_id?: string;
+  }) => {
+    if (!doctorData?.doctor_id) {
+      return { success: false, data: null };
+    }
+    try {
+      const response = await getAvailabilityDates(sessionId, {
+        doctor_id: doctorData.doctor_id,
+        hospital_id: doctorData.hospital_id || "",
+        region_id: doctorData.region_id || "",
+      });
+      if (!response?.available_dates?.length) {
+        console.error("Available dates are not coming in response", response);
+        return { success: false, data: null };
+      }
+      return { success: true, data: response };
+    } catch (error) {
+      console.error("Error loading availability dates:", error);
+      return { success: false, data: null };
+    }
+  };
+
+  const handleGetAvailableSlotsForAppointment = async (
+    appointment_date: string,
+    doctorData: {
+      doctor_id: string;
+      hospital_id?: string;
+      region_id?: string;
+    }
+  ) => {
+    if (!doctorData?.doctor_id || !appointment_date) {
+      return { success: false, data: null };
+    }
+    try {
+      const response = await getAvailabilitySlots(sessionId, {
+        doctor_id: doctorData.doctor_id,
+        appointment_date: appointment_date,
+        hospital_id: doctorData.hospital_id || "",
+        region_id: doctorData.region_id || "",
+      });
+      if (!response?.slots?.length) {
+        console.error("Available slots are not coming in response", response);
+        return { success: false, data: null };
+      }
+      return { success: true, data: response };
+    } catch (error) {
+      console.error("Error loading slots for date:", error);
+      return { success: false, data: null };
+    }
+  };
+
   // Mobile full-screen styles
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
+    ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
-    ? "fixed inset-4 z-50 bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
+    ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
     : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
-
   const chatHeight = isMobile
     ? "flex-1 min-h-0"
     : isExpanded
@@ -844,7 +1203,8 @@ export function ChatWidget({
         isExpanded={isExpanded}
         isMobile={isMobile}
         onStartSession={handleStartNewSession}
-        isConnected={isConnectionEstablished && isOnline}
+        connectionStatus={connectionStatus}
+        isOnline={isOnline}
       />
 
       {/* Loading State */}
@@ -886,7 +1246,9 @@ export function ChatWidget({
                   handleQuickAction={handleQuickAction}
                   quickActions={quickActions}
                   isQuickActionsDisabled={
-                    !isConnectionEstablished || isStreaming || !isOnline
+                    connectionStatus !== CONNECTION_STATUS.CONNECTED ||
+                    isStreaming ||
+                    !isOnline
                   }
                   isStreaming={
                     message.isBot &&
@@ -897,6 +1259,12 @@ export function ChatWidget({
                     message.isBot && index === messages.length - 1
                       ? progressMessage
                       : null
+                  }
+                  getAvailabilityDatesForAppointment={
+                    handleGetAvailabilityDatesForAppointment
+                  }
+                  getAvailableSlotsForAppointment={
+                    handleGetAvailableSlotsForAppointment
                   }
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
@@ -915,9 +1283,12 @@ export function ChatWidget({
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
                 <div className="px-4 py-2">
-                  <div className="flex gap-2 items-start justify-center">
-                    <div className="flex-shrink-0 mt-1">
-                      <DocAssistIcon size={24} />
+                  <div className="flex gap-1 items-start justify-center">
+                    <div className="flex-shrink-0">
+                      <ApolloAssistIcon
+                        size={32}
+                        isAnimating={isBotIconAnimating}
+                      />
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
@@ -939,7 +1310,9 @@ export function ChatWidget({
               startNewConnection={startNewConnection}
               clearError={clearError}
               error={error}
-              isConnected={isConnectionEstablished && isOnline}
+              isConnected={
+                connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
+              }
             />
           )}
 
@@ -947,10 +1320,11 @@ export function ChatWidget({
             <MessageInput
               onSendMessage={handleSendMessage}
               onFinalAudioStream={handleFinalAudioStream}
-              onAudioStream={handleAudioStream}
+              inlineText={inlineText || ""}
               onFileUpload={handleFileUpload}
-              disabled={disableInput}
+              disabled={isWaitingForResponse}
               setError={setError}
+              mobileVerificationStatus={mobileVerificationStatus}
             />
           </div>
 

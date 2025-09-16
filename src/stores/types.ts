@@ -1,5 +1,6 @@
 import { Message } from "@/types";
 import { ErrorMessageUI } from "@/types/socket";
+import { CONNECTION_STATUS } from "@/types/widget";
 
 export type TMedAssistStore = {
   sessionId: string;
@@ -8,8 +9,8 @@ export type TMedAssistStore = {
   sessionToken: string;
   setSessionToken: (sessionToken: string) => void;
 
-  isConnectionEstablished: boolean;
-  setConnectionEstablished: (established: boolean) => void;
+  connectionStatus: CONNECTION_STATUS;
+  setConnectionStatus: (status: CONNECTION_STATUS) => void;
 
   isStreaming: boolean;
   setIsStreaming: (streaming: boolean) => void;
@@ -20,7 +21,13 @@ export type TMedAssistStore = {
   showRetryButton: boolean;
   setShowRetryButton: (showRetry: boolean) => void;
 
+  inlineText: string | null;
+  setInlineText: (inlineText: string) => void;
+
   chats: { [sessionId: string]: Message[] };
+
+  isBotIconAnimating: boolean;
+  setIsBotIconAnimating: (isBotIconAnimating: boolean) => void;
 
   // Message actions
   addMessageToSession: (sessionId: string, message: Message) => void;
@@ -40,6 +47,16 @@ export type TMedAssistStore = {
   setTimeoutError: (isTimeout: boolean) => void;
 
   clearSession: () => void;
+
+  // Timeout management
+  streamingTimeoutId: NodeJS.Timeout | null;
+  setStreamingTimeoutId: (timeoutId: NodeJS.Timeout | null) => void;
+  clearStreamingTimeout: () => void;
+  responseTimeoutId: NodeJS.Timeout | null;
+  setResponseTimeoutId: (timeoutId: NodeJS.Timeout | null) => void;
+  clearResponseTimeout: () => void;
+  lastStreamingActivity: number | null;
+  setLastStreamingActivity: (timestamp: number | null) => void;
 
   // Session refresh functionality
   refreshSession: () => Promise<boolean>;

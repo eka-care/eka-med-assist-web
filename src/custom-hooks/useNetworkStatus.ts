@@ -34,11 +34,6 @@ export function useNetworkStatus(): NetworkStatus {
           downlink: connection.downlink,
           rtt: connection.rtt,
         }));
-        console.log('Network: Connection changed', {
-          type: connection.effectiveType || connection.type,
-          downlink: connection.downlink,
-          rtt: connection.rtt,
-        });
       }
     };
 

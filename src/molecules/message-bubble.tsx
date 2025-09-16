@@ -1,6 +1,6 @@
 import {
   Button,
-  DocAssistIcon,
+  //DocAssistIcon,
   MultiSelectGroup,
   MULTI_SELECT_ADDITIONAL_OPTION,
   // ScrollArea,
@@ -12,6 +12,8 @@ import ReactMarkdown from "react-markdown";
 import AppointmentCard from "./appointment-card";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
+import ApolloAssistIcon from "../components/ApollossistIcon";
+import useMedAssistStore from "@/stores/medAssistStore";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -87,6 +89,19 @@ interface MessageBubbleProps {
   files?: File[]; // Add files prop for file previews
   tips?: string[] | null;
   onTipsExpire?: () => void;
+  getAvailabilityDatesForAppointment: (doctorData: {
+    doctor_id: string;
+    hospital_id?: string;
+    region_id?: string;
+  }) => Promise<{ success: boolean; data: any }>;
+  getAvailableSlotsForAppointment: (
+    appointment_date: string,
+    doctorData: {
+      doctor_id: string;
+      hospital_id?: string;
+      region_id?: string;
+    }
+  ) => Promise<{ success: boolean; data: any }>;
 }
 
 export function MessageBubble({
@@ -109,7 +124,10 @@ export function MessageBubble({
   onTipsExpire,
   isResponded = false,
   files,
+  getAvailabilityDatesForAppointment,
+  getAvailableSlotsForAppointment,
 }: MessageBubbleProps) {
+  const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
 
   // Reset selected values when new commonContentData comes in
@@ -163,12 +181,12 @@ export function MessageBubble({
   return (
     <div className="px-4 py-2">
       <div
-        className={`flex gap-2 items-start justify-center ${
+        className={`flex gap-1 items-start justify-center ${
           !isBot ? "justify-end" : ""
         }`}>
         {isBot && (
-          <div className="flex-shrink-0 mt-1">
-            <DocAssistIcon size={24} />
+          <div className="flex-shrink-0">
+            <ApolloAssistIcon size={32} isAnimating={isBotIconAnimating} />
           </div>
         )}
 
@@ -313,15 +331,7 @@ export function MessageBubble({
                     availability={
                       commonContentData.data.doctor_details?.availability
                     }
-                    onSelect={() => {
-                      onContentClick?.(
-                        `Can you give me availability dates and slots of ${
-                          commonContentData?.data?.doctor_details?.doctor
-                            .name || "the doctor"
-                        }`,
-                        commonContentData.tool_use_id
-                      );
-                    }}
+                    callbacks={commonContentData.data.callbacks}
                     onBook={(info: { date: string; time: string }) => {
                       onContentClick?.(
                         `I want to book an appointment for ${
@@ -332,6 +342,12 @@ export function MessageBubble({
                       );
                     }}
                     disabled={isResponded}
+                    getAvailabilityDatesForAppointment={
+                      getAvailabilityDatesForAppointment
+                    }
+                    getAvailableSlotsForAppointment={
+                      getAvailableSlotsForAppointment
+                    }
                   />
                 )}
             </>

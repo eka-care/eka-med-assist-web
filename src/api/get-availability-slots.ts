@@ -2,9 +2,9 @@ import { config } from "@/configs/constants";
 
 export interface AvailabilitySlotsParams {
   doctor_id: string;
-  hospital_id: string;
-  region_id: number;
   appointment_date: string;
+  hospital_id?: string;
+  region_id?: string;
 }
 
 export interface AvailabilitySlotsResponse {

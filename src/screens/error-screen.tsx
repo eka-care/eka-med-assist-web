@@ -45,8 +45,8 @@ const ErrorScreen: React.FC<ErrorScreenProps> = ({
 
   // Container styles (same as chat widget)
   const containerStyles = isMobile
-    ? "fixed inset-0 z-50 bg-[var(--color-card)] border-border flex flex-col h-screen w-screen items-center justify-center"
-    : "fixed bottom-4 right-4 z-50 w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-2 pb-4 items-center justify-center";
+    ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border flex flex-col h-screen w-screen items-center justify-center"
+    : "fixed bottom-4 right-4 z-[2147483647] w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-2 pb-4 items-center justify-center";
 
   const contentHeight = isMobile ? "flex-1 min-h-0" : "h-[500px]";
 

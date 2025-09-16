@@ -39,7 +39,9 @@ export function ConnectionStatus({
             <div className="text-[#333333] font-semibold text-sm">
               {error?.title ? error.title : "Something went wrong"}
             </div>
-            <div className="text-[#666666] text-xs mt-1">Start a new session.</div>
+            <div className="text-[#666666] text-xs mt-1">
+              Start a new session.
+            </div>
           </div>
 
           {/* Close Button */}
@@ -151,7 +153,7 @@ export function ConnectionStatus({
           <div className="text-[#333333] font-semibold text-sm">
             {!isOnline
               ? "No internet connection"
-              : error?.title || "Something went wrong"}
+              : error?.title || "Connecting..."}
             {/* {!isOnline ? "No internet connection" : "Trying to reconnect..."} */}
           </div>
           <div className="text-[#666666] text-xs mt-1">
@@ -159,7 +161,7 @@ export function ConnectionStatus({
               ? "Please check your internet connection"
               : error?.description
               ? error.description
-              : "Please wait while we try to reconnect"}
+              : "Please wait while we try to connect"}
           </div>
         </div>
 

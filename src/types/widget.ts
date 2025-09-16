@@ -79,20 +79,16 @@ export type TDoctor = {
   experience?: string; // optional
   profile_link?: string; // optional
   profile_pic?: string; //optional
-  languages?: string[]; //optional
+  languages?: string; //optional
   // Additional fields for API callbacks
-  doctor_id?: string; // optional - for availability API calls
+  doctor_id: string;
   hospital_id?: string; // optional - for availability API calls
-  region_id?: number; // optional - for availability API calls
+  region_id?: string; // optional - for availability API calls
 };
 
 export type TAvailability = {
   selected_date?: string; // optional
-  slots_details: TSlotDetail[];
-  callbacks?: {
-    tool_callback_availability_dates: boolean;
-    tool_callback_availability_slots: boolean;
-  };
+  slots_details?: TSlotDetail[];
 };
 
 export type TSlotDetail = {
@@ -106,3 +102,18 @@ export type TDoctorDetails = {
   doctor: TDoctor;
   availability?: TAvailability;
 };
+
+export type TCallbacks = {
+  tool_callback_availability_dates?: boolean;
+  tool_callback_availability_slots?: boolean;
+  tool_callback_mobile_verification?: boolean;
+};
+
+export enum CONNECTION_STATUS {
+  CONNECTING = "connecting",
+  DISCONNECTED ="disconnected",
+  CONNECTED ="connected"
+  }
+
+  export const RESPONSE_TIMEOUT = 10000;
+  export const STREAMING_TIMEOUT = 5000;

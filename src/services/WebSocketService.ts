@@ -6,6 +6,7 @@ import {
 import type {
   AudioEndOfStreamRequest,
   AudioStreamRequest,
+  AuthRequest,
   ChatMessage,
   ChatRequest,
   ChatResponseMessage,
@@ -114,9 +115,7 @@ export class WebSocketService {
       this.connectionAttempts++;
 
       // Connect to WebSocket with session ID in URL and token as query param
-      const wsUrl = `${BASE_URL}/${
-        this.config.sessionId
-      }/?token=${encodeURIComponent(this.config.auth.token)}`;
+      const wsUrl = `${BASE_URL}/${this.config.sessionId}/`;
 
       console.log(
         "Connecting to WebSocket:",
@@ -157,36 +156,10 @@ export class WebSocketService {
         }
       }, this.config.options?.connectionTimeout || 5000);
 
-      // Wait for connection to be established
-      await new Promise<void>((resolve, reject) => {
-        if (!this.ws) {
-          reject(new Error("WebSocket not initialized"));
-          return;
-        }
-
-        const onOpen = () => {
-          console.log("WebSocket connected successfully");
-          this.isReconnecting = false;
-          this.connectionAttempts = 0;
-          this.updateConnectionState(ConnectionState.CONNECTED);
-          this.startPingInterval();
-          this.triggerEvent(
-            WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
-            true
-          );
-          resolve();
-        };
-
-        const onError = (error: Event) => {
-          console.error("WebSocket connection error:", error);
-          this.isReconnecting = false;
-          this.updateConnectionState(ConnectionState.ERROR);
-          reject(new Error("WebSocket connection failed"));
-        };
-
-        this.ws.onopen = onOpen;
-        this.ws.onerror = onError;
-      });
+      // Error handler will be set up in setupWebSocketHandlers()
+      if (!this.ws) {
+        throw new Error("WebSocket not initialized");
+      }
     } catch (error) {
       console.error("Failed to connect:", error);
       this.isReconnecting = false;
@@ -281,6 +254,11 @@ export class WebSocketService {
 
     this.ws.onopen = () => {
       console.log("WebSocket opened");
+      this.sendAuthMessage();
+      this.isReconnecting = false;
+      this.connectionAttempts = 0;
+      this.updateConnectionState(ConnectionState.CONNECTED);
+      this.startPingInterval();
     };
 
     this.ws.onmessage = async (event) => {
@@ -299,6 +277,8 @@ export class WebSocketService {
 
     this.ws.onerror = (error) => {
       console.error("WebSocket error:", error);
+      this.isReconnecting = false;
+      this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_SERVER_EVENTS.ERROR,
         new Error("WebSocket error occurred")
@@ -310,8 +290,6 @@ export class WebSocketService {
    * Handle server messages
    */
   private async handleServerMessage(message: ServerMessage): Promise<void> {
-    console.log("Received server message:", message);
-
     switch (message.ev) {
       case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
         this.handleConnectionEstablished(
@@ -371,11 +349,8 @@ export class WebSocketService {
    */
   private handleStreamMessage(message: StreamResponseMessage): void {
     if (message.ct === ContentType.TEXT && message.data) {
-      console.log("Stream response received:", message.data);
-
       // Handle progress messages
       if (message.data.progress_msg) {
-        console.log("Progress message received:", message.data.progress_msg);
         this.triggerEvent("progress_message", message.data.progress_msg);
         return;
       }
@@ -435,7 +410,6 @@ export class WebSocketService {
    * Handle pong message
    */
   private handlePongMessage(message: PongMessage): void {
-    console.log("Pong message received:", message);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.PONG, message);
   }
 
@@ -443,7 +417,6 @@ export class WebSocketService {
    * Handle sync message
    */
   private handleSyncMessage(message: SyncMessage): void {
-    console.log("Sync message received:", message);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.SYNC, message);
   }
 
@@ -451,7 +424,6 @@ export class WebSocketService {
    * Handle error message
    */
   private async handleErrorMessage(message: ErrorMessage): Promise<void> {
-    console.error("Error message received:", message);
     switch (message.code) {
       case SOCKET_ERROR_CODES.TIMEOUT:
         this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
@@ -605,45 +577,18 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
-  // const sendRegenerateLastMessage = (data: { text: string, tool_use_id?: string ,url?: string, audio?: AudioData, type?: ContentType}): void {
-  //   if (!this.isConnected()) {
-  //     throw new Error("WebSocket is not connected");
-  //   }
-  //   let message: ChatRequest;
-
-  //   switch(data.type){
-  //     case ContentType.TEXT:
-  //       message = {
-  //         ev: SocketEvent.CHAT,
-  //         ct: ContentType.TEXT,
-  //         ts: Date.now(),
-  //         _id: Date.now().toString(),
-  //         data: { text: data.text },
-  //       };
-  //       break;
-  //     case ContentType.FILE:
-  //       if(data.url){
-  //       message = {
-  //         ev: SocketEvent.CHAT,
-  //         ct: ContentType.FILE,
-  //         ts: Date.now(),
-  //         _id: Date.now().toString(),
-  //         data: { url: data.url, ...(data.text&&{text: data.text}) },
-  //       };}
-  //       break;
-  //   }
-  //   if(data.type === ContentType.TEXT && data.text){
-  //    message = {
-  //     ev: SocketEvent.CHAT,
-  //     ct: ContentType.TEXT,
-  //     ts: Date.now(),
-  //     _id: Date.now().toString(),
-  //     data: { text: data.text },
-  //   };
-  // }
-
-  //   this.sendMessage(message);
-  // }
+  private sendAuthMessage(): void {
+    if (!this.isConnected()) {
+      throw new Error("WebSocket is not connected");
+    }
+    const message: AuthRequest = {
+      ev: SocketEvent.AUTH,
+      _id: Date.now().toString(),
+      ts: Date.now(),
+      data: { token: this.config.auth.token },
+    };
+    this.sendMessage(message);
+  }
   /**
    * Send file upload completion with S3 URL
    */

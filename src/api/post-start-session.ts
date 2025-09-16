@@ -18,7 +18,7 @@ const startSession = async () => {
         if (errorData.error && errorData.error.msg) {
           throw new Error(errorData.error.msg);
         } else if (errorData.error && errorData.error.code) {
-          throw new Error(`Error: ${errorData.error.code}`);
+          throw new Error(`Something went wrong`);
         }
       } catch (parseError) {
         // If we can't parse the error response, fall back to status-based error
@@ -32,7 +32,10 @@ const startSession = async () => {
     return data;
   } catch (error) {
     console.error("Error starting session:", error);
-    throw error;
+    if (error instanceof Error) {
+      throw error;
+    }
+    throw new Error("Something went wrong");
   }
 };
 
