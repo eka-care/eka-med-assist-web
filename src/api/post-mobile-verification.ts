@@ -1,4 +1,5 @@
 import { config } from "@/configs/constants";
+import { MOBILE_VERIFICATION_ERROR_MESSAGES } from "@/types/widget";
 
 export interface MobileVerificationRequest {
   mobile_number: string;
@@ -46,9 +47,51 @@ export async function callMobileVerificationAPI(
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       //based on the error code show error as bot response
-      throw new Error(
-        errorData.message || `Something went wrong`
-      );
+      if (errorData?.error?.code) {
+
+        switch (errorData.error.code) {
+          case MOBILE_VERIFICATION_ERROR_MESSAGES.OTP_NOT_FOUND.code:
+            return {
+              error: {
+                code: MOBILE_VERIFICATION_ERROR_MESSAGES.OTP_NOT_FOUND.code,
+                msg: MOBILE_VERIFICATION_ERROR_MESSAGES.OTP_NOT_FOUND.msg,
+              },
+            };
+          case MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code:
+            return {
+              error: {
+                code: MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code,
+                msg: MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.msg,
+              },
+            };
+          case MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.code:
+            return {
+              error: {
+                code: MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.code,
+                msg: request?.otp
+                  ? MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.msg
+                  : MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_MOBILE_NUMBER
+                      .msg,
+              },
+            };
+          default:
+            if (!request?.otp) {
+              return {
+                error: {
+                  code: MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.code,
+                  msg: MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_MOBILE_NUMBER
+                    .msg,
+                },
+              };
+            }
+            return {
+              error: {
+                code: MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.code,
+                msg: MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.msg,
+              },
+            };
+        }
+      }
     }
 
     const data = await response.json();
@@ -58,8 +101,9 @@ export async function callMobileVerificationAPI(
     return {
       error: {
         code: "api_error",
-        msg:
-          error instanceof Error ? error.message : "Failed to process request",
+        msg: request?.otp
+          ? MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.msg
+          : MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_MOBILE_NUMBER.msg,
       },
     };
   }

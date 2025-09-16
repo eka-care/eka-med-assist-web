@@ -111,9 +111,28 @@ export type TCallbacks = {
 
 export enum CONNECTION_STATUS {
   CONNECTING = "connecting",
-  DISCONNECTED ="disconnected",
-  CONNECTED ="connected"
-  }
+  DISCONNECTED = "disconnected",
+  CONNECTED = "connected",
+}
 
-  export const RESPONSE_TIMEOUT = 10000;
-  export const STREAMING_TIMEOUT = 5000;
+export const RESPONSE_TIMEOUT = 10000;
+export const STREAMING_TIMEOUT = 10000;
+
+export const MOBILE_VERIFICATION_ERROR_MESSAGES = {
+  TOOL_ERROR: {
+    code: "tool_error",
+    msg: "You phone number is unverified, do you have any other queries?",
+  },
+  INVALID_OTP: {
+    code: "invalid_otp",
+    msg: "OTP is invalid, please try again",
+  },
+  OTP_NOT_FOUND: {
+    code: "otp_not_found",
+    msg: "The OTP you entered is incorrect or has expired. Please check the 6-digit code sent to your mobile number and try again, or request a new OTP.",
+  },
+  INVALID_MOBILE_NUMBER: {
+    code: "tool_error",
+    msg: "Something went wrong, I was unable to verify your mobile number, do you want to share another number or retry?",
+  },
+};
