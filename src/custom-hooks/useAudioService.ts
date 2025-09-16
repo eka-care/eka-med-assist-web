@@ -64,7 +64,7 @@ export function useAudioService() {
             serviceRef.current.cleanup();
           }
           const service = new AudioService({
-            maxRecordingDuration: 10000, // 10 seconds
+            maxRecordingDuration: 200000, // 2 minutes
             autoPauseEnabled: true,
             audioBitsPerSecond: 128000, // 128 kbps
           });
