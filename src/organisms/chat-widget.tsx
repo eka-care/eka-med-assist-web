@@ -576,6 +576,9 @@ export function ChatWidget({
     setProgressMessage(null);
     setTips(null);
 
+    if (inlineText) {
+      setInlineText("");
+    }
     try {
       let response: {
         success: boolean;
