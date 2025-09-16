@@ -2,13 +2,14 @@
 tag="$1"
 
 # Configuration - Update these values
-ENV="dev"
-BUCKET_NAME="m-dev-medassist"
+ENV="prod"
+BUCKET_NAME="m-prod-medassist"
 REGION="ap-south-1"
-WIDGET_CDN_URL="https://dev-cdn.ekacare.co/apollo"
-CLOUDFRONT_DISTRIBUTION_ID=E3BJWCYM0A7WQV
+WIDGET_CDN_URL="https://cdn.ekacare.co/apollo"
+CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q 
 
-echo "🚀 Deploying Eka Medical Assistant Widget to AWS Dev..."
+
+echo "🚀 Deploying Eka Medical Assistant Widget to AWS Prod..."
 
 rm -rf dist/
 yarn install
@@ -17,6 +18,8 @@ yarn build
 
 cd dist
 aws s3 cp widget.js s3://$BUCKET_NAME/main/apollo/widget.js   --cache-control "public,max-age=31536000,immutable" \
+  --content-type "application/javascript"
+aws s3 cp widget.js s3://$BUCKET_NAME/prod-$tag/apollo/widget.js   --cache-control "public,max-age=31536000,immutable" \
   --content-type "application/javascript"
 
 find assets/ -type f | while read file; do
@@ -34,6 +37,7 @@ find assets/ -type f | while read file; do
   target_path="${file#assets/}"
   target_path="${target_path#/}"  # Remove any leading slash
   aws s3 cp "$file" "s3://$BUCKET_NAME/main/apollo/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
+  aws s3 cp "$file" "s3://$BUCKET_NAME/prod-$tag/apollo/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
 done  
 #aws s3 sync assets/ s3://$BUCKET_NAME/main/apollo/assets/ --cache-control "public,max-age=31536000,immutable"
 
@@ -53,6 +57,8 @@ yarn build
 
 cd dist
 aws s3 cp widget-loader.js s3://$BUCKET_NAME/main/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \
+  --content-type "application/javascript"
+aws s3 cp widget-loader.js s3://$BUCKET_NAME/prod-$tag/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \
   --content-type "application/javascript"
 
 

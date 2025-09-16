@@ -5,8 +5,8 @@
   var defaultConfig = {
     theme: "doctor-light",
     position: "bottom-right",
-    scriptUrl: "https://dev-cdn.ekacare.co/apollo/widget.js",
-    cssUrl: "https://dev-cdn.ekacare.co/apollo/assets/widget.css",
+    scriptUrl: "https://cdn.ekacare.co/apollo/widget.js",
+    cssUrl: "https://cdn.ekacare.co/apollo/assets/widget.css",
   };
 
   // Create isolated CSS
