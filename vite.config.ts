@@ -36,9 +36,9 @@ function processWidgetLoader(isProduction = true, mode = 'dev', version = 'lates
                 try {
                     const result = await minify(content, {
                         compress: {
-                            drop_console: isProduction, // Remove console logs only in production
+                            drop_console: isProduction, // Temporarily commented out to fix production widget issue
                             drop_debugger: true,
-                            pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug'] : [], // Remove specific console calls
+                            pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug'] : [], // Commented out temporarily
                             unused: true, // Remove unused code
                         },
                         mangle: {
@@ -82,6 +82,8 @@ export default defineConfig(({ mode }) => {
         esbuild: {
             // Only drop console logs in production builds, keep them in development
             drop: isProduction ? ["console", "debugger"] : [],
+            // Temporarily commented out to fix production widget click issue
+            // drop: isProduction ? ["debugger"] : [],
         },
         define: {
             "process.env": {},
@@ -110,11 +112,11 @@ export default defineConfig(({ mode }) => {
                     compact: isProduction,
                 },
                 // Improve tree shaking
-                treeshake: isProduction ? {
-                    moduleSideEffects: false,
-                    propertyReadSideEffects: false,
-                    unknownGlobalSideEffects: false,
-                } : false,
+                // treeshake: isProduction ? {
+                //     moduleSideEffects: false,
+                //     propertyReadSideEffects: false,
+                //     unknownGlobalSideEffects: false,
+                // } : false,
             },
             // Bundle all dependencies
             ssr: false,
@@ -123,9 +125,9 @@ export default defineConfig(({ mode }) => {
             minify: isProduction ? 'terser' : 'esbuild',
             terserOptions: isProduction ? {
                 compress: {
-                    drop_console: true,
+                    // drop_console: true,  // Temporarily commented out to fix production widget issue
                     drop_debugger: true,
-                    pure_funcs: ['console.log', 'console.info', 'console.debug'],
+                    // pure_funcs: ['console.log', 'console.info', 'console.debug'],  // Commented out temporarily
                     unused: true,
                     dead_code: true,
                 },
@@ -171,7 +173,7 @@ export default defineConfig(({ mode }) => {
         optimizeDeps: {
             include: ["react", "react-dom", "zustand"],
             // Force optimization for better tree shaking in production
-            force: isProduction,
+            // force: isProduction,
         },
     };
 });
