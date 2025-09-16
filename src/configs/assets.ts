@@ -11,11 +11,11 @@ const buildAssetUrl = (filename: string): string => {
         return `./assets/${filename}`;
     }
 
-    // For production, construct CDN URL
+    // For production, construct full CDN URL with version
     return `https://cdn.ekacare.co/apollo/${ENVIRONMENT}-${VERSION}/assets/${filename}`;
 };
 
-// Asset URLs - all constructed dynamically
+// Asset URLs - all constructed dynamically with proper CDN paths
 export const ASSETS = {
     POWERED_BY_EKA_CARE: buildAssetUrl('powered-by-eka-care.svg'),
 } as const;

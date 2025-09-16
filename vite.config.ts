@@ -5,22 +5,41 @@ import path from "path";
 import { minify } from "terser";
 import { defineConfig } from "vite";
 
-// Custom plugin to minify widget-loader.js using Terser
-function minifyWidgetLoader() {
+// Custom plugin to minify widget-loader.js using Terser and inject version-aware URLs
+function processWidgetLoader(isProduction = true, mode = 'development', version = 'latest') {
     return {
-        name: "minify-widget-loader",
+        name: "process-widget-loader",
         async writeBundle() {
             const loaderPath = path.resolve(__dirname, "public/widget-loader.js");
             const distPath = path.resolve(__dirname, "dist/widget-loader.js");
 
             if (fs.existsSync(loaderPath)) {
-                const content = fs.readFileSync(loaderPath, "utf8");
+                let content = fs.readFileSync(loaderPath, "utf8");
+
+                // Inject version-aware URLs
+                const baseUrl = isProduction
+                    ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
+                    : './';
+
+                // Replace hardcoded URLs with dynamic ones
+                content = content.replace(
+                    /scriptUrl: "https:\/\/cdn\.ekacare\.co\/apollo\/prod-0\.0\.0\/widget\.js"/,
+                    `scriptUrl: "${baseUrl}widget.js"`
+                );
+                content = content.replace(
+                    /cssUrl: "https:\/\/cdn\.ekacare\.co\/apollo\/prod-0\.0\.0\/assets\/widget\.css"/,
+                    `cssUrl: "${baseUrl}assets/widget.css"`
+                );
+
+                console.log(`✓ Injected URLs in widget-loader.js: ${baseUrl}`);
 
                 try {
                     const result = await minify(content, {
                         compress: {
-                            drop_console: process.env.NODE_ENV === 'production', // Remove console logs only in production
+                            drop_console: isProduction, // Remove console logs only in production
                             drop_debugger: true,
+                            pure_funcs: isProduction ? ['console.log', 'console.info', 'console.debug'] : [], // Remove specific console calls
+                            unused: true, // Remove unused code
                         },
                         mangle: {
                             // Don't mangle global variables
@@ -33,7 +52,7 @@ function minifyWidgetLoader() {
 
                     if (result.code) {
                         fs.writeFileSync(distPath, result.code);
-                        console.log("✓ Minified widget-loader.js with Terser");
+                        console.log("✓ Processed and minified widget-loader.js with Terser");
                     } else {
                         throw new Error("Terser minification failed");
                     }
@@ -59,7 +78,7 @@ export default defineConfig(({ mode }) => {
 
     return {
     base,
-    plugins: [react(), tailwindcss(), minifyWidgetLoader()],
+    plugins: [react(), tailwindcss(), processWidgetLoader(isProduction, mode, version)],
     esbuild: {
         // Only drop console logs in production builds, keep them in development
         drop: isProduction ? ["console", "debugger"] : [],
@@ -87,18 +106,43 @@ export default defineConfig(({ mode }) => {
                 assetFileNames: "assets/[name].[ext]",
                 // Ensure all dependencies are bundled
                 manualChunks: undefined,
+                // Better compression
+                compact: isProduction,
             },
+            // Improve tree shaking
+            treeshake: isProduction ? {
+                moduleSideEffects: false,
+                propertyReadSideEffects: false,
+                unknownGlobalSideEffects: false,
+            } : false,
         },
         // Bundle all dependencies
         ssr: false,
         target: "es2015",
-        // Use terser for production minification, esbuild for development
+        // Use terser for production minification with optimization, esbuild for development
         minify: isProduction ? 'terser' : 'esbuild',
+        terserOptions: isProduction ? {
+            compress: {
+                drop_console: true,
+                drop_debugger: true,
+                pure_funcs: ['console.log', 'console.info', 'console.debug'],
+                unused: true,
+                dead_code: true,
+            },
+            mangle: {
+                safari10: true, // Better compression for Safari 10+
+            },
+            format: {
+                comments: false, // Remove all comments
+            },
+        } : undefined,
         sourcemap: false,
         // Ensure CSS is extracted and bundled
         cssCodeSplit: false,
         // Bundle size optimization
         chunkSizeWarningLimit: 1000,
+        // Faster builds with better caching in production
+        reportCompressedSize: isProduction,
     },
     resolve: {
         alias: {
@@ -126,6 +170,8 @@ export default defineConfig(({ mode }) => {
     },
     optimizeDeps: {
         include: ["react", "react-dom", "zustand"],
+        // Force optimization for better tree shaking in production
+        force: isProduction,
     },
     };
 });
