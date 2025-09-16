@@ -6,6 +6,7 @@ ENV="prod"
 BUCKET_NAME="m-prod-medassist"
 REGION="ap-south-1"
 WIDGET_CDN_URL="https://cdn.ekacare.co/apollo"
+WIDGET_VERSION_URL="https://cdn.ekacare.co/apollo/$ENV-$tag"
 CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q 
 
 
@@ -17,9 +18,7 @@ yarn build
 
 
 cd dist
-aws s3 cp widget.js s3://$BUCKET_NAME/main/apollo/widget.js   --cache-control "public,max-age=31536000,immutable" \
-  --content-type "application/javascript"
-aws s3 cp widget.js s3://$BUCKET_NAME/prod-$tag/apollo/widget.js   --cache-control "public,max-age=31536000,immutable" \
+aws s3 cp widget.js s3://$BUCKET_NAME/apollo/$ENV-$tag/widget.js   --cache-control "public,max-age=31536000,immutable" \
   --content-type "application/javascript"
 
 find assets/ -type f | while read file; do
@@ -36,16 +35,15 @@ find assets/ -type f | while read file; do
   esac
   target_path="${file#assets/}"
   target_path="${target_path#/}"  # Remove any leading slash
-  aws s3 cp "$file" "s3://$BUCKET_NAME/main/apollo/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
-  aws s3 cp "$file" "s3://$BUCKET_NAME/prod-$tag/apollo/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
+  #aws s3 cp "$file" "s3://$BUCKET_NAME/main/apollo/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
+  aws s3 cp "$file" "s3://$BUCKET_NAME/apollo/$ENV-$tag/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
 done  
-#aws s3 sync assets/ s3://$BUCKET_NAME/main/apollo/assets/ --cache-control "public,max-age=31536000,immutable"
 
 echo "Uploaded widget.js, assets/widget.css and entire assets folder to S3"
 
 # Save S3 URLs in variables
-WIDGET_JS_URL="$WIDGET_CDN_URL/widget.js"
-WIDGET_CSS_URL="$WIDGET_CDN_URL/assets/widget.css"
+WIDGET_JS_URL="$WIDGET_VERSION_URL/widget.js"
+WIDGET_CSS_URL="$WIDGET_VERSION_URL/assets/widget.css"
 WIDGET_LOADER_JS_URL="$WIDGET_CDN_URL/widget-loader.js"
 
 cd ../
@@ -58,7 +56,7 @@ yarn build
 cd dist
 aws s3 cp widget-loader.js s3://$BUCKET_NAME/main/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \
   --content-type "application/javascript"
-aws s3 cp widget-loader.js s3://$BUCKET_NAME/prod-$tag/apollo/widget-loader.js   --cache-control "public,max-age=30,immutable" \
+aws s3 cp widget-loader.js s3://$BUCKET_NAME/apollo/$ENV-$tag/widget-loader.js   --cache-control "public,max-age=30,immutable" \
   --content-type "application/javascript"
 
 
