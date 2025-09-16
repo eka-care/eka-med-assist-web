@@ -508,7 +508,7 @@ export function ChatWidget({
               "Streaming timeout: No streaming activity for 5 seconds"
             );
             setError({
-              title: "Streaming interrupted. The response was cut off.",
+              title: "Streaming interrupted.",
               description: "Please try again or check your connection.",
             });
             setIsWaitingForResponse(false);
@@ -626,16 +626,18 @@ export function ChatWidget({
             mobileVerificationStatus.mobile_number
           );
 
-          if (response?.success) {
-            setMobileVerificationStatus({
-              active: false,
+          if (
+            response?.data?.error?.code ===
+            MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code
+          ) {
+            setMobileVerificationStatus((prev) => ({
+              ...prev,
+              active: true,
               isSending: false,
-              isOtpSent: false,
-              mobile_number: null,
-              error: null,
-              message: null,
-            });
+              isOtpSent: true,
+            }));
           } else {
+            //if response is sucess/other otp error / normal message if sent
             clearMobileVerification();
           }
         }
