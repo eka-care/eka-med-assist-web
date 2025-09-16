@@ -11,6 +11,7 @@ import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { Message } from "@/types";
+import { ASSETS } from "@/configs/assets";
 import { type CommonHandlerData } from "@/types/socket";
 import {
   CONNECTION_STATUS,
@@ -1274,10 +1275,45 @@ export function ChatWidget({
                         isAnimating={isBotIconAnimating}
                       />
                     </div>
-                    <div className="flex-1">
-                      <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
-                        <span className="animate-pulse">...</span>
-                      </div>
+
+                    {/* Connection Status */}
+                    {!showErrorMessage && (
+                        <ConnectionStatus
+                            onRetry={handleRetry}
+                            onStartNewSession={handleStartNewSession}
+                            showRetryButton={showRetryButton}
+                            startNewConnection={startNewConnection}
+                            clearError={clearError}
+                            error={error}
+                            isConnected={
+                                connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
+                            }
+                        />
+                    )}
+
+                    <div className={isMobile ? "pb-safe" : ""}>
+                        <MessageInput
+                            onSendMessage={handleSendMessage}
+                            onFinalAudioStream={handleFinalAudioStream}
+                            inlineText={inlineText || ""}
+                            onFileUpload={handleFileUpload}
+                            disabled={isWaitingForResponse}
+                            setError={setError}
+                            mobileVerificationStatus={mobileVerificationStatus}
+                        />
+                    </div>
+
+                    {/* Powered by eka.care branding */}
+                    <div
+                        className={`flex items-center justify-center py-1.5 px-4 ${isMobile ? "pb-safe" : ""
+                            }`}>
+                        <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
+                            <img
+                                src={ASSETS.POWERED_BY_EKA_CARE}
+                                alt="eka.care"
+                                className="h-3.5"
+                            />
+                        </div>
                     </div>
                   </div>
                 </div>

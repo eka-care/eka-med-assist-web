@@ -12,4 +12,6 @@ const DEVELOPMENT_CONFIG = {
     X_AGENT_ID: "MWZlZDRkYzktMTBmMS00OTFkLWEzNDMtZGM3MzIzZDM5N2VmIzc3MDg4MTY2OTk2NzI0",
 };
 
-export const config = import.meta.env.VITE_IS_DEV === "false" ? PRODUCTION_CONFIG : DEVELOPMENT_CONFIG;
+// Use build mode instead of environment variable to avoid local .env dependency
+// This can be overridden at build time with: vite build --mode production
+export const config = import.meta.env.MODE === "production" ? PRODUCTION_CONFIG : DEVELOPMENT_CONFIG;

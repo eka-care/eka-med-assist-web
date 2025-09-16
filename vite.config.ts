@@ -19,7 +19,7 @@ function minifyWidgetLoader() {
                 try {
                     const result = await minify(content, {
                         compress: {
-                            drop_console: true, // Keep console.log for debugging
+                            drop_console: process.env.NODE_ENV === 'production', // Remove console logs only in production
                             drop_debugger: true,
                         },
                         mangle: {
@@ -48,14 +48,25 @@ function minifyWidgetLoader() {
 }
 
 // This app always runs as a widget, so build it as a library
-export default defineConfig({
+export default defineConfig(({ mode }) => {
+    const isProduction = mode === 'production';
+    const version = process.env.VITE_VERSION || 'latest';
+
+    // CDN base URL for production builds
+    const base = isProduction
+        ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
+        : '/';
+
+    return {
+    base,
     plugins: [react(), tailwindcss(), minifyWidgetLoader()],
     esbuild: {
-        drop: ["console", "debugger"],
+        // Only drop console logs in production builds, keep them in development
+        drop: isProduction ? ["console", "debugger"] : [],
     },
     define: {
         "process.env": {},
-        "process.env.NODE_ENV": JSON.stringify("production"),
+        "process.env.NODE_ENV": JSON.stringify(isProduction ? "production" : "development"),
     },
     build: {
         outDir: "dist",
@@ -81,7 +92,8 @@ export default defineConfig({
         // Bundle all dependencies
         ssr: false,
         target: "es2015",
-        minify: "esbuild",
+        // Use terser for production minification, esbuild for development
+        minify: isProduction ? 'terser' : 'esbuild',
         sourcemap: false,
         // Ensure CSS is extracted and bundled
         cssCodeSplit: false,
@@ -115,4 +127,5 @@ export default defineConfig({
     optimizeDeps: {
         include: ["react", "react-dom", "zustand"],
     },
+    };
 });
