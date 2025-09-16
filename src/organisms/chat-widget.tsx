@@ -25,6 +25,7 @@ import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
+import { ASSETS } from "@/configs/assets";
 
 interface ChatWidgetProps {
   title?: string;
@@ -1323,7 +1324,7 @@ export function ChatWidget({
             }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src={`./assets/powered-by-eka-care.svg`}
+                src={ASSETS.POWERED_BY_EKA_CARE}
                 alt="eka.care"
                 className="h-3.5"
               />
