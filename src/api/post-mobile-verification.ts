@@ -1,5 +1,6 @@
 import { config } from "@/configs/constants";
 import { MOBILE_VERIFICATION_ERROR_MESSAGES } from "@/types/widget";
+import { fetchWithTimeout } from "@/utils/timeoutUtils";
 
 export interface MobileVerificationRequest {
   mobile_number: string;
@@ -30,7 +31,7 @@ export async function callMobileVerificationAPI(
       toolParams.otp = request.otp;
     }
 
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${config.BASE_API_URL}/med-assist/api-call-tool?session_id=${request.session_id}&tool_name=mobile_verification`,
       {
         method: "POST",
@@ -41,14 +42,14 @@ export async function callMobileVerificationAPI(
         body: JSON.stringify({
           tool_params: toolParams,
         }),
-      }
+      },
+      10000 // 10 second timeout
     );
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       //based on the error code show error as bot response
       if (errorData?.error?.code) {
-
         switch (errorData.error.code) {
           case MOBILE_VERIFICATION_ERROR_MESSAGES.OTP_NOT_FOUND.code:
             return {
@@ -98,6 +99,17 @@ export async function callMobileVerificationAPI(
     return data;
   } catch (error) {
     console.error("Error calling mobile verification API:", error);
+
+    // Handle timeout error specifically
+    if (error instanceof Error && error.message.includes("timeout")) {
+      return {
+        error: {
+          code: "timeout_error",
+          msg: "Request timed out. Please try again.",
+        },
+      };
+    }
+
     return {
       error: {
         code: "api_error",

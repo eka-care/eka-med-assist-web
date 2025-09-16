@@ -1,4 +1,5 @@
 import { config } from "@/configs/constants";
+import { fetchWithTimeout } from "@/utils/timeoutUtils";
 
 export interface AvailabilityDatesParams {
   doctor_id: string;
@@ -15,7 +16,7 @@ export const getAvailabilityDates = async (
   toolParams: AvailabilityDatesParams
 ): Promise<AvailabilityDatesResponse> => {
   try {
-    const response = await fetch(
+    const response = await fetchWithTimeout(
       `${config.BASE_API_URL}/med-assist/api-call-tool?session_id=${sessionId}&tool_name=availability_dates`,
       {
         method: "POST",
@@ -26,7 +27,8 @@ export const getAvailabilityDates = async (
         body: JSON.stringify({
           tool_params: toolParams,
         }),
-      }
+      },
+      10000 // 10 second timeout
     );
 
     if (!response.ok) {
@@ -37,6 +39,12 @@ export const getAvailabilityDates = async (
     return data;
   } catch (error) {
     console.error("Error getting availability dates:", error);
+
+    // Handle timeout error specifically
+    if (error instanceof Error && error.message.includes("timeout")) {
+      throw new Error("Request timed out. Please try again.");
+    }
+
     throw error;
   }
 };
