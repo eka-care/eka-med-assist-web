@@ -32,7 +32,9 @@ find assets/ -type f | while read file; do
     json) mime="application/json" ;;
     *) mime="application/octet-stream" ;;
   esac
-  aws s3 cp "$file" "s3://$BUCKET_NAME/main/apollo/assets/${file#assets/}" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
+  target_path="${file#assets/}"
+  target_path="${target_path#/}"  # Remove any leading slash
+  aws s3 cp "$file" "s3://$BUCKET_NAME/main/apollo/assets/$target_path" --content-type "$mime"  --cache-control "public,max-age=31536000,immutable"
 done  
 #aws s3 sync assets/ s3://$BUCKET_NAME/main/apollo/assets/ --cache-control "public,max-age=31536000,immutable"
 

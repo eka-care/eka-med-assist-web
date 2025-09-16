@@ -5,8 +5,8 @@
   var defaultConfig = {
     theme: "doctor-light",
     position: "bottom-right",
-    scriptUrl: "./widget.js", // Relative to current directory
-    cssUrl: "./assets/widget.css", // CSS bundle in assets folder
+    scriptUrl: "https://dev-cdn.ekacare.co/apollo/widget.js",
+    cssUrl: "https://dev-cdn.ekacare.co/apollo/assets/widget.css",
   };
 
   // Create isolated CSS
