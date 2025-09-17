@@ -22,6 +22,10 @@ jobs:
       - name: setup yarn
         run: |
           npm install -g yarn
+      - name: Install Submodule Dependencies
+        run: |
+          cd packages/ui/base
+          yarn install --frozen-lockfile
       - name: Run dev script
         run: |
           bash deploy-dev.sh
