@@ -63,7 +63,7 @@ export class WebSocketService {
       auth: config.auth,
       options: {
         connectAttempts: 5,
-        reconnectAttempts: 2,
+        reconnectAttempts: 5,
         reconnectDelay: 1000,
         pingInterval: 30000, // 30 seconds
         connectionTimeout: 5000,
@@ -71,7 +71,7 @@ export class WebSocketService {
       },
     };
     //TODO change config to connection attempts
-    this.maxReconnectAttempts = this.config.options?.reconnectAttempts || 2;
+    this.maxReconnectAttempts = this.config.options?.reconnectAttempts || 5;
     this.maxConnectionAttempts = this.config.options?.connectAttempts || 5;
     this.reconnectDelay = this.config.options?.reconnectDelay || 1000;
   }
@@ -207,45 +207,6 @@ export class WebSocketService {
     }
   }
 
-  /**
-   * Attempt to refresh the session when it becomes inactive
-   */
-  private async attemptSessionRefresh(): Promise<boolean> {
-    try {
-      console.log("Attempting to refresh session:", this.config.sessionId);
-
-      // Import the refresh session function dynamically to avoid circular dependencies
-      const { default: refreshSession } = await import(
-        "@/api/get-refresh-session"
-      );
-      const response = await refreshSession(this.config.sessionId);
-
-      if (response.session_id && response.session_token) {
-        // Update the WebSocket config with new session details
-        this.config.sessionId = response.session_id;
-        this.config.auth.token = response.session_token;
-
-        console.log("Session refreshed successfully, updated config");
-        return true;
-      } else {
-        console.error("Invalid refresh response:", response);
-        return false;
-      }
-    } catch (error: any) {
-      console.error("Failed to refresh session:", error);
-
-      // Handle specific error codes
-      if (
-        error.code === "session_expired" ||
-        error.code === "session_not_found"
-      ) {
-        console.log("Session expired or not found, cannot refresh");
-        return false;
-      }
-
-      return false;
-    }
-  }
   /**
    * Set up WebSocket event handlers
    */
@@ -429,47 +390,49 @@ export class WebSocketService {
         break;
       case SOCKET_ERROR_CODES.SESSION_INACTIVE:
         // Try to refresh the session when it becomes inactive
-        console.log("Session inactive, attempting to refresh...");
-        const refreshSuccess = await this.attemptSessionRefresh();
-        if (refreshSuccess) {
-          console.log(
-            "Session refreshed successfully, triggering reconnection"
-          );
-          this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED, true);
-          // Attempt to reconnect with the refreshed session
-          setTimeout(() => {
-            this.reconnect(false, "session refreshed");
-          }, 1000);
-        } else {
-          console.log(
-            "Failed to refresh session, triggering session inactive event"
-          );
-          this.triggerEvent(
-            WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
-            new Error(message.msg)
-          );
-        }
+        // console.log("Session inactive, attempting to refresh...");
+        // const refreshSuccess = await this.attemptSessionRefresh();
+        // if (refreshSuccess) {
+        //   console.log(
+        //     "Session refreshed successfully, triggering reconnection"
+        //   );
+        //   this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED, true);
+        //   // Attempt to reconnect with the refreshed session
+        //   setTimeout(() => {
+        //     this.reconnect(false, "session refreshed");
+        //   }, 1000);
+        // } else {
+        //   console.log(
+        //     "Failed to refresh session, triggering session inactive event"
+        //   );
+        //   this.triggerEvent(
+        //     WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
+        //     new Error(message.msg)
+        //   );
+        // }
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
         break;
       case SOCKET_ERROR_CODES.SESSION_EXPIRED:
         // Try to refresh the session when it expires
-        console.log("Session expired, attempting to refresh...");
-        const refreshExpiredSuccess = await this.attemptSessionRefresh();
-        if (refreshExpiredSuccess) {
-          console.log(
-            "Expired session refreshed successfully, triggering reconnection"
-          );
-          this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED, true);
-          // Attempt to reconnect with the refreshed session
-          setTimeout(() => {
-            this.reconnect(false, "expired session refreshed");
-          }, 1000);
-        } else {
-          console.log(
-            "Failed to refresh expired session, triggering session expired event"
-          );
-          this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
-        }
+        console.log("Session expired from service");
+        this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
         break;
+        // const refreshExpiredSuccess = await this.attemptSessionRefresh();
+        // if (refreshExpiredSuccess) {
+        //   console.log(
+        //     "Expired session refreshed successfully, triggering reconnection"
+        //   );
+        //   this.triggerEvent(WEBSOCKET_CUSTOM_EVENTS.SESSION_REFRESHED, true);
+        //   // Attempt to reconnect with the refreshed session
+        //   setTimeout(() => {
+        //     this.reconnect(false, "expired session refreshed");
+        //   }, 1000);
+        // } else {
+        //   console.log(
+        //     "Failed to refresh expired session, triggering session expired event"
+        //   );
+        //   this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
+        // }
       case SOCKET_ERROR_CODES.INVALID_EVENT:
         this.triggerEvent(WEBSOCKET_SERVER_EVENTS.ERROR, message);
         break;
@@ -500,7 +463,7 @@ export class WebSocketService {
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, false);
 
     // Attempt to reconnect if not manually closed
-    if (event.code !== 1000 && !this.isReconnecting) {
+    if (event.code !== 1000 && !this.isReconnecting && event.code ! == 1008) {
       this.attemptReconnect();
     }
   }
@@ -535,7 +498,7 @@ export class WebSocketService {
   /**
    * Send chat message
    */
-  public sendChatMessage(message: string, tool_use_id?: string): void {
+  public sendChatMessage({message, tool_use_id, hidden}: {message: string, tool_use_id?: string, hidden?: boolean}): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket not connected");
     }
@@ -545,17 +508,10 @@ export class WebSocketService {
       ct: ContentType.TEXT,
       ts: Date.now(),
       _id: Date.now().toString(),
-      data: { text: message, ...(tool_use_id && { tool_use_id }) },
+      data: { text: message, ...(tool_use_id && { tool_use_id }), ...(hidden && { hidden }) },
     };
 
     this.sendMessage(chatMessage);
-  }
-
-  /**
-   * Send text message (alias for sendChatMessage)
-   */
-  public sendTextMessage(message: string): void {
-    this.sendChatMessage(message);
   }
 
   /**
@@ -1038,10 +994,10 @@ export class WebSocketService {
    * Update WebSocket configuration
    */
   public updateConfig(newConfig: Partial<WebSocketConfig>): void {
-    if (newConfig.sessionId) {
+    if (newConfig?.sessionId) {
       this.config.sessionId = newConfig.sessionId;
     }
-    if (newConfig.auth?.token) {
+    if (newConfig?.auth?.token) {
       this.config.auth.token = newConfig.auth.token;
     }
     console.log("WebSocket config updated:", this.config);
@@ -1080,6 +1036,9 @@ export class WebSocketService {
     }
   }
 
+  public getConfig(): WebSocketConfig {
+    return this.config;
+  }
   /**
    * Cleanup resources
    */

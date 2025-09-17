@@ -132,9 +132,9 @@ const useMedAssistStore = create<TMedAssistStore>()(
       isRefreshingSession: false,
       refreshSession: async (): Promise<boolean> => {
         const state = get();
-        const { sessionId } = state;
+        const { sessionId ,sessionToken} = state;
 
-        if (!sessionId) {
+        if (!sessionId || !sessionToken) {
           console.warn("No session ID available for refresh");
           return false;
         }
@@ -144,11 +144,11 @@ const useMedAssistStore = create<TMedAssistStore>()(
           return false;
         }
 
-        set({ isRefreshingSession: true });
+        set({ isRefreshingSession: true ,connectionStatus: CONNECTION_STATUS.CONNECTING});
 
         try {
           console.log("Refreshing session:", sessionId);
-          const response = await refreshSession(sessionId);
+          const response = await refreshSession(sessionId, sessionToken);
 
           if (response.session_id && response.session_token) {
             // Update session with new token
@@ -161,17 +161,17 @@ const useMedAssistStore = create<TMedAssistStore>()(
             return true;
           } else {
             console.error("Invalid refresh response:", response);
-            set({ isRefreshingSession: false });
+            set({ isRefreshingSession: false ,connectionStatus: CONNECTION_STATUS.DISCONNECTED});
             return false;
           }
         } catch (error: any) {
           console.error("Failed to refresh session:", error);
-          set({ isRefreshingSession: false });
+          set({ isRefreshingSession: false ,connectionStatus: CONNECTION_STATUS.DISCONNECTED});
 
           // Handle specific error codes
           if (
             error.code === "session_expired" ||
-            error.code === "session_not_found"
+            error.code === "session_not_found"||error.code === "validation_error"
           ) {
             // Session is no longer valid, clear it
             set({
