@@ -1,3 +1,4 @@
+import { useEffect, useState } from "react";
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
 import { ErrorMessageUI } from "@/types/socket";
 // import { X } from "lucide-react";
@@ -24,6 +25,27 @@ export function ConnectionStatus({
   isConnected,
 }: ConnectionStatusProps) {
   const { isOnline } = useNetworkStatus();
+  const [isVisible, setIsVisible] = useState(true);
+
+  // Handle fade functionality for default error case
+  useEffect(() => {
+    // Only apply fade for default error case (not startNewConnection and not showRetryButton)
+    if (!startNewConnection && !showRetryButton && error) {
+      setIsVisible(true); // Make sure it's visible when new error comes
+
+      // Set fade timer for 5 seconds
+      const fadeTimer = setTimeout(() => {
+        setIsVisible(false);
+      }, 5000);
+
+      return () => {
+        clearTimeout(fadeTimer);
+      };
+    } else {
+      // For other cases, keep it visible
+      setIsVisible(true);
+    }
+  }, [error, startNewConnection, showRetryButton]);
 
   if (startNewConnection) {
     return (
@@ -144,7 +166,9 @@ export function ConnectionStatus({
   // Show loader when trying to reconnect (when there's an error but no retry button, or when connection is not established)
   return (
     <div
-      className={`mx-4 mb-3 p-2 bg-[#FFFBEB] border border-[#FDD835] rounded-lg ${className}`}>
+      className={`mx-4 mb-3 p-2 bg-[#FFFBEB] border border-[#FDD835] rounded-lg transition-opacity duration-500 ${
+        isVisible ? "opacity-100" : "opacity-0"
+      } ${className}`}>
       <div className="flex items-center gap-3">
         {/* Info Icon */}
         <div className="w-5 h-5 bg-[#FDD835] rounded-full flex items-center justify-center flex-shrink-0">
