@@ -9,7 +9,7 @@ WIDGET_CDN_URL="https://cdn.ekacare.co/apollo"
 WIDGET_VERSION_URL="https://cdn.ekacare.co/apollo/$ENV-$tag"
 CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q 
 
-
+set -e
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Prod..."
 
 rm -rf dist/
@@ -62,3 +62,4 @@ echo "widget.js cdn url  -> $WIDGET_JS_URL"
 echo "assets/widget.css cdn url -> $WIDGET_CSS_URL"
 echo "widget-loader.js cdn url -> $WIDGET_LOADER_JS_URL"
 
+set +e

@@ -8,6 +8,7 @@ REGION="ap-south-1"
 WIDGET_CDN_URL="https://dev-cdn.ekacare.co/apollo"
 CLOUDFRONT_DISTRIBUTION_ID=E3BJWCYM0A7WQV
 
+set -e
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Dev..."
 
 rm -rf dist/
@@ -66,3 +67,4 @@ echo "Invalidated CloudFront cache"
 echo "widget.js cdn url  -> $WIDGET_JS_URL"
 echo "assets/widget.css cdn url -> $WIDGET_CSS_URL"
 echo "widget-loader.js cdn url -> $WIDGET_LOADER_JS_URL"
+set +e
