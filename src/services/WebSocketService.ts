@@ -330,9 +330,8 @@ export class WebSocketService {
    * Handle connection established message
    */
   private handleConnectionEstablished(
-    message: ConnectionEstablishedMessage
+    _: ConnectionEstablishedMessage
   ): void {
-    console.log("Connection established:", message);
     this.triggerEvent(WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED, true);
   }
 

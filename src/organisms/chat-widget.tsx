@@ -150,7 +150,6 @@ export function ChatWidget({
       //TODO: add a loading state here
       const previousMessages = getMessagesForSession(sessionId);
       if (previousMessages.length > 0) {
-        console.log("previousMessages", previousMessages);
         setMessages(previousMessages);
       } else {
         const welcomeMessage = {
@@ -163,7 +162,6 @@ export function ChatWidget({
 
         addMessageToSession(sessionId, welcomeMessage);
         setMessages([welcomeMessage]);
-        console.log("cleared inline text");
       }
     }
   }, [sessionId]);
