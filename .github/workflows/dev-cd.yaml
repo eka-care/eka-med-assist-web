@@ -19,9 +19,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: '20'
-
+      - name: setup yarn
+        run: |
+          npm install -g yarn
       - name: Run dev script
-        run: 
+        run: |
           bash deploy-dev.sh
         
 
