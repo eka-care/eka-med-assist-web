@@ -97,7 +97,7 @@ export function MessageInput({
   // Reset sending state when streaming starts or stops
   useEffect(() => {
     console.log("isStreaming from input", isStreaming);
-    if (isStreaming || error) {
+    if (isStreaming || error || !disabled) {
       setIsSending(false); // Reset sending state when streaming starts
     }
     if (
@@ -114,7 +114,7 @@ export function MessageInput({
 
       return () => clearTimeout(timer);
     }
-  }, [isStreaming, error]);
+  }, [isStreaming, error, disabled]);
 
   useEffect(() => {
     if (inlineText) {
