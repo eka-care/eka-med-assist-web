@@ -138,6 +138,9 @@ export function ConnectionStatus({
     );
   }
 
+  if (isConnected && isOnline && !error?.title) {
+    return null;
+  }
   // Show loader when trying to reconnect (when there's an error but no retry button, or when connection is not established)
   return (
     <div
