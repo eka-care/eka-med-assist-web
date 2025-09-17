@@ -6,7 +6,7 @@
  */
 export function withTimeout<T>(
   fetchPromise: Promise<T>,
-  timeoutMs: number = 10000
+  timeoutMs: number = 30000
 ): Promise<T> {
   return new Promise((resolve, reject) => {
     const timeoutId = setTimeout(() => {
@@ -35,7 +35,7 @@ export function withTimeout<T>(
 export function fetchWithTimeout(
   url: string,
   options: RequestInit = {},
-  timeoutMs: number = 10000
+  timeoutMs: number = 30000
 ): Promise<Response> {
   const fetchPromise = fetch(url, options);
   return withTimeout(fetchPromise, timeoutMs);
