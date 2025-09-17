@@ -1223,7 +1223,8 @@ export function ChatWidget({
         </div>
       )} */}
       {!isLoading && (
-        <div className={`${chatHeight} flex flex-col overflow-hidden`}>
+        <div
+          className={`${chatHeight} flex flex-col overflow-hidden max-h-screen`}>
           <div
             ref={scrollAreaRef}
             className="flex-1 min-h-0 overflow-y-auto"

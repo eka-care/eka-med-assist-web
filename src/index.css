@@ -218,3 +218,30 @@
 .pr-safe {
   padding-right: env(safe-area-inset-right, 0px);
 }
+
+/* Mobile viewport handling */
+@media (max-width: 768px) {
+  .eka-widget-root {
+    /* Ensure the widget doesn't exceed viewport height */
+    max-height: 100vh;
+    max-height: 100dvh; /* Dynamic viewport height for mobile browsers */
+    overflow: hidden;
+  }
+
+  /* Prevent textarea from causing viewport overflow */
+  .eka-widget-root textarea {
+    /* Ensure textarea respects mobile constraints */
+    max-height: 120px !important;
+    font-size: 16px !important; /* Prevent zoom on iOS */
+  }
+
+  /* Ensure input container doesn't overflow */
+  .eka-widget-root .flex.flex-col {
+    max-height: calc(
+      100vh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+    max-height: calc(
+      100dvh - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px)
+    );
+  }
+}
