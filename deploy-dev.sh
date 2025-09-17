@@ -47,8 +47,16 @@ WIDGET_LOADER_JS_URL="$WIDGET_CDN_URL/widget-loader.js"
 
 cd ../
 # now update the widget-loader.js with the new urls
-sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
-sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+# Use portable sed that works on both macOS and Linux
+if [[ "$OSTYPE" == "darwin"* ]]; then
+  # macOS
+  sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
+  sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+else
+  # Linux (GitHub Actions)
+  sed -i "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
+  sed -i "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+fi
 
 yarn build
 
