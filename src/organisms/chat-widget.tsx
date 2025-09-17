@@ -466,9 +466,9 @@ export function ChatWidget({
   // Timeout logic for waiting for response
   useEffect(() => {
     if (isWaitingForResponse && !isStreaming) {
-      // Set a 5-second timeout for waiting for response
+      // Set a timeout for waiting for response
       const timeoutId = setTimeout(() => {
-        console.log("Response timeout: No response received within 5 seconds");
+        console.log("Response timeout: No response received within 30 seconds");
         setIsWaitingForResponse(false);
       }, RESPONSE_TIMEOUT);
 

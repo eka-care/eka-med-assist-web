@@ -307,7 +307,7 @@ export function MessageInput({
       return true;
     }
     console.log(
-      "input enabled bcus of mobile verification is not sending",
+      "input enabled/disabled bcus ",
       disabled,
       isStreaming,
       isSending

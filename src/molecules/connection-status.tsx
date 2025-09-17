@@ -30,7 +30,10 @@ export function ConnectionStatus({
   // Handle fade functionality for default error case
   useEffect(() => {
     // Only apply fade for default error case (not startNewConnection and not showRetryButton)
-    if (!startNewConnection && !showRetryButton && error) {
+    //also make it invisible, if isconnected is fasle but not because of internet error
+   const shouldFade = !startNewConnection && !showRetryButton && error;
+    if (shouldFade) {
+      console.log("should fade",startNewConnection, showRetryButton, error);
       setIsVisible(true); // Make sure it's visible when new error comes
 
       // Set fade timer for 5 seconds
@@ -42,6 +45,7 @@ export function ConnectionStatus({
         clearTimeout(fadeTimer);
       };
     } else {
+      console.log("shouldnt fade", startNewConnection, showRetryButton, error);
       // For other cases, keep it visible
       setIsVisible(true);
     }
