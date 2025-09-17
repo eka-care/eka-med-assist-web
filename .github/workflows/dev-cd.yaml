@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-and-upload:
-    runs-on: prod-runner-server
+    runs-on: dev-ec2-server
     steps:
       - name: Checkout code with submodules
         uses: actions/checkout@v4
