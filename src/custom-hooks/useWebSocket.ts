@@ -462,6 +462,8 @@ export function useWebSocket(
     } else {
       console.error("WebSocket not connected");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
     }
   };
 
@@ -493,6 +495,8 @@ export function useWebSocket(
     } else {
       console.error("WebSocket not connected");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
     }
   };
 
@@ -579,6 +583,8 @@ export function useWebSocket(
     if (!wsRef.current?.isConnected()) {
       console.error("WebSocket not connected, cannot retry message");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
       return false;
     }
     if (!lastSentMessageRef.current) {
