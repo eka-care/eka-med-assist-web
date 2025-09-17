@@ -711,6 +711,7 @@ export function MessageInput({
               style={{
                 minHeight: "40px",
                 maxHeight: "120px",
+                fontSize: window.innerWidth <= 768 ? "16px" : "14px", // Prevent iOS zoom
               }}
             />
           </div>
