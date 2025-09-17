@@ -1,6 +1,6 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
 import { Mic, Send, Plus, Trash2, Check, Loader2 } from "lucide-react";
-import { Button, Input, voiceListeningGif } from "@ui/index";
+import { Button, Textarea, voiceListeningGif } from "@ui/index";
 import { useAudioService } from "@/custom-hooks/useAudioService";
 import formatTime from "@/utils/formatTime";
 import useSessionStore from "@/stores/medAssistStore";
@@ -66,8 +66,9 @@ export function MessageInput({
     null
   );
   const [isSending, setIsSending] = useState(false); // New state for send button loading
+  const [textareaHeight, setTextareaHeight] = useState(40); // Track textarea height
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const messageInputRef = useRef<HTMLInputElement>(null);
+  const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const connectionStatus = useMedAssistStore((state) => state.connectionStatus);
   const isStreaming = useSessionStore((state) => state.isStreaming);
@@ -96,7 +97,7 @@ export function MessageInput({
   // Reset sending state when streaming starts or stops
   useEffect(() => {
     console.log("isStreaming from input", isStreaming);
-    if (isStreaming || error) {
+    if (isStreaming || error || !disabled) {
       setIsSending(false); // Reset sending state when streaming starts
     }
     if (
@@ -113,7 +114,7 @@ export function MessageInput({
 
       return () => clearTimeout(timer);
     }
-  }, [isStreaming, error]);
+  }, [isStreaming, error, disabled]);
 
   useEffect(() => {
     if (inlineText) {
@@ -121,6 +122,39 @@ export function MessageInput({
       setRecordingPhase(RECODING_PHASE.IDLE);
     }
   }, [inlineText]);
+
+  // Reset height when message is cleared
+  useEffect(() => {
+    if (!message.trim()) {
+      setTextareaHeight(40);
+      if (messageInputRef.current) {
+        messageInputRef.current.style.height = "40px";
+      }
+    }
+  }, [message]);
+
+  // Handle initial height and mobile-specific adjustments
+  useEffect(() => {
+    if (messageInputRef.current && message.trim()) {
+      const textarea = messageInputRef.current;
+      textarea.style.height = "auto";
+      textarea.style.overflow = "hidden";
+
+      const scrollHeight = textarea.scrollHeight;
+      const minHeight = 40;
+      const maxHeight = 120;
+      const newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
+
+      textarea.style.height = newHeight + "px";
+      setTextareaHeight(newHeight);
+
+      if (scrollHeight > maxHeight) {
+        textarea.style.overflow = "auto";
+      } else {
+        textarea.style.overflow = "hidden";
+      }
+    }
+  }, [message]);
 
   useEffect(() => {
     if (audioServiceError) {
@@ -273,7 +307,7 @@ export function MessageInput({
       return true;
     }
     console.log(
-      "input enabled bcus of mobile verification is not sending",
+      "input enabled/disabled bcus ",
       disabled,
       isStreaming,
       isSending
@@ -528,8 +562,44 @@ export function MessageInput({
     }
   };
 
+  const handleTextareaChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    setMessage(e.target.value);
+    onInputChange?.(e.target.value);
+  };
+
+  const handleTextareaInput = (e: React.FormEvent<HTMLTextAreaElement>) => {
+    // Update height tracking with proper calculation on every input
+    const textarea = e.currentTarget;
+
+    // Force a reflow to ensure accurate measurements
+    textarea.style.height = "auto";
+    textarea.style.overflow = "hidden";
+
+    // Calculate height with proper constraints
+    const scrollHeight = textarea.scrollHeight;
+    const minHeight = 40;
+    const maxHeight = 120;
+    const newHeight = Math.max(minHeight, Math.min(scrollHeight, maxHeight));
+
+    // Apply the new height
+    textarea.style.height = newHeight + "px";
+    setTextareaHeight(newHeight);
+
+    // Restore overflow behavior
+    if (scrollHeight > maxHeight) {
+      textarea.style.overflow = "auto";
+    } else {
+      textarea.style.overflow = "hidden";
+    }
+  };
+
   return (
-    <div className="flex items-center gap-2 px-2 py-1 bg-[var(--color-background)] rounded-full border border-[var(--color-primary)] mx-4 flex-shrink-0">
+    <div
+      className={`flex gap-2 px-2 py-0.5 bg-[var(--color-background)] border border-[var(--color-primary)] mx-4 flex-shrink-0 ${
+        textareaHeight > 40
+          ? "rounded-lg items-end"
+          : "rounded-full items-center"
+      }`}>
       <input
         ref={fileInputRef}
         type="file"
@@ -579,13 +649,11 @@ export function MessageInput({
           </div>
         ) : (
           <div className="relative w-full">
-            <Input
+            <Textarea
               ref={messageInputRef}
               value={message}
-              onChange={(e) => {
-                setMessage(e.target.value);
-                onInputChange?.(e.target.value);
-              }}
+              onChange={handleTextareaChange}
+              onInput={handleTextareaInput}
               onKeyPress={handleKeyPress}
               // onFocus={onFocus}
               // onBlur={onBlur}
@@ -608,7 +676,12 @@ export function MessageInput({
                   : placeholder
               }
               disabled={isInputDisabled}
-              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm"
+              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm resize-none break-all overflow-hidden"
+              rows={1}
+              style={{
+                minHeight: "40px",
+                maxHeight: "120px",
+              }}
             />
           </div>
         )}

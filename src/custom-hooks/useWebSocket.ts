@@ -84,6 +84,7 @@ export function useWebSocket(
         if (connected) {
           setShowRetryButton(false);
           setStartNewConnection(false);
+          setError(null);
           retryAttempts.current = 0;
         }
       }
@@ -147,6 +148,7 @@ export function useWebSocket(
             setIsStreaming(true);
             // Clear response timeout when streaming starts
             clearResponseTimeout();
+            setError(null);
           }
           // Update streaming activity timestamp
           setLastStreamingActivity(Date.now());
@@ -192,6 +194,7 @@ export function useWebSocket(
           setIsStreaming(true);
           // Clear response timeout when streaming starts
           clearResponseTimeout();
+          setError(null);
         }
         // Update streaming activity timestamp
         setLastStreamingActivity(Date.now());
@@ -213,6 +216,7 @@ export function useWebSocket(
         setIsStreaming(true);
         // Clear response timeout when streaming starts
         clearResponseTimeout();
+        setError(null);
       }
       // Update streaming activity timestamp
       setLastStreamingActivity(Date.now());
@@ -317,9 +321,11 @@ export function useWebSocket(
         setIsStreaming(true);
         // Clear response timeout when streaming starts
         clearResponseTimeout();
+        setError(null);
       }
       if (onProgressMessage) {
         onProgressMessage(progressMessage);
+        setError(null);
       }
     });
 
@@ -333,6 +339,7 @@ export function useWebSocket(
 
     // Handle progressive text updates
     wsRef.current?.on("stream_chunk", (progressiveText: string) => {
+      setError(null);
       if (onTextMessage) {
         // Call the callback with the progressive text
         onTextMessage(progressiveText);
@@ -347,6 +354,7 @@ export function useWebSocket(
         setIsStreaming(false);
         // Clear streaming timeout when streaming ends
         clearStreamingTimeout();
+        setError(null);
       }
     });
 
@@ -454,6 +462,8 @@ export function useWebSocket(
     } else {
       console.error("WebSocket not connected");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
     }
   };
 
@@ -485,6 +495,8 @@ export function useWebSocket(
     } else {
       console.error("WebSocket not connected");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
     }
   };
 
@@ -571,6 +583,8 @@ export function useWebSocket(
     if (!wsRef.current?.isConnected()) {
       console.error("WebSocket not connected, cannot retry message");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
       return false;
     }
     if (!lastSentMessageRef.current) {

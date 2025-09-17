@@ -25,6 +25,7 @@ import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
+import { ASSETS } from "@/configs/assets";
 
 interface ChatWidgetProps {
   title?: string;
@@ -149,7 +150,6 @@ export function ChatWidget({
       //TODO: add a loading state here
       const previousMessages = getMessagesForSession(sessionId);
       if (previousMessages.length > 0) {
-        console.log("previousMessages", previousMessages);
         setMessages(previousMessages);
       } else {
         const welcomeMessage = {
@@ -162,7 +162,6 @@ export function ChatWidget({
 
         addMessageToSession(sessionId, welcomeMessage);
         setMessages([welcomeMessage]);
-        console.log("cleared inline text");
       }
     }
   }, [sessionId]);
@@ -467,13 +466,9 @@ export function ChatWidget({
   // Timeout logic for waiting for response
   useEffect(() => {
     if (isWaitingForResponse && !isStreaming) {
-      // Set a 5-second timeout for waiting for response
+      // Set a timeout for waiting for response
       const timeoutId = setTimeout(() => {
-        console.log("Response timeout: No response received within 5 seconds");
-        setError({
-          title: "Response timeout. The server didn't respond in time.",
-          description: "Please try again or check your connection.",
-        });
+        console.log("Response timeout: No response received within 30 seconds");
         setIsWaitingForResponse(false);
       }, RESPONSE_TIMEOUT);
 
@@ -502,14 +497,10 @@ export function ChatWidget({
         if (currentState.isStreaming && currentState.lastStreamingActivity) {
           const timeSinceLastActivity =
             Date.now() - currentState.lastStreamingActivity;
-          if (timeSinceLastActivity >= 5000) {
+          if (timeSinceLastActivity >= STREAMING_TIMEOUT) {
             console.log(
               "Streaming timeout: No streaming activity for 5 seconds"
             );
-            setError({
-              title: "Streaming interrupted. The response was cut off.",
-              description: "Please try again or check your connection.",
-            });
             setIsWaitingForResponse(false);
           }
         }
@@ -625,16 +616,18 @@ export function ChatWidget({
             mobileVerificationStatus.mobile_number
           );
 
-          if (response?.success) {
-            setMobileVerificationStatus({
-              active: false,
+          if (
+            response?.data?.error?.code ===
+            MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code
+          ) {
+            setMobileVerificationStatus((prev) => ({
+              ...prev,
+              active: true,
               isSending: false,
-              isOtpSent: false,
-              mobile_number: null,
-              error: null,
-              message: null,
-            });
+              isOtpSent: true,
+            }));
           } else {
+            //if response is sucess/other otp error / normal message if sent
             clearMobileVerification();
           }
         }
@@ -1266,7 +1259,7 @@ export function ChatWidget({
 
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
-                <div className="px-4 py-2">
+                <div className="px-2 py-4">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0">
                       <ApolloAssistIcon
@@ -1323,7 +1316,7 @@ export function ChatWidget({
             }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src={`./assets/powered-by-eka-care.svg`}
+                src={ASSETS.POWERED_BY_EKA_CARE}
                 alt="eka.care"
                 className="h-3.5"
               />
