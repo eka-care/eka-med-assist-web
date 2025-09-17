@@ -115,8 +115,8 @@ export enum CONNECTION_STATUS {
   CONNECTED = "connected",
 }
 
-export const RESPONSE_TIMEOUT = 10000;
-export const STREAMING_TIMEOUT = 10000;
+export const RESPONSE_TIMEOUT = 30000;
+export const STREAMING_TIMEOUT = 30000;
 
 export const MOBILE_VERIFICATION_ERROR_MESSAGES = {
   TOOL_ERROR: {

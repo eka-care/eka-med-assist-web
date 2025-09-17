@@ -469,10 +469,6 @@ export function ChatWidget({
       // Set a 5-second timeout for waiting for response
       const timeoutId = setTimeout(() => {
         console.log("Response timeout: No response received within 5 seconds");
-        setError({
-          title: "Response timeout. The server didn't respond in time.",
-          description: "Please try again or check your connection.",
-        });
         setIsWaitingForResponse(false);
       }, RESPONSE_TIMEOUT);
 
@@ -501,14 +497,10 @@ export function ChatWidget({
         if (currentState.isStreaming && currentState.lastStreamingActivity) {
           const timeSinceLastActivity =
             Date.now() - currentState.lastStreamingActivity;
-          if (timeSinceLastActivity >= 5000) {
+          if (timeSinceLastActivity >= STREAMING_TIMEOUT) {
             console.log(
               "Streaming timeout: No streaming activity for 5 seconds"
             );
-            setError({
-              title: "Streaming interrupted.",
-              description: "Please try again or check your connection.",
-            });
             setIsWaitingForResponse(false);
           }
         }
@@ -1267,7 +1259,7 @@ export function ChatWidget({
 
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
-                <div className="px-4 py-2">
+                <div className="px-2 py-4">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0">
                       <ApolloAssistIcon
