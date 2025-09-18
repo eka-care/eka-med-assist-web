@@ -8,10 +8,9 @@ REGION="ap-south-1"
 WIDGET_CDN_URL="https://dev-cdn.ekacare.co/apollo"
 CLOUDFRONT_DISTRIBUTION_ID=E3BJWCYM0A7WQV
 
-set -e
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Dev..."
 
-rm -rf dist/
+rm -rf dist/-
 yarn install
 yarn build --mode development
 
@@ -47,16 +46,8 @@ WIDGET_LOADER_JS_URL="$WIDGET_CDN_URL/widget-loader.js"
 
 cd ../
 # now update the widget-loader.js with the new urls
-# Use portable sed that works on both macOS and Linux
-if [[ "$OSTYPE" == "darwin"* ]]; then
-  # macOS
-  sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
-  sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
-else
-  # Linux (GitHub Actions)
-  sed -i "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
-  sed -i "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
-fi
+sed -i '' "s|scriptUrl: \".*\"|scriptUrl: \"$WIDGET_JS_URL\"|g" public/widget-loader.js
+sed -i '' "s|cssUrl: \".*\"|cssUrl: \"$WIDGET_CSS_URL\"|g" public/widget-loader.js
 
 yarn build
 
@@ -75,4 +66,3 @@ echo "Invalidated CloudFront cache"
 echo "widget.js cdn url  -> $WIDGET_JS_URL"
 echo "assets/widget.css cdn url -> $WIDGET_CSS_URL"
 echo "widget-loader.js cdn url -> $WIDGET_LOADER_JS_URL"
-set +e
