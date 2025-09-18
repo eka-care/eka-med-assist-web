@@ -91,6 +91,7 @@ export function ChatWidget({
     sessionId,
     sessionToken,
     clearSession,
+    refreshSession,
     getMessagesForSession,
     addMessageToSession,
     updateMessageInSession,
@@ -120,12 +121,23 @@ export function ChatWidget({
         try {
           const isValid = await getSessionDetails(sessionId);
           console.log("isValid", isValid);
-          if (!isValid) {
+          if (!isValid.success && !isValid.retry) {
             console.log("Session is invalid, starting new session");
             clearSession();
             await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
+          } else if (!isValid.success && isValid.retry) {
+            console.log("Session expired, refreshing session");
+            const success = await refreshSession();
+            if (success) {
+              setIsSessionValidated(true);
+            } else {
+              clearSession();
+              await onStartSession?.(true);
+              //For new sessions, we don't need validation
+              setIsSessionValidated(true);
+            }
           } else {
             console.log("Session is valid, allowing WebSocket connection");
             setIsSessionValidated(true);
@@ -169,8 +181,9 @@ export function ChatWidget({
   const socketConfig: WebSocketConfig | null = useMemo(() => {
     if (sessionId && sessionToken && isSessionValidated) {
       console.log(
-        "Creating WebSocket config with validated session:",
-        sessionId
+        "usememo for socket connection triggered:",
+        sessionId,
+        sessionToken
       );
       return {
         sessionId,
@@ -190,6 +203,7 @@ export function ChatWidget({
     regenerateResponse,
     sendChatMessage,
     retryLastMessage,
+    sendHiddenChatMessage,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
@@ -629,6 +643,11 @@ export function ChatWidget({
           } else {
             //if response is sucess/other otp error / normal message if sent
             clearMobileVerification();
+            const hiddenMessage = response?.success
+              ? "Otp Verified successfully"
+              : "Otp verification failed";
+            //send a hidden message chat messsage to BE
+            await sendHiddenChatMessage(hiddenMessage, tool_use_id);
           }
         }
 
@@ -1053,6 +1072,7 @@ export function ChatWidget({
     }
   };
 
+  //todo: add a wrapper for all too callbackes with trigger refresh session
   const handleMobileVerification = async (
     mobileNumber: string
   ): Promise<{
@@ -1203,7 +1223,8 @@ export function ChatWidget({
         </div>
       )} */}
       {!isLoading && (
-        <div className={`${chatHeight} flex flex-col overflow-hidden`}>
+        <div
+          className={`${chatHeight} flex flex-col overflow-hidden max-h-screen`}>
           <div
             ref={scrollAreaRef}
             className="flex-1 min-h-0 overflow-y-auto"

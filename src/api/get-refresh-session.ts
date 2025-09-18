@@ -20,7 +20,8 @@ interface RefreshSessionError {
  * @returns Promise with session details
  */
 const refreshSession = async (
-  sessionId: string
+  sessionId: string,
+  sessionToken: string
 ): Promise<RefreshSessionResponse> => {
   try {
     const response = await fetch(
@@ -28,8 +29,10 @@ const refreshSession = async (
       {
         method: "GET",
         headers: {
+          // "ngrok-skip-browser-warning": "69420",
           "Content-Type": "application/json",
           "X-agent-id": config.X_AGENT_ID,
+          "x-sess-token": sessionToken,
         },
       }
     );

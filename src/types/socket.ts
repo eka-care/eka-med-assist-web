@@ -71,7 +71,7 @@ export interface ChatRequest extends BaseMessage {
     | typeof ContentType.FILE
     | typeof ContentType.DOCTOR_CARD;
   _id: string;
-  data?: { url?: string; text?: string; tool_use_id?: string }; // message content or S3 URL
+  data?: { url?: string; text?: string; tool_use_id?: string, hidden?: boolean }; // message content or S3 URL
 }
 
 // Client to Server: Audio stream

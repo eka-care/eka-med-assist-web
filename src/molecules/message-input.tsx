@@ -67,6 +67,8 @@ export function MessageInput({
   );
   const [isSending, setIsSending] = useState(false); // New state for send button loading
   const [textareaHeight, setTextareaHeight] = useState(40); // Track textarea height
+  const [reinitializationAttempted, setReinitializationAttempted] =
+    useState(false); // Track if reinitialization was attempted
   const fileInputRef = useRef<HTMLInputElement>(null);
   const messageInputRef = useRef<HTMLTextAreaElement>(null);
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -173,18 +175,39 @@ export function MessageInput({
     // Clear audio errors when widget reopens
     if (!disabled && !isStreaming) {
       setAudioError(null);
-      // Try to reinitialize AudioService if there was an error
-      if (audioServiceError && reinitialize) {
+      // Only reset reinitialization flag if there's no persistent audio service error
+      if (!audioServiceError) {
+        setReinitializationAttempted(false);
+      }
+      // Try to reinitialize AudioService if there was an error and we haven't attempted yet
+      if (audioServiceError && reinitialize && !reinitializationAttempted) {
         console.log("Attempting to reinitialize AudioService...");
-        reinitialize().then((success) => {
-          if (success) {
-            console.log("AudioService reinitialized successfully");
-            setAudioError(null);
-          }
-        });
+        setReinitializationAttempted(true); // Mark that we're attempting reinitialization
+        reinitialize()
+          .then((success) => {
+            if (success) {
+              console.log("AudioService reinitialized successfully");
+              setAudioError(null);
+              setReinitializationAttempted(false); // Reset flag on success
+            } else {
+              console.log(
+                "AudioService reinitialization failed, will not retry"
+              );
+            }
+          })
+          .catch((error) => {
+            console.error("AudioService reinitialization error:", error);
+            // Don't reset the flag on error to prevent retries
+          });
       }
     }
-  }, [disabled, isStreaming, audioServiceError, reinitialize]);
+  }, [
+    disabled,
+    isStreaming,
+    audioServiceError,
+    reinitialize,
+    reinitializationAttempted,
+  ]);
 
   // Update recording time from the hook's duration tracking
   useEffect(() => {
@@ -343,11 +366,16 @@ export function MessageInput({
       }, 1000);
     } catch (error) {
       console.error("Error starting recording:", error);
-      // If it's an initialization error, try to reinitialize
-      if (error instanceof Error && error.message.includes("Not initialized")) {
+      // If it's an initialization error, try to reinitialize only once
+      if (
+        error instanceof Error &&
+        error.message.includes("Not initialized") &&
+        !reinitializationAttempted
+      ) {
         console.log(
           "AudioService not initialized in startRecording, attempting reinitialization..."
         );
+        setReinitializationAttempted(true); // Mark that we've attempted reinitialization
         try {
           const success = await reinitialize();
           if (success) {
@@ -513,14 +541,16 @@ export function MessageInput({
         }
       } catch (error) {
         console.error("Error starting recording:", error);
-        // If it's an initialization error, try to reinitialize
+        // If it's an initialization error, try to reinitialize only once
         if (
           error instanceof Error &&
-          error.message.includes("Not initialized")
+          error.message.includes("Not initialized") &&
+          !reinitializationAttempted
         ) {
           console.log(
             "AudioService not initialized, attempting reinitialization..."
           );
+          setReinitializationAttempted(true); // Mark that we've attempted reinitialization
           try {
             const success = await reinitialize();
             if (success) {
@@ -681,6 +711,7 @@ export function MessageInput({
               style={{
                 minHeight: "40px",
                 maxHeight: "120px",
+                fontSize: window.innerWidth <= 768 ? "16px" : "14px", // Prevent iOS zoom
               }}
             />
           </div>
