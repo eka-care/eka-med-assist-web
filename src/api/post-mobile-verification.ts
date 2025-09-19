@@ -43,7 +43,7 @@ export async function callMobileVerificationAPI(
           tool_params: toolParams,
         }),
       },
-      10000 // 10 second timeout
+      30000 // 10 second timeout
     );
 
     if (!response.ok) {

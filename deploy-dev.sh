@@ -10,9 +10,9 @@ CLOUDFRONT_DISTRIBUTION_ID=E3BJWCYM0A7WQV
 
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Dev..."
 
-rm -rf dist/
+rm -rf dist/-
 yarn install
-yarn build
+yarn build --mode development
 
 
 cd dist
@@ -46,8 +46,8 @@ WIDGET_LOADER_JS_URL="$WIDGET_CDN_URL/widget-loader.js"
 
 cd ../
 # now update the widget-loader.js with the new urls
-sed -i '' "s|scriptUrl:.*|scriptUrl: \"$WIDGET_JS_URL\",|g" public/widget-loader.js
-sed -i '' "s|cssUrl:.*|cssUrl: \"$WIDGET_CSS_URL\",|g" public/widget-loader.js
+sed -i '' "s|scriptUrl: \".*\"|scriptUrl: \"$WIDGET_JS_URL\"|g" public/widget-loader.js
+sed -i '' "s|cssUrl: \".*\"|cssUrl: \"$WIDGET_CSS_URL\"|g" public/widget-loader.js
 
 yarn build
 

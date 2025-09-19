@@ -25,6 +25,7 @@ import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
+import { ASSETS } from "@/configs/assets";
 
 interface ChatWidgetProps {
   title?: string;
@@ -90,6 +91,7 @@ export function ChatWidget({
     sessionId,
     sessionToken,
     clearSession,
+    refreshSession,
     getMessagesForSession,
     addMessageToSession,
     updateMessageInSession,
@@ -119,12 +121,23 @@ export function ChatWidget({
         try {
           const isValid = await getSessionDetails(sessionId);
           console.log("isValid", isValid);
-          if (!isValid) {
+          if (!isValid.success && !isValid.retry) {
             console.log("Session is invalid, starting new session");
             clearSession();
             await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
+          } else if (!isValid.success && isValid.retry) {
+            console.log("Session expired, refreshing session");
+            const success = await refreshSession();
+            if (success) {
+              setIsSessionValidated(true);
+            } else {
+              clearSession();
+              await onStartSession?.(true);
+              //For new sessions, we don't need validation
+              setIsSessionValidated(true);
+            }
           } else {
             console.log("Session is valid, allowing WebSocket connection");
             setIsSessionValidated(true);
@@ -149,7 +162,6 @@ export function ChatWidget({
       //TODO: add a loading state here
       const previousMessages = getMessagesForSession(sessionId);
       if (previousMessages.length > 0) {
-        console.log("previousMessages", previousMessages);
         setMessages(previousMessages);
       } else {
         const welcomeMessage = {
@@ -162,7 +174,6 @@ export function ChatWidget({
 
         addMessageToSession(sessionId, welcomeMessage);
         setMessages([welcomeMessage]);
-        console.log("cleared inline text");
       }
     }
   }, [sessionId]);
@@ -170,8 +181,9 @@ export function ChatWidget({
   const socketConfig: WebSocketConfig | null = useMemo(() => {
     if (sessionId && sessionToken && isSessionValidated) {
       console.log(
-        "Creating WebSocket config with validated session:",
-        sessionId
+        "usememo for socket connection triggered:",
+        sessionId,
+        sessionToken
       );
       return {
         sessionId,
@@ -191,6 +203,7 @@ export function ChatWidget({
     regenerateResponse,
     sendChatMessage,
     retryLastMessage,
+    sendHiddenChatMessage,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
@@ -467,13 +480,9 @@ export function ChatWidget({
   // Timeout logic for waiting for response
   useEffect(() => {
     if (isWaitingForResponse && !isStreaming) {
-      // Set a 5-second timeout for waiting for response
+      // Set a timeout for waiting for response
       const timeoutId = setTimeout(() => {
-        console.log("Response timeout: No response received within 5 seconds");
-        setError({
-          title: "Response timeout. The server didn't respond in time.",
-          description: "Please try again or check your connection.",
-        });
+        console.log("Response timeout: No response received within 30 seconds");
         setIsWaitingForResponse(false);
       }, RESPONSE_TIMEOUT);
 
@@ -502,14 +511,10 @@ export function ChatWidget({
         if (currentState.isStreaming && currentState.lastStreamingActivity) {
           const timeSinceLastActivity =
             Date.now() - currentState.lastStreamingActivity;
-          if (timeSinceLastActivity >= 5000) {
+          if (timeSinceLastActivity >= STREAMING_TIMEOUT) {
             console.log(
               "Streaming timeout: No streaming activity for 5 seconds"
             );
-            setError({
-              title: "Streaming interrupted. The response was cut off.",
-              description: "Please try again or check your connection.",
-            });
             setIsWaitingForResponse(false);
           }
         }
@@ -628,17 +633,24 @@ export function ChatWidget({
             mobileVerificationStatus.mobile_number
           );
 
-          if (response?.success) {
-            setMobileVerificationStatus({
-              active: false,
+          if (
+            response?.data?.error?.code ===
+            MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code
+          ) {
+            setMobileVerificationStatus((prev) => ({
+              ...prev,
+              active: true,
               isSending: false,
-              isOtpSent: false,
-              mobile_number: null,
-              error: null,
-              message: null,
-            });
+              isOtpSent: true,
+            }));
           } else {
+            //if response is sucess/other otp error / normal message if sent
             clearMobileVerification();
+            const hiddenMessage = response?.success
+              ? "Otp Verified successfully"
+              : "Otp verification failed";
+            //send a hidden message chat messsage to BE
+            await sendHiddenChatMessage(hiddenMessage, tool_use_id);
           }
         }
 
@@ -1063,6 +1075,7 @@ export function ChatWidget({
     }
   };
 
+  //todo: add a wrapper for all too callbackes with trigger refresh session
   const handleMobileVerification = async (
     mobileNumber: string
   ): Promise<{
@@ -1213,7 +1226,8 @@ export function ChatWidget({
         </div>
       )} */}
       {!isLoading && (
-        <div className={`${chatHeight} flex flex-col overflow-hidden`}>
+        <div
+          className={`${chatHeight} flex flex-col overflow-hidden max-h-screen`}>
           <div
             ref={scrollAreaRef}
             className="flex-1 min-h-0 overflow-y-auto"
@@ -1269,7 +1283,7 @@ export function ChatWidget({
 
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
-                <div className="px-4 py-2">
+                <div className="px-2 py-4">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0">
                       <ApolloAssistIcon
@@ -1326,7 +1340,7 @@ export function ChatWidget({
             }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src={`./assets/powered-by-eka-care.svg`}
+                src={ASSETS.POWERED_BY_EKA_CARE}
                 alt="eka.care"
                 className="h-3.5"
               />

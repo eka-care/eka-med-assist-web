@@ -4,7 +4,7 @@ import { useMemo, useState, useEffect } from "react";
 import {
   ArrowRight,
   Building2,
-  // Calendar,
+  Calendar,
   ChevronDown,
   ChevronLeft,
   ChevronRight,
@@ -658,11 +658,11 @@ export function AppointmentCard({
                                 ? "border-blue-600 bg-blue-600 text-white"
                                 : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
                             ].join(" ")}>
-                            {/* <Calendar
+                             <Calendar
                               className={`h-3.5 w-3.5 flex-shrink-0${
                                 selected ? "text-white" : "text-blue-600"
                               }`}
-                            /> */}
+                            /> 
                             <span className="truncate">{t}</span>
                           </Button>
                         );

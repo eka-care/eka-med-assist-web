@@ -203,7 +203,7 @@ export function MessageBubble({
                 <ReactMarkdown>{message}</ReactMarkdown>
               </div>
             )}
-            {message && !isBot && <div className="text-sm p-4">{message}</div>}
+            {message && !isBot && <div className="text-sm p-4 break-all">{message}</div>}
             {isBot && progressMessage && (
               <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
                 <ReactMarkdown>{progressMessage}</ReactMarkdown>

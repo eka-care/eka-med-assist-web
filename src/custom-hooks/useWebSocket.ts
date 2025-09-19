@@ -84,7 +84,12 @@ export function useWebSocket(
         if (connected) {
           setShowRetryButton(false);
           setStartNewConnection(false);
+          setError(null);
           retryAttempts.current = 0;
+        }else {
+          setShowRetryButton(true);
+          setError(ERROR_MESSAGES.CONNECTION_LOST);
+          setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
         }
       }
     );
@@ -147,6 +152,7 @@ export function useWebSocket(
             setIsStreaming(true);
             // Clear response timeout when streaming starts
             clearResponseTimeout();
+            setError(null);
           }
           // Update streaming activity timestamp
           setLastStreamingActivity(Date.now());
@@ -192,6 +198,7 @@ export function useWebSocket(
           setIsStreaming(true);
           // Clear response timeout when streaming starts
           clearResponseTimeout();
+          setError(null);
         }
         // Update streaming activity timestamp
         setLastStreamingActivity(Date.now());
@@ -213,6 +220,7 @@ export function useWebSocket(
         setIsStreaming(true);
         // Clear response timeout when streaming starts
         clearResponseTimeout();
+        setError(null);
       }
       // Update streaming activity timestamp
       setLastStreamingActivity(Date.now());
@@ -250,8 +258,12 @@ export function useWebSocket(
           break;
         }
         case SOCKET_ERROR_CODES.SESSION_EXPIRED: {
-          setShowRetryButton(false);
-          setStartNewConnection(true);
+          console.log("Session expired from useWebSocket");
+          //here i need to call refresh session
+          //so the session id and token changes useffect should trigger and call the hook again
+          // setShowRetryButton(false);
+          // setStartNewConnection(true);
+          triggerSessionRefresh();
           setError(ERROR_MESSAGES.SESSION_EXPIRED);
           break;
         }
@@ -317,9 +329,11 @@ export function useWebSocket(
         setIsStreaming(true);
         // Clear response timeout when streaming starts
         clearResponseTimeout();
+        setError(null);
       }
       if (onProgressMessage) {
         onProgressMessage(progressMessage);
+        setError(null);
       }
     });
 
@@ -333,6 +347,7 @@ export function useWebSocket(
 
     // Handle progressive text updates
     wsRef.current?.on("stream_chunk", (progressiveText: string) => {
+      setError(null);
       if (onTextMessage) {
         // Call the callback with the progressive text
         onTextMessage(progressiveText);
@@ -347,6 +362,7 @@ export function useWebSocket(
         setIsStreaming(false);
         // Clear streaming timeout when streaming ends
         clearStreamingTimeout();
+        setError(null);
       }
     });
 
@@ -442,7 +458,7 @@ export function useWebSocket(
           type: "text",
         };
 
-        wsRef.current.sendChatMessage(message, tool_use_id);
+        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id});
       } catch (error) {
         console.error("Failed to send text message:", error);
         setError(
@@ -454,6 +470,23 @@ export function useWebSocket(
     } else {
       console.error("WebSocket not connected");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
+    }
+  };
+
+  const sendHiddenChatMessage = (message: string, tool_use_id?: string) => {
+    if (wsRef.current?.isConnected()) {
+      try {
+        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id, hidden: true});
+      } catch (error) {
+        console.error("Failed to send hidden text message:", error);
+      }
+    } else {
+      console.error("WebSocket not connected");
+      setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
     }
   };
 
@@ -485,6 +518,8 @@ export function useWebSocket(
     } else {
       console.error("WebSocket not connected");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
     }
   };
 
@@ -545,21 +580,16 @@ export function useWebSocket(
   // Manual session refresh
   const triggerSessionRefresh = async (): Promise<boolean> => {
     try {
-      const success = await refreshSession();
-      if (success) {
+      if(wsRef.current){
+        wsRef.current.disconnect();
+      }
+      const status = await refreshSession();
+      if (status) {
         console.log("Manual session refresh successful");
-        // Update the WebSocket config with new session details
-        if (wsRef.current && config) {
-          const currentState = useMedAssistStore.getState();
-          wsRef.current.updateConfig({
-            sessionId: currentState.sessionId,
-            auth: { token: currentState.sessionToken },
-          });
-        }
       } else {
         console.log("Manual session refresh failed");
       }
-      return success;
+      return status;
     } catch (error) {
       console.error("Error during manual session refresh:", error);
       return false;
@@ -571,6 +601,8 @@ export function useWebSocket(
     if (!wsRef.current?.isConnected()) {
       console.error("WebSocket not connected, cannot retry message");
       setError(ERROR_MESSAGES.CONNECTION_LOST);
+      setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
+      setShowRetryButton(true);
       return false;
     }
     if (!lastSentMessageRef.current) {
@@ -636,6 +668,7 @@ export function useWebSocket(
     regenerateResponse,
     triggerSessionRefresh,
     retryLastMessage,
+    sendHiddenChatMessage,
     // WebSocket service reference (for advanced usage)
     webSocketService: wsRef.current,
   };
