@@ -209,6 +209,7 @@ export function ChatWidget({
     (botMessage: string) => {
       // Clear waiting state when we receive a bot response
       setIsWaitingForResponse(false);
+      setProgressMessage(null);
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
@@ -447,7 +448,7 @@ export function ChatWidget({
   useEffect(() => {
     scrollToBottom();
     if (isStreaming) {
-      setProgressMessage(null);
+      // setProgressMessage(null);
       setIsWaitingForResponse(false); // Clear waiting state when streaming starts
     }
   }, [messages, isStreaming]);
@@ -1299,6 +1300,25 @@ export function ChatWidget({
                   </div>
                 </div>
               )}
+              {progressMessage && !isStreaming && (
+                  <div className="px-2 py-4">
+                    <div className="flex gap-1 items-start justify-center">
+                      <div className="flex-shrink-0">
+                        <ApolloAssistIcon
+                          size={32}
+                          isAnimating={isBotIconAnimating}
+                        />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
+                          <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+                            {progressMessage}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
           </div>
 
@@ -1324,7 +1344,7 @@ export function ChatWidget({
               inlineText={inlineText || ""}
               onFileUpload={handleFileUpload}
               disabled={
-                isWaitingForResponse ||
+                isWaitingForResponse || !!progressMessage?.length ||
                 connectionStatus !== CONNECTION_STATUS.CONNECTED ||
                 !isOnline
               }

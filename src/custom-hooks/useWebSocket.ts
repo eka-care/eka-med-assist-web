@@ -326,7 +326,7 @@ export function useWebSocket(
       setLastStreamingActivity(Date.now());
       const currentStreaming = useMedAssistStore.getState().isStreaming;
       if (!currentStreaming) {
-        setIsStreaming(true);
+       // setIsStreaming(true);
         // Clear response timeout when streaming starts
         clearResponseTimeout();
         setError(null);

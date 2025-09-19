@@ -655,7 +655,7 @@ export function MessageInput({
           size="sm"
           className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
           onClick={handleFileClick}
-          disabled={isInputDisabled}>
+          disabled={isInputDisabled || mobileVerificationStatus?.active}>
           <Plus className="h-4 w-4 text-[var(--color-primary)]" />
         </Button>
       )}
@@ -783,7 +783,7 @@ export function MessageInput({
               size="sm"
               className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
               onClick={handleMicClick}
-              disabled={disabled || isStreaming || !!audioError || isSending}>
+              disabled={disabled || isStreaming || !!audioError || isSending || mobileVerificationStatus?.active}>
               <Mic className="h-4 w-4 text-[var(--color-primary)]" />
             </Button>
           )}
