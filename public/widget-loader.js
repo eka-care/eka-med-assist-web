@@ -297,13 +297,6 @@
       return;
     }
 
-    // Load CSS first
-    if (config.cssUrl) {
-      var link = document.createElement("link");
-      link.rel = "stylesheet";
-      link.href = config.cssUrl;
-      document.head.appendChild(link);
-    }
 
     // Load the JavaScript bundle
     var script = document.createElement("script");
