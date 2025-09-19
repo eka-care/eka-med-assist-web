@@ -135,29 +135,69 @@ class EkaMedAssistWidgetElement extends HTMLElement {
     loadingContainer: HTMLElement
   ) {
     try {
-      // Load CSS first
-      const cssUrl = new URL("./assets/widget.css", import.meta.url);
-      const response = await fetch(cssUrl);
-      const css = await response.text();
+      // Use CSS URL from config if available, otherwise fallback to import.meta.url
+      let cssUrl: string;
+      if (this.config?.cssUrl) {
+        cssUrl = this.config.cssUrl;
+      } else {
+        // Fallback to constructing URL from import.meta.url
+        cssUrl = new URL("./assets/widget.css", import.meta.url).toString();
+      }
 
-      // Inject library styles
-      injectCSS(css);
+      // In widget-element.ts, add preload link first
+      const preloadLink = document.createElement("link");
+      preloadLink.rel = "preload";
+      preloadLink.as = "style";
+      preloadLink.href = cssUrl;
+      this.shadowRootRef.appendChild(preloadLink);
+      
+      // Use link tag in shadow DOM (recommended for external CSS)
+      const link = document.createElement("link");
+      link.rel = "stylesheet";
+      link.href = cssUrl;
+
+      // Add to shadow root - this bypasses CORS for stylesheets
+      this.shadowRootRef.appendChild(link);
+
+      // Wait for CSS to load
+      await new Promise((resolve) => {
+        let timeoutId: NodeJS.Timeout;
+
+        const cleanup = () => {
+          if (timeoutId) {
+            clearTimeout(timeoutId);
+          }
+        };
+
+        link.onload = () => {
+          console.log("CSS loaded successfully via link tag");
+          cleanup();
+          resolve(void 0);
+        };
+        link.onerror = () => {
+          console.warn(
+            "Failed to load CSS via link tag, proceeding with basic styles"
+          );
+          cleanup();
+          resolve(void 0); // Don't reject, just proceed
+        };
+
+        // Timeout after 5 seconds
+        timeoutId = setTimeout(() => {
+          console.warn("CSS loading timeout, proceeding with basic styles");
+          resolve(void 0);
+        }, 5000);
+      });
 
       // Enforce font stack after library base resets
       injectCSS(
         `:host { font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif; }`
       );
-
-      //   this.cssLoaded = true;
-
-      // Small delay to ensure CSS is parsed and applied
-      await new Promise((resolve) => setTimeout(resolve, 50));
     } catch (error) {
       console.warn(
         "Failed to load widget CSS, proceeding with basic styles:",
         error
       );
-      //   this.cssLoaded = true; // Proceed even if CSS fails to load
     }
 
     // Now render React app
@@ -185,7 +225,6 @@ class EkaMedAssistWidgetElement extends HTMLElement {
       onClose:
         this.config.onClose ||
         (() => this.dispatchEvent(new CustomEvent("close"))),
-      isProduction: true, // Flag to indicate widget mode
     };
 
     // Add loaded class to container for smooth transition
