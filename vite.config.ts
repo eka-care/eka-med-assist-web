@@ -19,7 +19,7 @@ function processWidgetLoader(isProduction = true, mode = 'dev', version = 'lates
                 // Inject version-aware URLs
                 const baseUrl = isProduction
                     ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
-                    : './';
+                    : mode === 'stage' ? `https://dev-cdn.ekacare.co/apollo/${mode}-${version}/` : './';
 
                 // Replace hardcoded URLs with dynamic ones
                 content = content.replace(
@@ -69,12 +69,13 @@ function processWidgetLoader(isProduction = true, mode = 'dev', version = 'lates
 // This app always runs as a widget, so build it as a library
 export default defineConfig(({ mode }) => {
     const isProduction = mode === 'prod';
+    const isStage = mode === 'stage';
     const version = process.env.VITE_VERSION || 'latest';
 
     // CDN base URL for production builds
     const base = isProduction
         ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
-        : '/';
+        : isStage ? `https://dev-cdn.ekacare.co/apollo/${mode}-${version}/` : '/';
 
     return {
         base,
@@ -82,12 +83,10 @@ export default defineConfig(({ mode }) => {
         esbuild: {
             // Only drop console logs in production builds, keep them in development
             drop: isProduction ? ["console", "debugger"] : [],
-            // Temporarily commented out to fix production widget click issue
-            // drop: isProduction ? ["debugger"] : [],
         },
         define: {
             "process.env": {},
-            "process.env.NODE_ENV": JSON.stringify(isProduction ? "prod" : "dev"),
+            "process.env.NODE_ENV": JSON.stringify(isProduction ? "prod" : isStage ? "stage" : "dev"),
         },
         build: {
             outDir: "dist",
@@ -125,9 +124,9 @@ export default defineConfig(({ mode }) => {
             minify: isProduction ? 'terser' : 'esbuild',
             terserOptions: isProduction ? {
                 compress: {
-                    // drop_console: true,  // Temporarily commented out to fix production widget issue
+                    drop_console: true,
                     drop_debugger: true,
-                    // pure_funcs: ['console.log', 'console.info', 'console.debug'],  // Commented out temporarily
+                    pure_funcs: ['console.log', 'console.info', 'console.debug'],
                     unused: true,
                     dead_code: true,
                 },
