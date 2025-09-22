@@ -28,7 +28,16 @@ function App({ config }: AppProps = {}) {
 
   useEffect(() => {
     const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
+      const width = window?.innerWidth;
+      const userAgent = navigator?.userAgent?.toLowerCase();
+      // More comprehensive mobile detection
+      const isMobileDevice =
+        width < 768 ||
+        /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
+          userAgent
+        );
+
+      setIsMobile(isMobileDevice);
     };
 
     checkMobile();
