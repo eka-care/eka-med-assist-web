@@ -25,7 +25,6 @@ import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
-import { ASSETS } from "@/configs/assets";
 
 interface ChatWidgetProps {
   title?: string;
@@ -1189,7 +1188,7 @@ export function ChatWidget({
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
     : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
   const chatHeight = isMobile
-    ? "flex-1 min-h-0"
+    ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
     ? "flex-1 min-h-0"
     : "h-[500px]";
@@ -1360,7 +1359,7 @@ export function ChatWidget({
             }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src={ASSETS.POWERED_BY_EKA_CARE}
+                src={import.meta.env.BASE_URL + "assets/powered-by-eka-care.svg"}
                 alt="eka.care"
                 className="h-3.5"
               />
