@@ -1300,24 +1300,24 @@ export function ChatWidget({
                 </div>
               )}
               {progressMessage && !isStreaming && (
-                  <div className="px-2 py-4">
-                    <div className="flex gap-1 items-start justify-center">
-                      <div className="flex-shrink-0">
-                        <ApolloAssistIcon
-                          size={32}
-                          isAnimating={isBotIconAnimating}
-                        />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
-                          <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
-                            {progressMessage}
-                          </div>
+                <div className="px-2 py-4">
+                  <div className="flex gap-1 items-start justify-center">
+                    <div className="flex-shrink-0">
+                      <ApolloAssistIcon
+                        size={32}
+                        isAnimating={isBotIconAnimating}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
+                        <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+                          {progressMessage}
                         </div>
                       </div>
                     </div>
                   </div>
-                )}
+                </div>
+              )}
             </div>
           </div>
 
@@ -1343,7 +1343,8 @@ export function ChatWidget({
               inlineText={inlineText || ""}
               onFileUpload={handleFileUpload}
               disabled={
-                isWaitingForResponse || !!progressMessage?.length ||
+                isWaitingForResponse ||
+                !!progressMessage?.length ||
                 connectionStatus !== CONNECTION_STATUS.CONNECTED ||
                 !isOnline
               }
@@ -1359,7 +1360,9 @@ export function ChatWidget({
             }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src={import.meta.env.BASE_URL + "assets/powered-by-eka-care.svg"}
+                src={
+                  import.meta.env.BASE_URL + "assets/powered-by-eka-care.svg"
+                }
                 alt="eka.care"
                 className="h-3.5"
               />

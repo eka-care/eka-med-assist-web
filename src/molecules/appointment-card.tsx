@@ -66,12 +66,9 @@ export function AppointmentCard({
   // Load additional availability dates when component mounts if callbacks are enabled
   // This will extend the existing availability data with more future dates
   useEffect(() => {
-    console.log("hi from apoin useffct");
     if (
       callbacks?.tool_callback_availability_dates &&
       doctor.doctor_id &&
-      // doctor.hospital_id &&
-      // doctor.region_id &&
       sessionId &&
       !callbackAvailability
     ) {
