@@ -9,11 +9,12 @@ import {
 import { QuickActions } from "./quick-actions";
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
-import AppointmentCard from "./appointment-card";
+import DoctorDetailsList from "./doctor-details-list";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
+import { TDoctor } from "@/types/widget";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -228,7 +229,9 @@ export function MessageBubble({
               </span>
             )}
             {isBot && verificationStatus && (
-              <div className="flex items-center gap-1 text-red-500 text-sm cursor-pointer hover:underline" onClick={clearMobileVerification}>
+              <div
+                className="flex items-center gap-1 text-red-500 text-sm cursor-pointer hover:underline"
+                onClick={clearMobileVerification}>
                 Exit verification
               </div>
             )}
@@ -336,18 +339,18 @@ export function MessageBubble({
                 )}
 
               {commonContentData.type === ContentType.DOCTOR_CARD &&
-                commonContentData.data.doctor_details?.doctor && (
-                  <AppointmentCard
-                    doctor={commonContentData.data.doctor_details.doctor}
-                    availability={
-                      commonContentData.data.doctor_details?.availability
-                    }
+                commonContentData.data.doctor_details?.doctor_ids?.length && (
+                  <DoctorDetailsList
+                    doctorDetails={commonContentData.data.doctor_details}
                     callbacks={commonContentData.data.callbacks}
-                    onBook={(info: { date: string; time: string }) => {
+                    onBook={(info: {
+                      date: string;
+                      time: string;
+                      doctor: TDoctor;
+                    }) => {
                       onContentClick?.(
                         `I want to book an appointment for ${
-                          commonContentData?.data?.doctor_details?.doctor
-                            .name || "the doctor"
+                          info.doctor?.name || "the doctor"
                         } on ${info.date} for ${info.time}`,
                         commonContentData.tool_use_id
                       );
@@ -369,33 +372,38 @@ export function MessageBubble({
                       {isResponded ? "UHID selected:" : "Select a UHID:"}
                     </div>
                     <div className="flex flex-row gap-2 flex-wrap">
-                      {commonContentData.data.uhids.map((uhid, index) => (//TODO: change it to choices with value and label
-                        <Button
-                          key={`${commonContentData.tool_use_id}-${index}`}
-                          variant="outline"
-                          size="sm"
-                          className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
-                            isResponded
-                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                              : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
-                          }`}
-                          onClick={() =>
-                            !isResponded &&
-                            onContentClick?.(
-                              uhid.uhid,
-                              commonContentData.tool_use_id
-                            )
-                          }
-                          disabled={isQuickActionsDisabled || isResponded}>
-                          <MarqueeText
-                            text={`${uhid.fn || ""} ${uhid.ln || ""} ${
-                              uhid.age || ""
-                            } (${uhid.uhid})`}
-                            maxWidth="300px"
-                            className="text-left"
-                          />
-                        </Button>
-                      ))}
+                      {commonContentData.data.uhids.map(
+                        (
+                          uhid,
+                          index //TODO: change it to choices with value and label
+                        ) => (
+                          <Button
+                            key={`${commonContentData.tool_use_id}-${index}`}
+                            variant="outline"
+                            size="sm"
+                            className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
+                              isResponded
+                                ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
+                            }`}
+                            onClick={() =>
+                              !isResponded &&
+                              onContentClick?.(
+                                uhid.uhid,
+                                commonContentData.tool_use_id
+                              )
+                            }
+                            disabled={isQuickActionsDisabled || isResponded}>
+                            <MarqueeText
+                              text={`${uhid.fn || ""} ${uhid.ln || ""} ${
+                                uhid.age || ""
+                              } (${uhid.uhid})`}
+                              maxWidth="300px"
+                              className="text-left"
+                            />
+                          </Button>
+                        )
+                      )}
                     </div>
                   </div>
                 )}

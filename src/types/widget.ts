@@ -99,7 +99,7 @@ export type TSlotDetail = {
 };
 
 export type TDoctorDetails = {
-  doctor: TDoctor;
+  doctor_ids?: string[];
   availability?: TAvailability;
 };
 
