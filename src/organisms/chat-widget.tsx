@@ -685,7 +685,13 @@ export function ChatWidget({
             updatedMessages[updatedMessages.length - 1] = {
               ...updatedMessages[updatedMessages.length - 1],
               isResponded: true,
+              isStored: true,
             };
+            updateMessageInSession(
+              sessionId,
+              updatedMessages[updatedMessages.length - 1].id,
+              updatedMessages[updatedMessages.length - 1]
+            );
             return updatedMessages;
           });
           if (
