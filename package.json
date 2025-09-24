@@ -1,13 +1,12 @@
 {
   "name": "eka-med-assist-web",
   "private": true,
-  "version": "0.0.5",
+  "version": "0.0.8",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "tsc -b && vite build",
-    "build-dev": "yarn version --patch --no-git-tag-version && vite build --mode dev",
-    "build-stage": "yarn version --prerelease --preid=beta --no-git-tag-version && vite build --mode stage",
+    "build-stage": "yarn version --prerelease --no-git-tag-version && vite build --mode stage",
     "build-prod": "yarn version --patch --no-git-tag-version &&  vite build --mode prod",
     "lint": "eslint .",
     "preview": "vite preview"

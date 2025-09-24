@@ -24,7 +24,7 @@ function processWidgetLoader(
         const baseUrl = isProduction
           ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
           : mode === "stage"
-          ? `https://dev-cdn.ekacare.co/apollo/${mode}-${version}/`
+          ? `https://dev-cdn.ekacare.co/apollo/dev-${version}/`
           : "/";
 
         // Replace hardcoded URLs with dynamic ones
@@ -86,7 +86,7 @@ export default defineConfig(({ mode }) => {
   const base = isProduction
     ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
     : isStage
-    ? `https://dev-cdn.ekacare.co/apollo/${mode}-${version}/`
+    ? `https://dev-cdn.ekacare.co/apollo/dev-${version}/`
     : "./";
 
   return {
