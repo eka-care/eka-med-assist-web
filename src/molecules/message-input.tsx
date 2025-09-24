@@ -9,7 +9,7 @@ import { ErrorMessageUI } from "@/types/socket";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { CONNECTION_STATUS } from "@/types/widget";
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
-import { TMobileVerificationStatus } from "@/organisms/chat-widget";
+import { MOBILE_VERIFICATION_STAGE, TMobileVerificationStatus } from "@/organisms/chat-widget";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -288,27 +288,10 @@ export function MessageInput({
     } else if (
       mobileVerificationStatus.active &&
       mobileVerificationStatus.isSending &&
-      !mobileVerificationStatus.isOtpSent
+      mobileVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER
     ) {
       return "Sending OTP to your mobile number...";
-    } else if (
-      mobileVerificationStatus.active &&
-      mobileVerificationStatus.isSending &&
-      mobileVerificationStatus.isOtpSent
-    ) {
-      return "Verifying OTP...";
-    } else if (
-      mobileVerificationStatus.active &&
-      !mobileVerificationStatus.isOtpSent
-    ) {
-      return "Enter your mobile number...";
-    } else if (
-      mobileVerificationStatus.active &&
-      mobileVerificationStatus.isOtpSent &&
-      !mobileVerificationStatus.isSending
-    ) {
-      return "Enter 6-digit OTP...";
-    }
+    } 
     return null;
   }, [mobileVerificationStatus]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)

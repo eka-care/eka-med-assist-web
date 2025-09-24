@@ -76,6 +76,8 @@ interface MessageBubbleProps {
   progressMessage?: string | null;
   onLike?: () => void;
   onDislike?: () => void;
+  verificationStatus: boolean;
+  clearMobileVerification: () => void;
   onRegenerate?: (messageId: string) => void;
   handleQuickAction: (action: string) => void;
   showRetry?: boolean;
@@ -117,6 +119,8 @@ export function MessageBubble({
   progressMessage,
   handleQuickAction,
   // messageId,
+  verificationStatus,
+  clearMobileVerification,
   isRegenerating = false,
   commonContentData,
   onContentClick,
@@ -203,7 +207,9 @@ export function MessageBubble({
                 <ReactMarkdown>{message}</ReactMarkdown>
               </div>
             )}
-            {message && !isBot && <div className="text-sm p-4 break-word">{message}</div>}
+            {message && !isBot && (
+              <div className="text-sm p-4 break-word">{message}</div>
+            )}
             {isBot && progressMessage && (
               <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
                 <ReactMarkdown>{progressMessage}</ReactMarkdown>
@@ -220,6 +226,11 @@ export function MessageBubble({
               <span className="ml-2 text-blue-600 animate-pulse">
                 🔄 Regenerating...
               </span>
+            )}
+            {isBot && verificationStatus && (
+              <div className="flex items-center gap-1 text-red-500 text-sm cursor-pointer hover:underline" onClick={clearMobileVerification}>
+                Exit verification
+              </div>
             )}
           </div>
 
@@ -349,6 +360,44 @@ export function MessageBubble({
                       getAvailableSlotsForAppointment
                     }
                   />
+                )}
+              {commonContentData.type === ContentType.MOBILE_VERIFICATION &&
+                commonContentData.data.uhids &&
+                commonContentData.data.uhids?.length && (
+                  <div>
+                    <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
+                      {isResponded ? "UHID selected:" : "Select a UHID:"}
+                    </div>
+                    <div className="flex flex-row gap-2 flex-wrap">
+                      {commonContentData.data.uhids.map((uhid, index) => (//TODO: change it to choices with value and label
+                        <Button
+                          key={`${commonContentData.tool_use_id}-${index}`}
+                          variant="outline"
+                          size="sm"
+                          className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
+                            isResponded
+                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                              : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
+                          }`}
+                          onClick={() =>
+                            !isResponded &&
+                            onContentClick?.(
+                              uhid.uhid,
+                              commonContentData.tool_use_id
+                            )
+                          }
+                          disabled={isQuickActionsDisabled || isResponded}>
+                          <MarqueeText
+                            text={`${uhid.fn || ""} ${uhid.ln || ""} ${
+                              uhid.age || ""
+                            } (${uhid.uhid})`}
+                            maxWidth="300px"
+                            className="text-left"
+                          />
+                        </Button>
+                      ))}
+                    </div>
+                  </div>
                 )}
             </>
           )}

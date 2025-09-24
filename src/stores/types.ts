@@ -1,6 +1,5 @@
-import { Message } from "@/types";
 import { ErrorMessageUI } from "@/types/socket";
-import { CONNECTION_STATUS } from "@/types/widget";
+import { CONNECTION_STATUS, Message } from "@/types/widget";
 
 export type TMedAssistStore = {
   sessionId: string;

@@ -132,7 +132,15 @@ export const MOBILE_VERIFICATION_ERROR_MESSAGES = {
     msg: "The OTP you entered is incorrect or has expired. Please check the 6-digit code sent to your mobile number and try again, or request a new OTP.",
   },
   INVALID_MOBILE_NUMBER: {
-    code: "tool_error",
+    code: "invalid_mobile_number",
     msg: "Something went wrong, I was unable to verify your mobile number, do you want to share another number or retry?",
+  },
+  USER_NOT_AUTHENTICATED: {
+    code: "user_not_authenticated",
+    msg: "You are not authenticated, please login again",
+  },
+  INVALID_UHID: {
+    code: "invalid_uhid",
+    msg: "Uhid is invalid, please try again",
   },
 };

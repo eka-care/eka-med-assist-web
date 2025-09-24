@@ -1,5 +1,6 @@
 import { MULTI_SELECT_ADDITIONAL_OPTION } from "@/configs/enums";
 import { TCallbacks, TDoctorDetails } from "./widget";
+import { TUhidDetails } from "@/api/post-mobile-verification";
 
 // WebSocket event types for chatbot
 export const SocketEvent = {
@@ -315,6 +316,7 @@ export interface CommonHandlerData {
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     url?: string;
     mobile_number?: string;
+    uhids?: TUhidDetails[];
   };
 }
 
