@@ -25,7 +25,7 @@ function processWidgetLoader(
           ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
           : mode === "stage"
           ? `https://dev-cdn.ekacare.co/apollo/${mode}-${version}/`
-          : "./";
+          : "/";
 
         // Replace hardcoded URLs with dynamic ones
         content = content.replace(
