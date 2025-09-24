@@ -38,6 +38,7 @@ export function useWebSocket(
     audioData?: AudioData;
     files?: File[];
     message?: string;
+    tool_use_params?: any;
   } | null>(null);
   const setError = useMedAssistStore((state) => state.setError);
   const setShowRetryButton = useMedAssistStore(
@@ -448,7 +449,7 @@ export function useWebSocket(
   }, [config?.sessionId, config?.auth?.token, setConnectionStatus]);
 
   // Send chat message (alias for sendTextMessage)
-  const sendChatMessage = (message: string, tool_use_id?: string) => {
+  const sendChatMessage = ({message, tool_use_id,tool_use_params}: {message: string, tool_use_id?: string, tool_use_params?: any}) => {
     if (wsRef.current?.isConnected()) {
       try {
         // Store the last sent message data for potential retry
@@ -458,7 +459,7 @@ export function useWebSocket(
           type: "text",
         };
 
-        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id});
+        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id, tool_use_params: tool_use_params});
       } catch (error) {
         console.error("Failed to send text message:", error);
         setError(
@@ -475,10 +476,10 @@ export function useWebSocket(
     }
   };
 
-  const sendHiddenChatMessage = (message: string, tool_use_id?: string) => {
+  const sendHiddenChatMessage = ({message, tool_use_id,tool_use_params}: {message: string, tool_use_id?: string, tool_use_params?: any}) => {
     if (wsRef.current?.isConnected()) {
       try {
-        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id, hidden: true});
+        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id, hidden: true, tool_use_params: tool_use_params});
       } catch (error) {
         console.error("Failed to send hidden text message:", error);
       }
@@ -616,7 +617,7 @@ export function useWebSocket(
     try {
       switch (lastMessage.type) {
         case "text":
-          await sendChatMessage(lastMessage.content, lastMessage.tool_use_id);
+          await sendChatMessage({message: lastMessage.content, tool_use_id: lastMessage.tool_use_id, tool_use_params: lastMessage.tool_use_params});
           break;
         case "audio":
           if (lastMessage.audioData) {

@@ -498,7 +498,7 @@ export class WebSocketService {
   /**
    * Send chat message
    */
-  public sendChatMessage({message, tool_use_id, hidden}: {message: string, tool_use_id?: string, hidden?: boolean}): void {
+  public sendChatMessage({message, tool_use_id, hidden ,tool_use_params}: {message: string, tool_use_id?: string, hidden?: boolean, tool_use_params?: any}): void {
     if (!this.isConnected()) {
       throw new Error("WebSocket not connected");
     }
@@ -508,7 +508,7 @@ export class WebSocketService {
       ct: ContentType.TEXT,
       ts: Date.now(),
       _id: Date.now().toString(),
-      data: { text: message, ...(tool_use_id && { tool_use_id }), ...(hidden && { hidden }) },
+      data: { text: message, ...(tool_use_id && { tool_use_id }), ...(hidden && { hidden }), ...(tool_use_params && { tool_use_params }) },
     };
 
     this.sendMessage(chatMessage);

@@ -89,9 +89,6 @@ export function DoctorDetailsList({
     loadInitialDoctors();
   }, [doctorIds, sessionId, initialLoadCount]);
 
-  useEffect(() => {
-    console.log("doctors", doctors);
-  }, [doctors]);
   // Load remaining doctors when "Show more" is clicked
   const loadRemainingDoctors = async () => {
     if (loadedCount >= totalDoctors || !sessionId) return;
@@ -140,7 +137,7 @@ export function DoctorDetailsList({
 
   if (disabled) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center py-2">
         <p className="text-sm text-gray-500">Doctor Selected</p>
       </div>
     );
@@ -205,7 +202,7 @@ export function DoctorDetailsList({
 
   if (doctors.length === 0) {
     return (
-      <div className="flex items-center justify-center py-8">
+      <div className="flex items-center justify-center py-2">
         <p className="text-sm text-gray-500">No doctor details available.</p>
       </div>
     );
