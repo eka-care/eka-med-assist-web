@@ -3,7 +3,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getAvailabilityDates } from "@/api/post-availability-dates";
 import { getAvailabilitySlots } from "@/api/post-availability-slots";
 import { getSessionDetails } from "@/api/get-session-details";
-import { IMobileVerificationResponse } from "@/api/post-mobile-verification";
+import {
+  IMobileVerificationResponse,
+  TUhidDetails,
+} from "@/api/post-mobile-verification";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
@@ -39,7 +42,7 @@ export type TMobileVerificationStatus = {
   mobile_number: string | null;
   isSending: boolean;
   tool_use_id: string | null;
-  uhids: string[];
+  uhids: TUhidDetails[];
 };
 interface ChatWidgetProps {
   title?: string;
@@ -625,6 +628,9 @@ export function ChatWidget({
                 response?.data?.error?.msg ||
                 "Mobile number verification failed",
               tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobileNumber,
+              },
             });
           }
         } else if (
@@ -653,16 +659,20 @@ export function ChatWidget({
               ...prev,
               active: true,
               isSending: false,
+              uhids: response?.data?.uhids || [],
               stage: MOBILE_VERIFICATION_STAGE.UHID,
             }));
           } else {
-            //if response is sucess/other otp error / normal message if sent
-            clearMobileVerification();
             //send a hidden message chat messsage to BE
             await sendHiddenChatMessage({
               message: "Otp verification failed",
               tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobVerificationStatusRef.current.mobile_number,
+              },
             });
+            //if response is sucess/other otp error / normal message if sent
+            clearMobileVerification();
           }
         } else if (
           mobVerificationStatusRef.current.stage ===
@@ -693,16 +703,23 @@ export function ChatWidget({
               tool_use_id
             );
           } else {
-            clearMobileVerification();
-            const hiddenMessage =
+            const message =
               response?.data?.status === "success"
-                ? "Verification successful"
+                ? `Verification successful ,selected uhid: ${content}`
                 : response?.data?.error?.msg || "Verification failed";
 
-            await sendHiddenChatMessage({
-              message: hiddenMessage,
+            const uhid_details = mobVerificationStatusRef.current?.uhids?.find(
+              (uhid) => uhid?.uhid === content
+            );
+            await sendChatMessage({
+              message: message,
               tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobVerificationStatusRef.current.mobile_number,
+                ...(uhid_details && { ...uhid_details }),
+              },
             });
+            clearMobileVerification();
           }
         }
 
@@ -1101,12 +1118,12 @@ export function ChatWidget({
   };
 
   const exitMobileVerification = async () => {
-    const exitMessage =
-      mobVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER
-        ? "Exit mobile verification"
-        : mobVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.OTP
-        ? "Exit otp verification"
-        : "Exit uhid verification";
+    const exitMessage = `Exit ${mobVerificationStatus?.stage || "Mobile"} verification ${
+            mobVerificationStatusRef?.current?.mobile_number
+              ? "for mobile number:" +
+                mobVerificationStatusRef.current?.mobile_number
+              : ""
+          }`
     const tool_use_id = mobVerificationStatusRef.current?.tool_use_id;
     await clearMobileVerification();
 
