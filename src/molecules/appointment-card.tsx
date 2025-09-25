@@ -78,11 +78,9 @@ export function AppointmentCard({
 
   // Use callback availability if it has more data, otherwise use provided availability
   const currentAvailability = callbackAvailability || availability;
-  console.log("curent availability", currentAvailability);
 
   // Get the first date from availability to start the calendar
   const firstDate = useMemo(() => {
-    console.log("current availabilty", currentAvailability);
 
     if (!currentAvailability?.slots_details?.length) return new Date();
     const firstSlot = currentAvailability.slots_details[0];
@@ -91,7 +89,6 @@ export function AppointmentCard({
 
   // Auto-select date based on selected_date or first available date (only on initial load)
   useEffect(() => {
-    console.log("current availabilty in useeffect", currentAvailability);
 
     if (currentAvailability?.slots_details?.length && !userHasSelectedDate) {
       let targetDateIndex = 0;
@@ -580,7 +577,7 @@ export function AppointmentCard({
                           type="button"
                           variant="outline"
                           onClick={() => !isDisabled && selectDate(day.date)}
-                          disabled={isDisabled}
+                          disabled={isDisabled || disabled}
                           aria-current={isSelected ? "date" : undefined}
                           className={[
                             "flex flex-col items-center justify-center h-12 rounded-lg border p-2 gap-0.5 min-w-0",
@@ -649,6 +646,7 @@ export function AppointmentCard({
                             variant="outline"
                             onClick={() => setSelectedSlot(t)}
                             aria-pressed={selected}
+                            disabled={disabled}
                             className={[
                               "inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold",
                               selected

@@ -69,6 +69,7 @@ export interface Message {
   audioData?: AudioData; // Add audio data support
   isResponded?: boolean; // Track if this bot message has been responded to
   isStored: boolean;
+  tool_use_params?: any;
 }
 
 export type TDoctor = {

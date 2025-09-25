@@ -455,7 +455,7 @@ export function ChatWidget({
   useEffect(() => {
     scrollToBottom();
     if (isStreaming) {
-      // setProgressMessage(null);
+      setProgressMessage(null);
       setIsWaitingForResponse(false); // Clear waiting state when streaming starts
     }
   }, [messages, isStreaming]);
@@ -552,6 +552,8 @@ export function ChatWidget({
     if (!sessionId) {
       clearMobileVerification();
     }
+    setIsWaitingForResponse(false);
+    setProgressMessage(null);
   }, [sessionId]);
 
   const showErrorMessage = useMemo(() => {
@@ -790,6 +792,16 @@ export function ChatWidget({
             updatedMessages[i] = {
               ...updatedMessages[i],
               isResponded: true,
+              ...(tool_use_params && { tool_use_params }),
+              ...(tool_use_params?.doctor_id && updatedMessages[i].commonContentData && { 
+                commonContentData: {
+                  ...updatedMessages[i].commonContentData!, 
+                  data: {
+                    ...updatedMessages[i].commonContentData!.data, 
+                    doctor_details: {...updatedMessages[i].commonContentData!.data.doctor_details, doctor_ids: [tool_use_params.doctor_id]}
+                  }
+                }
+              }),
             };
             updateMessageInSession(
               sessionId,
