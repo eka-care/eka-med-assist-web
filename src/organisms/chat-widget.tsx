@@ -569,7 +569,15 @@ export function ChatWidget({
     mobVerificationStatusRef.current = mobVerificationStatus;
   }, [mobVerificationStatus]);
 
-  const handleSendMessage = async (content: string, tool_use_id?: string) => {
+  const handleSendMessage = async ({
+    content,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    content: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => {
     // Block sending if currently streaming
     if (isStreaming) {
       console.log("Cannot send message while streaming");
@@ -704,10 +712,10 @@ export function ChatWidget({
               isSending: false,
               stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
             }));
-            await handleSendMessage(
-              mobVerificationStatusRef.current.mobile_number || "",
-              tool_use_id
-            );
+            await handleSendMessage({
+              content: mobVerificationStatusRef.current.mobile_number || "",
+              tool_use_id: tool_use_id,
+            });
           } else {
             const message =
               response?.data?.status === "success"
@@ -767,7 +775,7 @@ export function ChatWidget({
         return;
       } else {
         // Normal chat flow - clear mobile verification if active
-        await sendChatMessage({ message: content, tool_use_id: tool_use_id });
+        await sendChatMessage({ message: content, tool_use_id: tool_use_id ,...(tool_use_params && { tool_use_params })});
       }
 
       // Mark the bot message as responded if it has pills or multiselect
@@ -974,7 +982,7 @@ export function ChatWidget({
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       try {
-        await handleSendMessage(action.label);
+        await handleSendMessage({ content: action.label});
       } catch (error) {
         console.error("Failed to send quick action:", error);
       }
@@ -1124,16 +1132,14 @@ export function ChatWidget({
   };
 
   const exitMobileVerification = async () => {
-    const exitMessage = `Exit ${mobVerificationStatus?.stage || "Mobile"} verification ${
-            mobVerificationStatusRef?.current?.mobile_number
-              ? "for mobile number:" +
-                mobVerificationStatusRef.current?.mobile_number
-              : ""
-          }`
+    const exitMessage = `Exit ${
+      mobVerificationStatus?.stage || "Mobile"
+    } verification`;
     const tool_use_id = mobVerificationStatusRef.current?.tool_use_id;
+    const tool_use_params = mobVerificationStatusRef.current?.mobile_number;
     await clearMobileVerification();
 
-    await handleSendMessage(exitMessage, tool_use_id || "");
+    await handleSendMessage({ content: exitMessage, tool_use_id: tool_use_id || "",tool_use_params:{mobile_number: tool_use_params} });
   };
 
   //TODO: add a wrapper for all too callbackes with trigger refresh session

@@ -5,7 +5,7 @@ import { Button } from "@ui/index";
 
 interface OTPInputProps {
   mobileNumber: string;
-  onSendOTP: (otp: string) => void;
+  onSendOTP: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
   onEditMobile?: () => void;
   onResendOTP?: () => void;
   isLoading?: boolean;
@@ -34,13 +34,13 @@ export function OTPInput({
     setOtp(value);
     // Auto-submit when 6 digits are entered
     if (value.length === 6) {
-      onSendOTP(value);
+      onSendOTP({content: value});
     }
   };
 
   const handleSendClick = () => {
     if (otp.length === 6) {
-      onSendOTP(otp);
+      onSendOTP({content: otp});
     }
   };
 

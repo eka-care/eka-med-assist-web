@@ -86,7 +86,15 @@ interface MessageBubbleProps {
   messageId: string; // Add messageId prop
   isRegenerating?: boolean; // Add isRegenerating prop
   commonContentData?: CommonHandlerData; // Add common content data prop
-  onContentClick?: (text: string, tool_use_id: string) => void; // Add common content click handler
+  onContentClick?: ({
+    content,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    content: string;
+    tool_use_id: string;
+    tool_use_params?: any;
+  }) => void; // Add common content click handler
   audioData?: any; // Add audio data support
   isResponded?: boolean; // Track if this bot message has been responded to
   files?: File[]; // Add files prop for file previews
@@ -180,7 +188,10 @@ export function MessageBubble({
       }
 
       // Send the selected values as comma-separated text
-      onContentClick(finalValues.join(", "), commonContentData.tool_use_id);
+      onContentClick({
+        content: finalValues.join(", "),
+        tool_use_id: commonContentData.tool_use_id,
+      });
     }
   };
   return (
@@ -275,10 +286,10 @@ export function MessageBubble({
                           }`}
                           onClick={() =>
                             !isResponded &&
-                            onContentClick?.(
-                              choice,
-                              commonContentData.tool_use_id
-                            )
+                            onContentClick?.({
+                              content: choice,
+                              tool_use_id: commonContentData.tool_use_id,
+                            })
                           }
                           disabled={isQuickActionsDisabled || isResponded}>
                           <MarqueeText
@@ -338,32 +349,38 @@ export function MessageBubble({
                   </div>
                 )}
 
-              {commonContentData.type === ContentType.DOCTOR_CARD &&
-                commonContentData.data.doctor_details?.doctor_ids?.length && (
-                  <DoctorDetailsList
-                    doctorDetails={commonContentData.data.doctor_details}
-                    callbacks={commonContentData.data.callbacks}
-                    onBook={(info: {
-                      date: string;
-                      time: string;
-                      doctor: TDoctor;
-                    }) => {
-                      onContentClick?.(
-                        `I want to book an appointment for ${
-                          info.doctor?.name || "the doctor"
-                        } on ${info.date} for ${info.time}`,
-                        commonContentData.tool_use_id
-                      );
-                    }}
-                    disabled={isResponded}
-                    getAvailabilityDatesForAppointment={
-                      getAvailabilityDatesForAppointment
-                    }
-                    getAvailableSlotsForAppointment={
-                      getAvailableSlotsForAppointment
-                    }
-                  />
-                )}
+              {commonContentData.type === ContentType.DOCTOR_CARD && (
+                <DoctorDetailsList
+                  doctorDetails={commonContentData.data.doctor_details || {}}
+                  callbacks={commonContentData.data.callbacks}
+                  onBook={(info: {
+                    date: string;
+                    time: string;
+                    doctor: TDoctor;
+                  }) => {
+                    onContentClick?.({
+                      content: `I want to book an appointment for ${
+                        info.doctor?.name || "the doctor"
+                      } on ${info.date} for ${info.time}`,
+                      tool_use_id: commonContentData.tool_use_id,
+                      tool_use_params: {
+                        selected_date: info.date,
+                        selected_slot: info.time,
+                        doctor_id: info.doctor?.doctor_id,
+                        hospital_id: info.doctor?.hospital_id,
+                        region_id: info.doctor?.region_id,
+                      },
+                    });
+                  }}
+                  disabled={isResponded}
+                  getAvailabilityDatesForAppointment={
+                    getAvailabilityDatesForAppointment
+                  }
+                  getAvailableSlotsForAppointment={
+                    getAvailableSlotsForAppointment
+                  }
+                />
+              )}
               {commonContentData.type === ContentType.MOBILE_VERIFICATION &&
                 commonContentData.data.uhids &&
                 commonContentData.data.uhids?.length && (
@@ -388,10 +405,10 @@ export function MessageBubble({
                             }`}
                             onClick={() =>
                               !isResponded &&
-                              onContentClick?.(
-                                uhid.uhid,
-                                commonContentData.tool_use_id
-                              )
+                              onContentClick?.({
+                                content: uhid.uhid,
+                                tool_use_id: commonContentData.tool_use_id,
+                              })
                             }
                             disabled={isQuickActionsDisabled || isResponded}>
                             <MarqueeText

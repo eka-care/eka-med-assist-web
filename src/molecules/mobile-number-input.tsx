@@ -4,7 +4,7 @@ import { Input } from "@ui/index";
 import { Button } from "@ui/index";
 
 interface MobileNumberInputProps {
-  onSendMobile: (mobileNumber: string) => void;
+  onSendMobile: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
   isLoading?: boolean;
   error?: string | null;
   disabled?: boolean;
@@ -36,7 +36,7 @@ export function MobileNumberInput({
 
   const handleSendClick = () => {
     if (mobileNumber.length === 10) {
-      onSendMobile(mobileNumber);
+      onSendMobile({content: mobileNumber});
     }
   };
 

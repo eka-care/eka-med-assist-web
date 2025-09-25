@@ -29,7 +29,7 @@ const formatFileSize = (bytes: number): string => {
 };
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
   onFinalAudioStream: (audioData: AudioData) => void;
   onFileUpload: (files: FileList, message?: string) => void;
   onInputChange?: (value: string) => void;
@@ -462,7 +462,7 @@ export function MessageInput({
 
         // Send text message
         if (message.trim() && uploadedFiles.length === 0) {
-          onSendMessage(message.trim());
+          onSendMessage({content: message.trim()});
         }
 
         // Send files if any
