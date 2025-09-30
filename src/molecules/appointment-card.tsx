@@ -81,7 +81,6 @@ export function AppointmentCard({
 
   // Get the first date from availability to start the calendar
   const firstDate = useMemo(() => {
-
     if (!currentAvailability?.slots_details?.length) return new Date();
     const firstSlot = currentAvailability.slots_details[0];
     return new Date(firstSlot.date);
@@ -89,7 +88,6 @@ export function AppointmentCard({
 
   // Auto-select date based on selected_date or first available date (only on initial load)
   useEffect(() => {
-
     if (currentAvailability?.slots_details?.length && !userHasSelectedDate) {
       let targetDateIndex = 0;
 
@@ -653,11 +651,11 @@ export function AppointmentCard({
                                 ? "border-blue-600 bg-blue-600 text-white"
                                 : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
                             ].join(" ")}>
-                             <Calendar
+                            <Calendar
                               className={`h-3.5 w-3.5 flex-shrink-0${
                                 selected ? "text-white" : "text-blue-600"
                               }`}
-                            /> 
+                            />
                             <span className="truncate">{t}</span>
                           </Button>
                         );
@@ -690,6 +688,11 @@ export function AppointmentCard({
                 </p>
               </div>
             )}
+          </div>
+        )}
+        {open && !currentAvailability?.slots_details?.length && (
+          <div className="px-1 pb-2 pt-1">
+            <p className="text-sm text-slate-500">No availability provided.</p>
           </div>
         )}
       </CardContent>

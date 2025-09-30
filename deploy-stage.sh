@@ -14,7 +14,7 @@ echo "🚀 Deploying Eka Medical Assistant Widget to AWS Dev..."
 
 rm -rf dist/
 yarn install
-yarn build --mode stage
+yarn build-stage-update
 
 
 cd dist
