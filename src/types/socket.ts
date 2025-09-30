@@ -226,6 +226,7 @@ export enum SOCKET_ERROR_CODES {
   FILE_UPLOAD_INPROGRESS = "file_upload_inprogress",
   TIMEOUT = "timeout",
   SERVER_ERROR = "server_error",
+  SESSION_TOKEN_MISMATCH = "session_token_mismatch",
 }
 
 // UI Error Message interface
@@ -284,6 +285,10 @@ export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
     title: "Oops! Something went wrong",
     description:
       "We had trouble processing your message. Please start a new session to continue.",
+  },
+  SESSION_TOKEN_MISMATCH: {
+    title: "Session Token Mismatch",//add user firendly message
+    description: "Please start a new session to continue.",
   },
 } as const;
 

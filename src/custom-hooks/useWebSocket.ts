@@ -303,6 +303,12 @@ export function useWebSocket(
           setShowRetryButton(true);
           break;
         }
+        case SOCKET_ERROR_CODES.SESSION_TOKEN_MISMATCH: {
+          setError(ERROR_MESSAGES.SESSION_TOKEN_MISMATCH);
+          setShowRetryButton(false);
+          setStartNewConnection(true);
+          break;
+        }
         default: {
           setError({ title: error.msg });
           setShowRetryButton(true);
@@ -428,6 +434,12 @@ export function useWebSocket(
       setShowRetryButton(false);
       setStartNewConnection(true);
       setError(ERROR_MESSAGES.SESSION_INACTIVE);
+    });
+
+    wsRef.current?.on(WEBSOCKET_CUSTOM_EVENTS.SESSION_EXPIRED, (_: Error) => {
+      setShowRetryButton(false);
+      triggerSessionRefresh();
+      setError(ERROR_MESSAGES.SESSION_EXPIRED);
     });
 
     // Connect to WebSocket

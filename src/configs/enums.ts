@@ -27,6 +27,7 @@ export enum WEBSOCKET_CUSTOM_EVENTS {
   SESSION_REFRESHED = "session_refreshed",
   SESSION_NOT_FOUND = "session_not_found",
   START_NEW_SESSION = "start_new_session",
+  SESSION_EXPIRED = "session_expired",
 }
 
 export enum MULTI_SELECT_ADDITIONAL_OPTION {

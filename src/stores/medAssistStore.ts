@@ -99,7 +99,12 @@ const useMedAssistStore = create<TMedAssistStore>()(
       setTimeoutError: (isTimeout: boolean) =>
         set({ isTimeoutError: isTimeout }),
 
-      clearSession: () => set(storeInitialState),
+      clearSession: async () => {
+        set(storeInitialState);
+        console.log("Clearing session");
+        // Clear persisted data from localStorage
+        await localStorage.removeItem("med-assist-store");
+      },
 
       // Timeout management
       streamingTimeoutId: null,
@@ -176,22 +181,6 @@ const useMedAssistStore = create<TMedAssistStore>()(
             isRefreshingSession: false,
             connectionStatus: CONNECTION_STATUS.DISCONNECTED,
           });
-
-          // Handle specific error codes
-          if (
-            error.code === "session_expired" ||
-            error.code === "session_not_found" ||
-            error.code === "validation_error"
-          ) {
-            // Session is no longer valid, clear it
-            set({
-              sessionId: "",
-              sessionToken: "",
-              connectionStatus: CONNECTION_STATUS.CONNECTING,
-            });
-            console.log("Session expired or not found, cleared session");
-          }
-
           return false;
         }
       },

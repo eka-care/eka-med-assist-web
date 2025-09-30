@@ -135,7 +135,7 @@ export function ChatWidget({
           console.log("isValid", isValid);
           if (!isValid.success && !isValid.retry) {
             console.log("Session is invalid, starting new session");
-            clearSession();
+            await clearSession();
             await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
@@ -145,7 +145,7 @@ export function ChatWidget({
             if (success) {
               setIsSessionValidated(true);
             } else {
-              clearSession();
+             await clearSession();
               await onStartSession?.(true);
               //For new sessions, we don't need validation
               setIsSessionValidated(true);
@@ -157,7 +157,7 @@ export function ChatWidget({
         } catch (error) {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
-          clearSession();
+          await clearSession();
           await onStartSession?.(true);
           //For new sessions, we don't need validation
           setIsSessionValidated(true);
@@ -1109,10 +1109,10 @@ export function ChatWidget({
     }
   };
 
-  const handleStartNewSession = () => {
+  const handleStartNewSession = async () => {
     try {
       setMessages([messages[0]]);
-      clearSession();
+      await clearSession();
       setIsWaitingForResponse(false); // Clear waiting state when starting new session
       onStartSession?.(true);
     } catch (error) {
