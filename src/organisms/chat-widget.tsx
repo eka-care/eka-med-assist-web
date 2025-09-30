@@ -91,6 +91,7 @@ export function ChatWidget({
       mobile_number: null,
     });
   const mobVerificationStatusRef = useRef(mobVerificationStatus); //using ref to get rid of state updates issues
+  const isUnmountingRef = useRef(false);
 
   const {
     connectionStatus,
@@ -145,7 +146,7 @@ export function ChatWidget({
             if (success) {
               setIsSessionValidated(true);
             } else {
-             await clearSession();
+              await clearSession();
               await onStartSession?.(true);
               //For new sessions, we don't need validation
               setIsSessionValidated(true);
@@ -166,10 +167,40 @@ export function ChatWidget({
 
       validateSession();
     }
+    return () => {
+      isUnmountingRef.current = true;
+    };
   }, []); // Only run on mount
 
-  //load previous messages on unmout
   useEffect(() => {
+    //on unmount save last message left in local state if not already stored
+    return () => {
+      if (
+        messages.length > 0 &&
+        !messages[messages.length - 1].isStored &&
+        sessionId &&
+        isUnmountingRef.current
+      ) {
+        const updatedMessage = {
+          ...messages[messages.length - 1],
+          isStored: true,
+        };
+        setMessages((prev) => {
+          const updatedMessages = [...prev];
+          updatedMessages[updatedMessages.length - 1] = updatedMessage;
+          return updatedMessages;
+        });
+        addMessageToSession(sessionId, updatedMessage);
+      }
+    };
+  }, [messages]);
+  //load previous messages on mount
+  useEffect(() => {
+    if (!sessionId) {
+      clearMobileVerification();
+    }
+    setIsWaitingForResponse(false);
+    setProgressMessage(null);
     if (sessionId) {
       //TODO: add a loading state here
       const previousMessages = getMessagesForSession(sessionId);
@@ -241,7 +272,6 @@ export function ChatWidget({
             isRegenerating: false, // Clear regenerating state
             isStored: false,
           };
-
           return updatedMessages;
         } else if (
           lastMessage &&
@@ -547,15 +577,6 @@ export function ChatWidget({
     setIsBotIconAnimating(shouldAnimate);
   }, [progressMessage, isWaitingForResponse]);
 
-  // Clear mobile verification when session changes
-  useEffect(() => {
-    if (!sessionId) {
-      clearMobileVerification();
-    }
-    setIsWaitingForResponse(false);
-    setProgressMessage(null);
-  }, [sessionId]);
-
   const showErrorMessage = useMemo(() => {
     return (
       connectionStatus === CONNECTION_STATUS.CONNECTED &&
@@ -777,7 +798,11 @@ export function ChatWidget({
         return;
       } else {
         // Normal chat flow - clear mobile verification if active
-        await sendChatMessage({ message: content, tool_use_id: tool_use_id ,...(tool_use_params && { tool_use_params })});
+        await sendChatMessage({
+          message: content,
+          tool_use_id: tool_use_id,
+          ...(tool_use_params && { tool_use_params }),
+        });
       }
 
       // Mark the bot message as responded if it has pills or multiselect
@@ -793,15 +818,20 @@ export function ChatWidget({
               ...updatedMessages[i],
               isResponded: true,
               ...(tool_use_params && { tool_use_params }),
-              ...(tool_use_params?.doctor_id && updatedMessages[i].commonContentData && { 
-                commonContentData: {
-                  ...updatedMessages[i].commonContentData!, 
-                  data: {
-                    ...updatedMessages[i].commonContentData!.data, 
-                    doctor_details: {...updatedMessages[i].commonContentData!.data.doctor_details, doctor_ids: [tool_use_params.doctor_id]}
-                  }
-                }
-              }),
+              ...(tool_use_params?.doctor_id &&
+                updatedMessages[i].commonContentData && {
+                  commonContentData: {
+                    ...updatedMessages[i].commonContentData!,
+                    data: {
+                      ...updatedMessages[i].commonContentData!.data,
+                      doctor_details: {
+                        ...updatedMessages[i].commonContentData!.data
+                          .doctor_details,
+                        doctor_ids: [tool_use_params.doctor_id],
+                      },
+                    },
+                  },
+                }),
             };
             updateMessageInSession(
               sessionId,
@@ -994,7 +1024,7 @@ export function ChatWidget({
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       try {
-        await handleSendMessage({ content: action.label});
+        await handleSendMessage({ content: action.label });
       } catch (error) {
         console.error("Failed to send quick action:", error);
       }
@@ -1151,7 +1181,11 @@ export function ChatWidget({
     const tool_use_params = mobVerificationStatusRef.current?.mobile_number;
     await clearMobileVerification();
 
-    await handleSendMessage({ content: exitMessage, tool_use_id: tool_use_id || "",tool_use_params:{mobile_number: tool_use_params} });
+    await handleSendMessage({
+      content: exitMessage,
+      tool_use_id: tool_use_id || "",
+      tool_use_params: { mobile_number: tool_use_params },
+    });
   };
 
   //TODO: add a wrapper for all too callbackes with trigger refresh session

@@ -170,7 +170,6 @@ class EkaMedAssistWidgetElement extends HTMLElement {
         };
 
         link.onload = () => {
-          console.log("CSS loaded successfully via link tag");
           cleanup();
           resolve(void 0);
         };

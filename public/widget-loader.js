@@ -346,7 +346,6 @@
 
     widgetState.isVisible = true;
     hideButton();
-    console.log("Widget mounted successfully (Shadow DOM)");
   }
 
   // Toggle widget visibility

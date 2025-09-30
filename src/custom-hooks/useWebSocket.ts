@@ -456,6 +456,14 @@ export function useWebSocket(
         wsRef.current.disconnect();
         wsRef.current = null;
       }
+      setIsStreaming(false);
+      clearStreamingTimeout();
+      clearResponseTimeout();
+      setError(null);
+      setLastStreamingActivity(null);
+      lastSentMessageRef.current = null;
+      setShowRetryButton(false);
+      setStartNewConnection(false);
       setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
     };
   }, [config?.sessionId, config?.auth?.token, setConnectionStatus]);

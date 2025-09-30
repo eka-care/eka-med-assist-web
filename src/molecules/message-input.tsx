@@ -98,7 +98,6 @@ export function MessageInput({
 
   // Reset sending state when streaming starts or stops
   useEffect(() => {
-    console.log("isStreaming from input", isStreaming);
     if (isStreaming || error || !disabled) {
       setIsSending(false); // Reset sending state when streaming starts
     }
@@ -110,7 +109,6 @@ export function MessageInput({
     ) {
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
-        console.log("Focusing input now");
         messageInputRef.current?.focus();
       }, 100);
 
@@ -678,7 +676,7 @@ export function MessageInput({
               placeholder={
                 mobVerificationPlaceholder
                   ? mobVerificationPlaceholder
-                  : isStreaming
+                  : (isStreaming || disabled)
                   ? "Please wait for response..."
                   : isSending
                   ? recordingPhase === RECODING_PHASE.PROCESSING
