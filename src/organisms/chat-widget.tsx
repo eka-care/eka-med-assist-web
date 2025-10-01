@@ -685,7 +685,7 @@ export function ChatWidget({
               active: true,
               isSending: false,
             }));
-          } else if (response?.success) {
+          } else if (response?.success && response?.data?.uhids?.length) {
             setMobVerificationStatus((prev) => ({
               ...prev,
               active: true,
@@ -694,9 +694,10 @@ export function ChatWidget({
               stage: MOBILE_VERIFICATION_STAGE.UHID,
             }));
           } else {
+            const hiddenMessage = !response?.data?.uhids?.length? "Otp verification successful,but Uhids not found":"Otp verification failed";
             //send a hidden message chat messsage to BE
             await sendHiddenChatMessage({
-              message: "Otp verification failed",
+              message: hiddenMessage,
               tool_use_id: tool_use_id,
               tool_use_params: {
                 mobile_number: mobVerificationStatusRef.current.mobile_number,
