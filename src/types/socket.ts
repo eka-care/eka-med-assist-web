@@ -1,5 +1,6 @@
 import { MULTI_SELECT_ADDITIONAL_OPTION } from "@/configs/enums";
 import { TCallbacks, TDoctorDetails } from "./widget";
+import { TUhidDetails } from "@/api/post-mobile-verification";
 
 // WebSocket event types for chatbot
 export const SocketEvent = {
@@ -71,7 +72,7 @@ export interface ChatRequest extends BaseMessage {
     | typeof ContentType.FILE
     | typeof ContentType.DOCTOR_CARD;
   _id: string;
-  data?: { url?: string; text?: string; tool_use_id?: string, hidden?: boolean }; // message content or S3 URL
+  data?: { url?: string; text?: string; tool_use_id?: string, hidden?: boolean ,tool_use_params?: any}; // message content or S3 URL
 }
 
 // Client to Server: Audio stream
@@ -225,6 +226,7 @@ export enum SOCKET_ERROR_CODES {
   FILE_UPLOAD_INPROGRESS = "file_upload_inprogress",
   TIMEOUT = "timeout",
   SERVER_ERROR = "server_error",
+  SESSION_TOKEN_MISMATCH = "session_token_mismatch",
 }
 
 // UI Error Message interface
@@ -284,6 +286,10 @@ export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
     description:
       "We had trouble processing your message. Please start a new session to continue.",
   },
+  SESSION_TOKEN_MISMATCH: {
+    title: "Session Token Mismatch",//add user firendly message
+    description: "Please start a new session to continue.",
+  },
 } as const;
 
 export type ConnectionStateType =
@@ -315,6 +321,7 @@ export interface CommonHandlerData {
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     url?: string;
     mobile_number?: string;
+    uhids?: TUhidDetails[];
   };
 }
 

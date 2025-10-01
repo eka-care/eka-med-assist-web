@@ -1,16 +1,30 @@
 import { config } from "@/configs/constants";
+import { MOBILE_VERIFICATION_STAGE } from "@/organisms/chat-widget";
 import { MOBILE_VERIFICATION_ERROR_MESSAGES } from "@/types/widget";
 import { fetchWithTimeout } from "@/utils/timeoutUtils";
 
-export interface MobileVerificationRequest {
-  mobile_number: string;
+export type MobileVerificationRequest = {
+  mobile_number?: string;
   otp?: string;
-  session_id?: string;
+  session_id: string;
+  stage: MOBILE_VERIFICATION_STAGE;
+  selected_uhid?: string;
 }
 
+export type TUhidDetails ={
+  uhid: string;
+  fn?: string;
+  ln?: string;
+  mn?: string;
+  dob?: string;
+  age?: string;
+  gender?: string;
+  hospital?: string;
+}
 export interface IMobileVerificationResponse {
   status?: "success";
   message?: string;
+  uhids?: TUhidDetails[];
   error?: {
     code?: string;
     msg?: string;
@@ -21,7 +35,12 @@ export async function callMobileVerificationAPI(
   request: MobileVerificationRequest
 ): Promise<IMobileVerificationResponse> {
   try {
-    const toolParams: { mobile_number?: string; otp?: string } = {};
+    const toolParams: {
+      mobile_number?: string;
+      otp?: string;
+      stage?: MOBILE_VERIFICATION_STAGE;
+      selected_uhid?: string;
+    } = {};
 
     if (request.mobile_number) {
       toolParams.mobile_number = request.mobile_number;
@@ -29,6 +48,14 @@ export async function callMobileVerificationAPI(
 
     if (request.otp) {
       toolParams.otp = request.otp;
+    }
+
+    if (request.stage) {
+      toolParams.stage = request.stage;
+    }
+
+    if (request.selected_uhid) {
+      toolParams.selected_uhid = request.selected_uhid;
     }
 
     const response = await fetchWithTimeout(

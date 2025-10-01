@@ -9,7 +9,7 @@ import { ErrorMessageUI } from "@/types/socket";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { CONNECTION_STATUS } from "@/types/widget";
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
-import { TMobileVerificationStatus } from "@/organisms/chat-widget";
+import { MOBILE_VERIFICATION_STAGE, TMobileVerificationStatus } from "@/organisms/chat-widget";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -29,7 +29,7 @@ const formatFileSize = (bytes: number): string => {
 };
 
 interface MessageInputProps {
-  onSendMessage: (message: string) => void;
+  onSendMessage: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
   onFinalAudioStream: (audioData: AudioData) => void;
   onFileUpload: (files: FileList, message?: string) => void;
   onInputChange?: (value: string) => void;
@@ -98,7 +98,6 @@ export function MessageInput({
 
   // Reset sending state when streaming starts or stops
   useEffect(() => {
-    console.log("isStreaming from input", isStreaming);
     if (isStreaming || error || !disabled) {
       setIsSending(false); // Reset sending state when streaming starts
     }
@@ -110,7 +109,6 @@ export function MessageInput({
     ) {
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
-        console.log("Focusing input now");
         messageInputRef.current?.focus();
       }, 100);
 
@@ -288,27 +286,10 @@ export function MessageInput({
     } else if (
       mobileVerificationStatus.active &&
       mobileVerificationStatus.isSending &&
-      !mobileVerificationStatus.isOtpSent
+      mobileVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER
     ) {
       return "Sending OTP to your mobile number...";
-    } else if (
-      mobileVerificationStatus.active &&
-      mobileVerificationStatus.isSending &&
-      mobileVerificationStatus.isOtpSent
-    ) {
-      return "Verifying OTP...";
-    } else if (
-      mobileVerificationStatus.active &&
-      !mobileVerificationStatus.isOtpSent
-    ) {
-      return "Enter your mobile number...";
-    } else if (
-      mobileVerificationStatus.active &&
-      mobileVerificationStatus.isOtpSent &&
-      !mobileVerificationStatus.isSending
-    ) {
-      return "Enter 6-digit OTP...";
-    }
+    } 
     return null;
   }, [mobileVerificationStatus]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)
@@ -479,7 +460,7 @@ export function MessageInput({
 
         // Send text message
         if (message.trim() && uploadedFiles.length === 0) {
-          onSendMessage(message.trim());
+          onSendMessage({content: message.trim()});
         }
 
         // Send files if any
@@ -655,7 +636,7 @@ export function MessageInput({
           size="sm"
           className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
           onClick={handleFileClick}
-          disabled={isInputDisabled}>
+          disabled={isInputDisabled || mobileVerificationStatus?.active}>
           <Plus className="h-4 w-4 text-[var(--color-primary)]" />
         </Button>
       )}
@@ -695,7 +676,7 @@ export function MessageInput({
               placeholder={
                 mobVerificationPlaceholder
                   ? mobVerificationPlaceholder
-                  : isStreaming
+                  : (isStreaming || disabled)
                   ? "Please wait for response..."
                   : isSending
                   ? recordingPhase === RECODING_PHASE.PROCESSING
@@ -706,7 +687,7 @@ export function MessageInput({
                   : placeholder
               }
               disabled={isInputDisabled}
-              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm resize-none break-all overflow-hidden"
+              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm resize-none break-word overflow-hidden"
               rows={1}
               style={{
                 minHeight: "40px",
@@ -783,7 +764,7 @@ export function MessageInput({
               size="sm"
               className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
               onClick={handleMicClick}
-              disabled={disabled || isStreaming || !!audioError || isSending}>
+              disabled={disabled || isStreaming || !!audioError || isSending || mobileVerificationStatus?.active}>
               <Mic className="h-4 w-4 text-[var(--color-primary)]" />
             </Button>
           )}

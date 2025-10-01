@@ -3,6 +3,8 @@ import { MoreHorizontal, Maximize2, X } from "lucide-react";
 import { Separator } from "@ui/index";
 import { useState, useRef, useEffect, useCallback } from "react";
 import { CONNECTION_STATUS } from "@/types/widget";
+import SignalIcon from "@ui/eka-ui/icons/SignalIcon";
+import NoSignalIcon from "@ui/eka-ui/icons/NoSignalIcon";
 
 interface ChatHeaderProps {
   title: string;
@@ -83,7 +85,12 @@ export function ChatHeader({
       className={`relative flex items-center justify-between px-4 py-2 bg-[var(--color-card)] ${
         isExpanded || isMobile ? "sticky top-0 z-10" : ""
       }`}>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2">
+          <img
+            src={import.meta.env.BASE_URL + "assets/apollo-icon.svg"}
+            alt="Apollo Icon"
+            className={`flex-shrink-0 w-6 h-6`}
+          />
         <h2 className="font-semibold text-[var(--color-foreground)] text-lg">
           {title}
         </h2>
@@ -95,21 +102,20 @@ export function ChatHeader({
               : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
               ? "bg-yellow-100 text-yellow-800"
               : "bg-red-100 text-red-800"
-          } text-xs font-medium rounded-full`}>
-          <div
-            className={`w-2 h-2 ${
-              connectionStatus == CONNECTION_STATUS.CONNECTED && isOnline
-                ? "bg-green-500"
-                : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
-                ? "bg-yellow-500"
-                : "bg-red-500"
-            } rounded-full`}></div>
+          } text-xs font-medium rounded-lg`}>
+          {connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline ? (
+            <SignalIcon className="text-green-600" />
+          ) : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline ? (
+            <SignalIcon className="text-yellow-600" />
+          ) : (
+            <NoSignalIcon className="text-red-600" />
+          )}
           <span>
             {connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
               ? "Connected"
               : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
               ? "Connecting"
-              : "Disconnected"}
+              : "Not Connected"}
           </span>
         </div>
       </div>

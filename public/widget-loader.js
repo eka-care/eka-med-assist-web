@@ -304,7 +304,6 @@
       link.href = config.cssUrl;
       document.head.appendChild(link);
     }
-
     // Load the JavaScript bundle
     var script = document.createElement("script");
     script.src = config.scriptUrl;
@@ -347,7 +346,6 @@
 
     widgetState.isVisible = true;
     hideButton();
-    console.log("Widget mounted successfully (Shadow DOM)");
   }
 
   // Toggle widget visibility

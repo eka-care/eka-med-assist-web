@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 
-import { getAvailabilityDates } from "@/api/get-availability-dates";
-import { getAvailabilitySlots } from "@/api/get-availability-slots";
+import { getAvailabilityDates } from "@/api/post-availability-dates";
+import { getAvailabilitySlots } from "@/api/post-availability-slots";
 import { getSessionDetails } from "@/api/get-session-details";
 import {
-  callMobileVerificationAPI,
   IMobileVerificationResponse,
+  TUhidDetails,
 } from "@/api/post-mobile-verification";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
-import { Message } from "@/types";
-import { type CommonHandlerData } from "@/types/socket";
+import { ContentType, type CommonHandlerData } from "@/types/socket";
 import {
   CONNECTION_STATUS,
+  Message,
   MOBILE_VERIFICATION_ERROR_MESSAGES,
   RESPONSE_TIMEOUT,
   STREAMING_TIMEOUT,
@@ -25,8 +25,25 @@ import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
 import { MessageInput } from "../molecules/message-input";
 import { ERROR_MESSAGES, type WebSocketConfig } from "../types/socket";
-import { ASSETS } from "@/configs/assets";
+import { MobileNumberInput } from "@/molecules/mobile-number-input";
+import { OTPInput } from "@/molecules/otp-input";
+import handleMobileVerification from "@/utils/handleMobileVerification";
+import handleOtpVerification from "@/utils/handleOtpVerification";
+import handleUhidVerification from "@/utils/handleUhidVerification";
 
+export enum MOBILE_VERIFICATION_STAGE {
+  MOBILE_NUMBER = "mobile",
+  OTP = "otp",
+  UHID = "uhid",
+}
+export type TMobileVerificationStatus = {
+  active: boolean;
+  stage: MOBILE_VERIFICATION_STAGE;
+  mobile_number: string | null;
+  isSending: boolean;
+  tool_use_id: string | null;
+  uhids: TUhidDetails[];
+};
 interface ChatWidgetProps {
   title?: string;
   className?: string;
@@ -38,14 +55,7 @@ interface ChatWidgetProps {
   isLoading?: boolean;
   isOnline?: boolean;
 }
-export type TMobileVerificationStatus = {
-  active: boolean;
-  isOtpSent: boolean;
-  isSending: boolean;
-  error: string | null;
-  mobile_number: string | null;
-  message: string | null;
-};
+
 export function ChatWidget({
   title = "Apollo Assist",
   className = "",
@@ -71,15 +81,18 @@ export function ChatWidget({
   const [isWaitingForResponse, setIsWaitingForResponse] =
     useState<boolean>(false);
   const [isSessionValidated, setIsSessionValidated] = useState<boolean>(false);
-  const [mobileVerificationStatus, setMobileVerificationStatus] =
+  const [mobVerificationStatus, setMobVerificationStatus] =
     useState<TMobileVerificationStatus>({
       active: false,
-      isOtpSent: false,
       isSending: false,
-      error: null,
+      stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+      uhids: [],
+      tool_use_id: null,
       mobile_number: null,
-      message: null,
     });
+  const mobVerificationStatusRef = useRef(mobVerificationStatus); //using ref to get rid of state updates issues
+  const isUnmountingRef = useRef(false);
+
   const {
     connectionStatus,
     showRetryButton,
@@ -123,7 +136,7 @@ export function ChatWidget({
           console.log("isValid", isValid);
           if (!isValid.success && !isValid.retry) {
             console.log("Session is invalid, starting new session");
-            clearSession();
+            await clearSession();
             await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
@@ -133,7 +146,7 @@ export function ChatWidget({
             if (success) {
               setIsSessionValidated(true);
             } else {
-              clearSession();
+              await clearSession();
               await onStartSession?.(true);
               //For new sessions, we don't need validation
               setIsSessionValidated(true);
@@ -145,7 +158,7 @@ export function ChatWidget({
         } catch (error) {
           console.error("Error checking session details:", error);
           // If there's an error checking session, start a new one
-          clearSession();
+          await clearSession();
           await onStartSession?.(true);
           //For new sessions, we don't need validation
           setIsSessionValidated(true);
@@ -154,10 +167,40 @@ export function ChatWidget({
 
       validateSession();
     }
+    return () => {
+      isUnmountingRef.current = true;
+    };
   }, []); // Only run on mount
 
-  //load previous messages on unmout
   useEffect(() => {
+    //on unmount save last message left in local state if not already stored
+    return () => {
+      if (
+        messages.length > 0 &&
+        !messages[messages.length - 1].isStored &&
+        sessionId &&
+        isUnmountingRef.current
+      ) {
+        const updatedMessage = {
+          ...messages[messages.length - 1],
+          isStored: true,
+        };
+        setMessages((prev) => {
+          const updatedMessages = [...prev];
+          updatedMessages[updatedMessages.length - 1] = updatedMessage;
+          return updatedMessages;
+        });
+        addMessageToSession(sessionId, updatedMessage);
+      }
+    };
+  }, [messages]);
+  //load previous messages on mount
+  useEffect(() => {
+    if (!sessionId) {
+      clearMobileVerification();
+    }
+    setIsWaitingForResponse(false);
+    setProgressMessage(null);
     if (sessionId) {
       //TODO: add a loading state here
       const previousMessages = getMessagesForSession(sessionId);
@@ -209,6 +252,7 @@ export function ChatWidget({
     (botMessage: string) => {
       // Clear waiting state when we receive a bot response
       setIsWaitingForResponse(false);
+      setProgressMessage(null);
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
@@ -228,7 +272,6 @@ export function ChatWidget({
             isRegenerating: false, // Clear regenerating state
             isStored: false,
           };
-
           return updatedMessages;
         } else if (
           lastMessage &&
@@ -324,14 +367,13 @@ export function ChatWidget({
 
         if (commonContentData?.data?.mobile_number) {
           // Mobile number provided - disable input and send OTP automatically
-          setMobileVerificationStatus({
+          setMobVerificationStatus((p) => ({
+            ...p,
             active: true,
-            isOtpSent: false,
             isSending: true,
+            tool_use_id: commonContentData?.tool_use_id,
             mobile_number: commonContentData?.data?.mobile_number || null,
-            error: null,
-            message: null,
-          });
+          }));
           setProgressMessage("Sending OTP to your mobile number...");
 
           let responseMessage = "";
@@ -339,7 +381,8 @@ export function ChatWidget({
 
           try {
             const response = await handleMobileVerification(
-              commonContentData?.data?.mobile_number
+              commonContentData?.data?.mobile_number,
+              sessionId
             );
 
             if (response?.success && response?.data?.message) {
@@ -359,16 +402,14 @@ export function ChatWidget({
           } finally {
             setProgressMessage(null);
 
-            setMobileVerificationStatus({
+            setMobVerificationStatus((p) => ({
+              ...p,
               active: isSuccess,
               isSending: false,
-              isOtpSent: isSuccess,
-              mobile_number: isSuccess
-                ? commonContentData?.data?.mobile_number || null
-                : null,
-              error: isSuccess ? null : responseMessage,
-              message: isSuccess ? responseMessage : null,
-            });
+              stage: isSuccess
+                ? MOBILE_VERIFICATION_STAGE.OTP
+                : MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+            }));
 
             // Update messages with the response
             setMessages((prev) => {
@@ -407,14 +448,11 @@ export function ChatWidget({
           }
         } else {
           // No mobile number provided - ask user to enter mobile number
-          setMobileVerificationStatus({
+          setMobVerificationStatus((p) => ({
+            ...p,
             active: true,
-            isOtpSent: false,
-            isSending: false,
-            mobile_number: null,
-            error: null,
-            message: "Please enter your mobile number to receive OTP",
-          });
+            tool_use_id: commonContentData?.tool_use_id,
+          }));
         }
       }
     },
@@ -539,13 +577,6 @@ export function ChatWidget({
     setIsBotIconAnimating(shouldAnimate);
   }, [progressMessage, isWaitingForResponse]);
 
-  // Clear mobile verification when session changes
-  useEffect(() => {
-    if (!sessionId) {
-      clearMobileVerification();
-    }
-  }, [sessionId]);
-
   const showErrorMessage = useMemo(() => {
     return (
       connectionStatus === CONNECTION_STATUS.CONNECTED &&
@@ -556,7 +587,20 @@ export function ChatWidget({
     );
   }, [connectionStatus, isOnline, error, showRetryButton, startNewConnection]);
 
-  const handleSendMessage = async (content: string, tool_use_id?: string) => {
+  // Update the ref whenever the state changes
+  useEffect(() => {
+    mobVerificationStatusRef.current = mobVerificationStatus;
+  }, [mobVerificationStatus]);
+
+  const handleSendMessage = async ({
+    content,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    content: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => {
     // Block sending if currently streaming
     if (isStreaming) {
       console.log("Cannot send message while streaming");
@@ -581,73 +625,138 @@ export function ChatWidget({
     setProgressMessage(null);
     setTips(null);
 
+    if (inlineText) {
+      setInlineText("");
+    }
     try {
       let response: {
         success: boolean;
         data: IMobileVerificationResponse | null;
       } | null = null;
 
-      // Handle mobile verification flow
-      if (mobileVerificationStatus.active) {
-        if (!mobileVerificationStatus.isOtpSent) {
+      // Use the ref to get the current state
+      if (mobVerificationStatusRef.current.active) {
+        if (
+          mobVerificationStatusRef.current.stage ===
+          MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER
+        ) {
           // User is entering mobile number
           const mobileNumber =
-            mobileVerificationStatus.mobile_number || content;
-          response = await handleMobileVerification(mobileNumber);
+            mobVerificationStatusRef.current.mobile_number || content;
+          response = await handleMobileVerification(mobileNumber, sessionId);
 
           if (response?.success) {
-            setMobileVerificationStatus((prev) => ({
+            setMobVerificationStatus((prev) => ({
               ...prev,
-              active: true,
               isSending: false,
-              isOtpSent: true,
               mobile_number: mobileNumber,
-              error: null,
-              message:
-                response?.data?.message ||
-                "OTP sent successfully, please enter 6 digit OTP",
+              stage: MOBILE_VERIFICATION_STAGE.OTP,
             }));
           } else {
-            setMobileVerificationStatus((prev) => ({
-              ...prev,
-              active: false,
-              isSending: false,
-              isOtpSent: false,
-              mobile_number: null,
-              error:
+            clearMobileVerification();
+            await sendHiddenChatMessage({
+              message:
                 response?.data?.error?.msg ||
-                "Failed to send OTP. Please try again.",
-              message: null,
-            }));
+                "Mobile number verification failed",
+              tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobileNumber,
+              },
+            });
           }
         } else if (
-          mobileVerificationStatus.isOtpSent &&
-          mobileVerificationStatus.mobile_number
+          mobVerificationStatusRef.current.stage ===
+            MOBILE_VERIFICATION_STAGE.OTP &&
+          mobVerificationStatusRef.current.mobile_number
         ) {
           // User is entering OTP
           response = await handleOtpVerification(
             content,
-            mobileVerificationStatus.mobile_number
+            mobVerificationStatusRef.current.mobile_number,
+            sessionId
           );
 
           if (
             response?.data?.error?.code ===
             MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code
           ) {
-            setMobileVerificationStatus((prev) => ({
+            setMobVerificationStatus((prev) => ({
               ...prev,
               active: true,
               isSending: false,
-              isOtpSent: true,
+            }));
+          } else if (response?.success) {
+            setMobVerificationStatus((prev) => ({
+              ...prev,
+              active: true,
+              isSending: false,
+              uhids: response?.data?.uhids || [],
+              stage: MOBILE_VERIFICATION_STAGE.UHID,
             }));
           } else {
+            //send a hidden message chat messsage to BE
+            await sendHiddenChatMessage({
+              message: "Otp verification failed",
+              tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobVerificationStatusRef.current.mobile_number,
+              },
+            });
             //if response is sucess/other otp error / normal message if sent
             clearMobileVerification();
-            const hiddenMessage = response?.success
-              ? "Otp Verified successfully"
-              : "Otp verification failed";
-            //send a hidden message chat messsage to BE
-            await sendHiddenChatMessage(hiddenMessage, tool_use_id);
+          }
+        } else if (
+          mobVerificationStatusRef.current.stage ===
+          MOBILE_VERIFICATION_STAGE.UHID
+        ) {
+          response = await handleUhidVerification(content, sessionId);
+          //update the last message as responded
+          setMessages((prev) => {
+            const updatedMessages = [...prev];
+            updatedMessages[updatedMessages.length - 1] = {
+              ...updatedMessages[updatedMessages.length - 1],
+              isResponded: true,
+              isStored: true,
+            };
+            updateMessageInSession(
+              sessionId,
+              updatedMessages[updatedMessages.length - 1].id,
+              updatedMessages[updatedMessages.length - 1]
+            );
+            return updatedMessages;
+          });
+          if (
+            response?.data?.error?.code ===
+            MOBILE_VERIFICATION_ERROR_MESSAGES.USER_NOT_AUTHENTICATED.code
+          ) {
+            setMobVerificationStatus((prev) => ({
+              ...prev,
+              active: true,
+              isSending: false,
+              stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+            }));
+            await handleSendMessage({
+              content: mobVerificationStatusRef.current.mobile_number || "",
+              tool_use_id: tool_use_id,
+            });
+          } else {
+            const message =
+              response?.data?.status === "success"
+                ? `Verification successful ,selected uhid: ${content}`
+                : response?.data?.error?.msg || "Verification failed";
+
+            const uhid_details = mobVerificationStatusRef.current?.uhids?.find(
+              (uhid) => uhid?.uhid === content
+            );
+            await sendChatMessage({
+              message: message,
+              tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobVerificationStatusRef.current.mobile_number,
+                ...(uhid_details && { ...uhid_details }),
+              },
+            });
+            clearMobileVerification();
           }
         }
 
@@ -671,6 +780,16 @@ export function ChatWidget({
               : response?.data?.error?.msg || "Failed. Please try again.",
             isBot: true,
             isStored: true,
+            ...(response?.data?.uhids?.length &&
+              mobVerificationStatusRef.current?.tool_use_id && {
+                commonContentData: {
+                  type: ContentType.MOBILE_VERIFICATION,
+                  tool_use_id: mobVerificationStatusRef.current?.tool_use_id,
+                  data: {
+                    uhids: response?.data?.uhids,
+                  },
+                },
+              }),
           };
           setMessages((prev) => [...prev, botMessage]);
           addMessageToSession(sessionId, botMessage);
@@ -679,10 +798,11 @@ export function ChatWidget({
         return;
       } else {
         // Normal chat flow - clear mobile verification if active
-        if (mobileVerificationStatus.active) {
-          clearMobileVerification();
-        }
-        await sendChatMessage(content, tool_use_id);
+        await sendChatMessage({
+          message: content,
+          tool_use_id: tool_use_id,
+          ...(tool_use_params && { tool_use_params }),
+        });
       }
 
       // Mark the bot message as responded if it has pills or multiselect
@@ -697,6 +817,21 @@ export function ChatWidget({
             updatedMessages[i] = {
               ...updatedMessages[i],
               isResponded: true,
+              ...(tool_use_params && { tool_use_params }),
+              ...(tool_use_params?.doctor_id &&
+                updatedMessages[i].commonContentData && {
+                  commonContentData: {
+                    ...updatedMessages[i].commonContentData!,
+                    data: {
+                      ...updatedMessages[i].commonContentData!.data,
+                      doctor_details: {
+                        ...updatedMessages[i].commonContentData!.data
+                          .doctor_details,
+                        doctor_ids: [tool_use_params.doctor_id],
+                      },
+                    },
+                  },
+                }),
             };
             updateMessageInSession(
               sessionId,
@@ -772,7 +907,7 @@ export function ChatWidget({
       // Send the full audio data
       await sendAudioData(audioData);
       // Send end of stream signal
-      if (mobileVerificationStatus.active) {
+      if (mobVerificationStatus.active) {
         clearMobileVerification();
         return;
       }
@@ -849,7 +984,7 @@ export function ChatWidget({
       setFilesForUpload(fileArray, message);
       await sendFileUploadRequest();
       addMessageToSession(sessionId, newMessage);
-      if (mobileVerificationStatus.active) {
+      if (mobVerificationStatus.active) {
         clearMobileVerification();
         return;
       }
@@ -889,7 +1024,7 @@ export function ChatWidget({
     const action = quickActions.find((a) => a.id === actionId);
     if (action) {
       try {
-        await handleSendMessage(action.label);
+        await handleSendMessage({ content: action.label });
       } catch (error) {
         console.error("Failed to send quick action:", error);
       }
@@ -1004,10 +1139,10 @@ export function ChatWidget({
     }
   };
 
-  const handleStartNewSession = () => {
+  const handleStartNewSession = async () => {
     try {
       setMessages([messages[0]]);
-      clearSession();
+      await clearSession();
       setIsWaitingForResponse(false); // Clear waiting state when starting new session
       onStartSession?.(true);
     } catch (error) {
@@ -1038,89 +1173,31 @@ export function ChatWidget({
     }
   };
 
-  const handleOtpVerification = async (otp: string, mobile_number: string) => {
-    try {
-      const response = await callMobileVerificationAPI({
-        mobile_number: mobile_number.trim(),
-        otp: otp.trim(),
-        session_id: sessionId,
-      });
-      if (response.error) {
-        return { success: false, data: { error: response.error } };
-      } else if (response.status === "success") {
-        return { success: true, data: response };
-      }
-      return {
-        success: false,
-        data: {
-          error: { msg: MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.msg },
-        },
-      };
-    } catch (error) {
-      console.error("OTP verification error:", error);
-      return {
-        success: false,
-        data: {
-          error: {
-            msg:
-              error instanceof Error
-                ? error.message
-                : MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.msg,
-          },
-        },
-      };
-    }
+  const exitMobileVerification = async () => {
+    const exitMessage = `Exit ${
+      mobVerificationStatus?.stage || "Mobile"
+    } verification`;
+    const tool_use_id = mobVerificationStatusRef.current?.tool_use_id;
+    const tool_use_params = mobVerificationStatusRef.current?.mobile_number;
+    await clearMobileVerification();
+
+    await handleSendMessage({
+      content: exitMessage,
+      tool_use_id: tool_use_id || "",
+      tool_use_params: { mobile_number: tool_use_params },
+    });
   };
 
-  //todo: add a wrapper for all too callbackes with trigger refresh session
-  const handleMobileVerification = async (
-    mobileNumber: string
-  ): Promise<{
-    success: boolean;
-    data: null | IMobileVerificationResponse;
-  }> => {
-    try {
-      const response = await callMobileVerificationAPI({
-        mobile_number: mobileNumber.trim(),
-        session_id: sessionId,
-      });
-      if (response.error) {
-        return { success: false, data: { error: response.error } };
-      } else if (response.status === "success") {
-        return { success: true, data: response };
-      }
-      return {
-        success: false,
-        data: {
-          error: {
-            msg: MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_MOBILE_NUMBER.msg,
-          },
-        },
-      };
-    } catch (error) {
-      console.error("Mobile verification error:", error);
-      return {
-        success: false,
-        data: {
-          error: {
-            msg:
-              error instanceof Error
-                ? error.message
-                : MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_MOBILE_NUMBER.msg,
-          },
-        },
-      };
-    }
-  };
+  //TODO: add a wrapper for all too callbackes with trigger refresh session
 
   const clearMobileVerification = () => {
-    setMobileVerificationStatus({
+    setMobVerificationStatus({
       active: false,
-      isOtpSent: false,
       isSending: false,
       mobile_number: null,
-      error: null,
-      message: null,
+      uhids: [],
+      tool_use_id: null,
+      stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
     });
   };
   // New handlers for appointment-card to use
@@ -1185,7 +1262,7 @@ export function ChatWidget({
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
     : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
   const chatHeight = isMobile
-    ? "flex-1 min-h-0"
+    ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
     ? "flex-1 min-h-0"
     : "h-[500px]";
@@ -1267,6 +1344,11 @@ export function ChatWidget({
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
                   }
+                  verificationStatus={
+                    mobVerificationStatus.active &&
+                    index === messages.length - 1
+                  }
+                  clearMobileVerification={exitMobileVerification}
                   onTipsExpire={() => setTips(null)}
                   isRegenerating={message.isRegenerating}
                   commonContentData={message.commonContentData}
@@ -1296,6 +1378,25 @@ export function ChatWidget({
                   </div>
                 </div>
               )}
+              {progressMessage && !isStreaming && (
+                <div className="px-2 py-4">
+                  <div className="flex gap-1 items-start justify-center">
+                    <div className="flex-shrink-0">
+                      <ApolloAssistIcon
+                        size={32}
+                        isAnimating={isBotIconAnimating}
+                      />
+                    </div>
+                    <div className="flex-1">
+                      <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
+                        <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+                          {progressMessage}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1314,22 +1415,41 @@ export function ChatWidget({
             />
           )}
 
-          <div className={isMobile ? "pb-safe" : ""}>
-            <MessageInput
-              onSendMessage={handleSendMessage}
-              onFinalAudioStream={handleFinalAudioStream}
-              inlineText={inlineText || ""}
-              onFileUpload={handleFileUpload}
-              disabled={
-                isWaitingForResponse ||
-                connectionStatus !== CONNECTION_STATUS.CONNECTED ||
-                !isOnline
-              }
-              setError={setError}
-              mobileVerificationStatus={mobileVerificationStatus}
-            />
-          </div>
+          {(!mobVerificationStatus.active ||
+            mobVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.UHID) && (
+            <div className={isMobile ? "pb-safe" : ""}>
+              <MessageInput
+                onSendMessage={handleSendMessage}
+                onFinalAudioStream={handleFinalAudioStream}
+                inlineText={inlineText || ""}
+                onFileUpload={handleFileUpload}
+                disabled={
+                  isWaitingForResponse ||
+                  !!progressMessage?.length ||
+                  connectionStatus !== CONNECTION_STATUS.CONNECTED ||
+                  !isOnline
+                }
+                setError={setError}
+                mobileVerificationStatus={mobVerificationStatus}
+              />
+            </div>
+          )}
 
+          {mobVerificationStatus.active &&
+            (mobVerificationStatus.stage ===
+            MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER ? (
+              <MobileNumberInput
+                onSendMobile={handleSendMessage}
+                isLoading={mobVerificationStatus.isSending}
+              />
+            ) : mobVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.OTP &&
+              mobVerificationStatus.mobile_number ? (
+              <OTPInput
+                mobileNumber={mobVerificationStatus.mobile_number}
+                onSendOTP={handleSendMessage}
+                // onEditMobile={handleEditMobile}
+              />
+            ) : null)}
           {/* Powered by eka.care branding */}
           <div
             className={`flex items-center justify-center py-1.5 px-4 ${
@@ -1337,7 +1457,9 @@ export function ChatWidget({
             }`}>
             <div className="flex items-center gap-1 text-xs text-[var(--color-muted-foreground)]">
               <img
-                src={ASSETS.POWERED_BY_EKA_CARE}
+                src={
+                  import.meta.env.BASE_URL + "assets/powered-by-eka-care.svg"
+                }
                 alt="eka.care"
                 className="h-3.5"
               />

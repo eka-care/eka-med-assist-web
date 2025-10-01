@@ -99,7 +99,12 @@ const useMedAssistStore = create<TMedAssistStore>()(
       setTimeoutError: (isTimeout: boolean) =>
         set({ isTimeoutError: isTimeout }),
 
-      clearSession: () => set(storeInitialState),
+      clearSession: async () => {
+        set(storeInitialState);
+        console.log("Clearing session");
+        // Clear persisted data from localStorage
+        await localStorage.removeItem("med-assist-store");
+      },
 
       // Timeout management
       streamingTimeoutId: null,
@@ -132,7 +137,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
       isRefreshingSession: false,
       refreshSession: async (): Promise<boolean> => {
         const state = get();
-        const { sessionId ,sessionToken} = state;
+        const { sessionId, sessionToken } = state;
 
         if (!sessionId || !sessionToken) {
           console.warn("No session ID available for refresh");
@@ -144,7 +149,10 @@ const useMedAssistStore = create<TMedAssistStore>()(
           return false;
         }
 
-        set({ isRefreshingSession: true ,connectionStatus: CONNECTION_STATUS.CONNECTING});
+        set({
+          isRefreshingSession: true,
+          connectionStatus: CONNECTION_STATUS.CONNECTING,
+        });
 
         try {
           console.log("Refreshing session:", sessionId);
@@ -161,27 +169,18 @@ const useMedAssistStore = create<TMedAssistStore>()(
             return true;
           } else {
             console.error("Invalid refresh response:", response);
-            set({ isRefreshingSession: false ,connectionStatus: CONNECTION_STATUS.DISCONNECTED});
+            set({
+              isRefreshingSession: false,
+              connectionStatus: CONNECTION_STATUS.DISCONNECTED,
+            });
             return false;
           }
         } catch (error: any) {
           console.error("Failed to refresh session:", error);
-          set({ isRefreshingSession: false ,connectionStatus: CONNECTION_STATUS.DISCONNECTED});
-
-          // Handle specific error codes
-          if (
-            error.code === "session_expired" ||
-            error.code === "session_not_found"||error.code === "validation_error"
-          ) {
-            // Session is no longer valid, clear it
-            set({
-              sessionId: "",
-              sessionToken: "",
-              connectionStatus: CONNECTION_STATUS.CONNECTING,
-            });
-            console.log("Session expired or not found, cleared session");
-          }
-
+          set({
+            isRefreshingSession: false,
+            connectionStatus: CONNECTION_STATUS.DISCONNECTED,
+          });
           return false;
         }
       },
