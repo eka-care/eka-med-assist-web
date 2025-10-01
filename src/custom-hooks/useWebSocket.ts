@@ -87,7 +87,7 @@ export function useWebSocket(
           setStartNewConnection(false);
           setError(null);
           retryAttempts.current = 0;
-        }else {
+        } else {
           setShowRetryButton(true);
           setError(ERROR_MESSAGES.CONNECTION_LOST);
           setConnectionStatus(CONNECTION_STATUS.DISCONNECTED);
@@ -260,10 +260,6 @@ export function useWebSocket(
         }
         case SOCKET_ERROR_CODES.SESSION_EXPIRED: {
           console.log("Session expired from useWebSocket");
-          //here i need to call refresh session
-          //so the session id and token changes useffect should trigger and call the hook again
-          // setShowRetryButton(false);
-          // setStartNewConnection(true);
           triggerSessionRefresh();
           setError(ERROR_MESSAGES.SESSION_EXPIRED);
           break;
@@ -333,7 +329,7 @@ export function useWebSocket(
       setLastStreamingActivity(Date.now());
       const currentStreaming = useMedAssistStore.getState().isStreaming;
       if (!currentStreaming) {
-       // setIsStreaming(true);
+        // setIsStreaming(true);
         // Clear response timeout when streaming starts
         clearResponseTimeout();
         setError(null);
@@ -469,7 +465,15 @@ export function useWebSocket(
   }, [config?.sessionId, config?.auth?.token, setConnectionStatus]);
 
   // Send chat message (alias for sendTextMessage)
-  const sendChatMessage = ({message, tool_use_id,tool_use_params}: {message: string, tool_use_id?: string, tool_use_params?: any}) => {
+  const sendChatMessage = ({
+    message,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    message: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => {
     if (wsRef.current?.isConnected()) {
       try {
         // Store the last sent message data for potential retry
@@ -479,7 +483,11 @@ export function useWebSocket(
           type: "text",
         };
 
-        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id, tool_use_params: tool_use_params});
+        wsRef.current.sendChatMessage({
+          message: message,
+          tool_use_id: tool_use_id,
+          tool_use_params: tool_use_params,
+        });
       } catch (error) {
         console.error("Failed to send text message:", error);
         setError(
@@ -496,10 +504,23 @@ export function useWebSocket(
     }
   };
 
-  const sendHiddenChatMessage = ({message, tool_use_id,tool_use_params}: {message: string, tool_use_id?: string, tool_use_params?: any}) => {
+  const sendHiddenChatMessage = ({
+    message,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    message: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => {
     if (wsRef.current?.isConnected()) {
       try {
-        wsRef.current.sendChatMessage({message: message, tool_use_id: tool_use_id, hidden: true, tool_use_params: tool_use_params});
+        wsRef.current.sendChatMessage({
+          message: message,
+          tool_use_id: tool_use_id,
+          hidden: true,
+          tool_use_params: tool_use_params,
+        });
       } catch (error) {
         console.error("Failed to send hidden text message:", error);
       }
@@ -601,13 +622,16 @@ export function useWebSocket(
   // Manual session refresh
   const triggerSessionRefresh = async (): Promise<boolean> => {
     try {
-      if(wsRef.current){
+      if (wsRef.current) {
         wsRef.current.disconnect();
       }
       const status = await refreshSession();
       if (status) {
         console.log("Manual session refresh successful");
       } else {
+        setShowRetryButton(false);
+        setStartNewConnection(true);
+        setError(ERROR_MESSAGES.SESSION_EXPIRED);
         console.log("Manual session refresh failed");
       }
       return status;
@@ -637,7 +661,11 @@ export function useWebSocket(
     try {
       switch (lastMessage.type) {
         case "text":
-          await sendChatMessage({message: lastMessage.content, tool_use_id: lastMessage.tool_use_id, tool_use_params: lastMessage.tool_use_params});
+          await sendChatMessage({
+            message: lastMessage.content,
+            tool_use_id: lastMessage.tool_use_id,
+            tool_use_params: lastMessage.tool_use_params,
+          });
           break;
         case "audio":
           if (lastMessage.audioData) {
