@@ -77,6 +77,7 @@ interface MessageBubbleProps {
   progressMessage?: string | null;
   onLike?: () => void;
   onDislike?: () => void;
+  refreshSession: () => Promise<boolean>;
   verificationStatus: boolean;
   clearMobileVerification: () => void;
   onRegenerate?: (messageId: string) => void;
@@ -127,6 +128,7 @@ export function MessageBubble({
   isStreaming = false,
   progressMessage,
   handleQuickAction,
+  refreshSession,
   // messageId,
   verificationStatus,
   clearMobileVerification,
@@ -353,6 +355,7 @@ export function MessageBubble({
                 <DoctorDetailsList
                   doctorDetails={commonContentData.data.doctor_details || {}}
                   callbacks={commonContentData.data.callbacks}
+                  refreshSession={refreshSession}
                   onBook={(info: {
                     date: string;
                     time: string;

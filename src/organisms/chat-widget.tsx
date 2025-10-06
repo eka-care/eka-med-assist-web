@@ -1,7 +1,4 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-
-import { getAvailabilityDates } from "@/api/post-availability-dates";
-import { getAvailabilitySlots } from "@/api/post-availability-slots";
 import { getSessionDetails } from "@/api/get-session-details";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
@@ -27,6 +24,8 @@ import handleMobileVerification from "@/utils/handleMobileVerification";
 import handleOtpVerification from "@/utils/handleOtpVerification";
 import handleUhidVerification from "@/utils/handleUhidVerification";
 import { IMobileVerificationResponse, TUhidDetails } from "@/types/api";
+import getAvailabiltyDates from "@/utils/getAvailabiltyDates";
+import getAvailabilitySlots from "@/utils/getAvailabilitySlots";
 
 export enum MOBILE_VERIFICATION_STAGE {
   MOBILE_NUMBER = "mobile",
@@ -1216,24 +1215,11 @@ export function ChatWidget({
     hospital_id?: string;
     region_id?: string;
   }) => {
-    if (!doctorData?.doctor_id) {
-      return { success: false, data: null };
-    }
-    try {
-      const response = await getAvailabilityDates(sessionId, {
-        doctor_id: doctorData.doctor_id,
-        hospital_id: doctorData.hospital_id || "",
-        region_id: doctorData.region_id || "",
-      });
-      if (!response?.available_dates?.length) {
-        console.error("Available dates are not coming in response", response);
-        return { success: false, data: null };
-      }
-      return { success: true, data: response };
-    } catch (error) {
-      console.error("Error loading availability dates:", error);
-      return { success: false, data: null };
-    }
+    return await getAvailabiltyDates(
+      doctorData,
+      sessionId,
+      triggerSessionRefresh
+    );
   };
 
   const handleGetAvailableSlotsForAppointment = async (
@@ -1244,25 +1230,12 @@ export function ChatWidget({
       region_id?: string;
     }
   ) => {
-    if (!doctorData?.doctor_id || !appointment_date) {
-      return { success: false, data: null };
-    }
-    try {
-      const response = await getAvailabilitySlots(sessionId, {
-        doctor_id: doctorData.doctor_id,
-        appointment_date: appointment_date,
-        hospital_id: doctorData.hospital_id || "",
-        region_id: doctorData.region_id || "",
-      });
-      if (!response?.slots?.length) {
-        console.error("Available slots are not coming in response", response);
-        return { success: false, data: null };
-      }
-      return { success: true, data: response };
-    } catch (error) {
-      console.error("Error loading slots for date:", error);
-      return { success: false, data: null };
-    }
+    return await getAvailabilitySlots(
+      appointment_date,
+      doctorData,
+      sessionId,
+      triggerSessionRefresh
+    );
   };
 
   // Mobile full-screen styles
@@ -1340,6 +1313,7 @@ export function ChatWidget({
                     isStreaming &&
                     index === messages.length - 1
                   }
+                  refreshSession={triggerSessionRefresh}
                   progressMessage={
                     message.isBot && index === messages.length - 1
                       ? progressMessage
