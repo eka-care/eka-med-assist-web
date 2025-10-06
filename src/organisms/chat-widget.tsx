@@ -3,10 +3,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { getAvailabilityDates } from "@/api/post-availability-dates";
 import { getAvailabilitySlots } from "@/api/post-availability-slots";
 import { getSessionDetails } from "@/api/get-session-details";
-import {
-  IMobileVerificationResponse,
-  TUhidDetails,
-} from "@/api/post-mobile-verification";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
@@ -30,6 +26,7 @@ import { OTPInput } from "@/molecules/otp-input";
 import handleMobileVerification from "@/utils/handleMobileVerification";
 import handleOtpVerification from "@/utils/handleOtpVerification";
 import handleUhidVerification from "@/utils/handleUhidVerification";
+import { IMobileVerificationResponse, TUhidDetails } from "@/types/api";
 
 export enum MOBILE_VERIFICATION_STAGE {
   MOBILE_NUMBER = "mobile",
@@ -247,6 +244,7 @@ export function ChatWidget({
     sendChatMessage,
     retryLastMessage,
     sendHiddenChatMessage,
+    triggerSessionRefresh,
   } = useWebSocket(
     socketConfig,
     (botMessage: string) => {
@@ -382,7 +380,8 @@ export function ChatWidget({
           try {
             const response = await handleMobileVerification(
               commonContentData?.data?.mobile_number,
-              sessionId
+              sessionId,
+              triggerSessionRefresh
             );
 
             if (response?.success && response?.data?.message) {
@@ -643,7 +642,11 @@ export function ChatWidget({
           // User is entering mobile number
           const mobileNumber =
             mobVerificationStatusRef.current.mobile_number || content;
-          response = await handleMobileVerification(mobileNumber, sessionId);
+          response = await handleMobileVerification(
+            mobileNumber,
+            sessionId,
+            triggerSessionRefresh
+          );
 
           if (response?.success) {
             setMobVerificationStatus((prev) => ({
@@ -673,7 +676,8 @@ export function ChatWidget({
           response = await handleOtpVerification(
             content,
             mobVerificationStatusRef.current.mobile_number,
-            sessionId
+            sessionId,
+            triggerSessionRefresh
           );
 
           if (
@@ -694,7 +698,9 @@ export function ChatWidget({
               stage: MOBILE_VERIFICATION_STAGE.UHID,
             }));
           } else {
-            const hiddenMessage = !response?.data?.uhids?.length? "Otp verification successful,but Uhids not found":"Otp verification failed";
+            const hiddenMessage = !response?.data?.uhids?.length
+              ? "Otp verification successful,but Uhids not found"
+              : "Otp verification failed";
             //send a hidden message chat messsage to BE
             await sendHiddenChatMessage({
               message: hiddenMessage,
@@ -710,7 +716,11 @@ export function ChatWidget({
           mobVerificationStatusRef.current.stage ===
           MOBILE_VERIFICATION_STAGE.UHID
         ) {
-          response = await handleUhidVerification(content, sessionId);
+          response = await handleUhidVerification(
+            content,
+            sessionId,
+            triggerSessionRefresh
+          );
           //update the last message as responded
           setMessages((prev) => {
             const updatedMessages = [...prev];
@@ -1189,8 +1199,6 @@ export function ChatWidget({
     });
   };
 
-  //TODO: add a wrapper for all too callbackes with trigger refresh session
-
   const clearMobileVerification = () => {
     setMobVerificationStatus({
       active: false,
@@ -1201,6 +1209,7 @@ export function ChatWidget({
       stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
     });
   };
+
   // New handlers for appointment-card to use
   const handleGetAvailabilityDatesForAppointment = async (doctorData: {
     doctor_id: string;
