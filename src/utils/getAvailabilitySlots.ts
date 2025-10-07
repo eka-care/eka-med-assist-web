@@ -1,6 +1,6 @@
-import { AvailabilitySlotsParams } from "@/api/post-availability-slots";
 import { postCallbackWrapper } from "@/api/post-callback-wrapper";
 import { TOOL_NAME } from "@/configs/enums";
+import { AvailabilitySlotsParams } from "@/types/api";
 
 const getAvailabilitySlots = async (appointmentDate: string, doctorData: {
     doctor_id: string;

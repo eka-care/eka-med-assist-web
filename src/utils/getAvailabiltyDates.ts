@@ -1,6 +1,6 @@
-import { AvailabilityDatesParams } from "@/api/post-availability-dates";
 import { postCallbackWrapper } from "@/api/post-callback-wrapper";
 import { TOOL_NAME } from "@/configs/enums";
+import { AvailabilityDatesParams } from "@/types/api";
 
 const getAvailabiltyDates = async (doctorData: {
     doctor_id: string;

@@ -16,10 +16,6 @@ export interface ApiWrapperOptions {
 
 export async function postCallbackWrapper<T>({toolParams, wrapperOptions, retryCount = 0}: {
   toolParams:T,
-    // | MobileVerificationRequest
-    // | AvailabilityDatesParams
-    // | AvailabilitySlotsParams
-    // | DoctorDetailsParams,
   wrapperOptions: ApiWrapperOptions,
   retryCount?: number,
 }): Promise<Response> {

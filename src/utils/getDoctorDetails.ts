@@ -1,6 +1,7 @@
-import { DoctorDetailsParams } from "@/api/post-available-doctors";
+
 import { postCallbackWrapper } from "@/api/post-callback-wrapper";
 import { TOOL_NAME } from "@/configs/enums";
+import { DoctorDetailsParams } from "@/types/api";
 
 const getDoctorDetails = async (
   doctorId: string,

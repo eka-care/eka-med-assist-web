@@ -1,4 +1,5 @@
 import { MOBILE_VERIFICATION_STAGE } from "@/organisms/chat-widget";
+import { TDoctor } from "./widget";
 
 export type MobileVerificationRequest = {
   mobile_number?: string;
@@ -25,4 +26,31 @@ export interface IMobileVerificationResponse {
     code?: string;
     msg?: string;
   };
+}
+
+export interface AvailabilitySlotsParams {
+  doctor_id: string;
+  appointment_date: string;
+  hospital_id?: string;
+  region_id?: string;
+}
+
+export interface AvailabilitySlotsResponse {
+  slots: string[];
+}
+
+export interface DoctorDetailsParams {
+  doctor_id: string;
+}
+
+export interface DoctorDetailsResponse extends TDoctor {}
+
+export interface AvailabilityDatesParams {
+  doctor_id: string;
+  hospital_id?: string;
+  region_id?: string;
+}
+
+export interface AvailabilityDatesResponse {
+  available_dates: string[];
 }
