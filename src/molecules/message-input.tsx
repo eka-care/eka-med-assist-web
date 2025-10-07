@@ -9,7 +9,11 @@ import { ErrorMessageUI } from "@/types/socket";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { CONNECTION_STATUS } from "@/types/widget";
 import { useNetworkStatus } from "@/custom-hooks/useNetworkStatus";
-import { MOBILE_VERIFICATION_STAGE, TMobileVerificationStatus } from "@/organisms/chat-widget";
+import {
+  MOBILE_VERIFICATION_STAGE,
+  TMobileVerificationStatus,
+} from "@/organisms/chat-widget";
+import { FilePreviewList } from "./file-preview";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
@@ -29,7 +33,15 @@ const formatFileSize = (bytes: number): string => {
 };
 
 interface MessageInputProps {
-  onSendMessage: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
+  onSendMessage: ({
+    content,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    content: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => void;
   onFinalAudioStream: (audioData: AudioData) => void;
   onFileUpload: (files: FileList, message?: string) => void;
   onInputChange?: (value: string) => void;
@@ -289,7 +301,7 @@ export function MessageInput({
       mobileVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER
     ) {
       return "Sending OTP to your mobile number...";
-    } 
+    }
     return null;
   }, [mobileVerificationStatus]);
   // Check if input should be disabled (either disabled prop, streaming, or sending)
@@ -460,7 +472,7 @@ export function MessageInput({
 
         // Send text message
         if (message.trim() && uploadedFiles.length === 0) {
-          onSendMessage({content: message.trim()});
+          onSendMessage({ content: message.trim() });
         }
 
         // Send files if any
@@ -568,7 +580,26 @@ export function MessageInput({
     console.log("handleFileChange called");
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
-      setUploadedFiles((prev) => [...prev, ...files]);
+
+      // Validate file types - only allow images and PDFs
+      const validFiles = files.filter((file) => {
+        console.log("file", file);
+        const isValidImage = file?.type?.startsWith("image/");
+        const isValidPDF = file.type === "application/pdf";
+
+        if (!isValidImage && !isValidPDF) {
+          setError({
+            title: `File type not supported: ${file.name}`,
+            description: "Only images and PDF files are allowed.",
+          });
+          return false;
+        }
+        return true;
+      });
+
+      if (validFiles.length > 0) {
+        setUploadedFiles((prev) => [...prev, ...validFiles]);
+      }
       e.target.value = ""; // Reset input
     }
   };
@@ -615,7 +646,7 @@ export function MessageInput({
         ref={fileInputRef}
         type="file"
         multiple
-        accept="image/*,video/*,audio/*,.pdf,.doc,.docx,.txt"
+        accept="image/*,.pdf"
         onChange={handleFileChange}
         className="hidden"
         data-max-size={MAX_FILE_SIZE.toString()}
@@ -676,7 +707,7 @@ export function MessageInput({
               placeholder={
                 mobVerificationPlaceholder
                   ? mobVerificationPlaceholder
-                  : (isStreaming || disabled)
+                  : isStreaming || disabled
                   ? "Please wait for response..."
                   : isSending
                   ? recordingPhase === RECODING_PHASE.PROCESSING
@@ -700,26 +731,15 @@ export function MessageInput({
 
         {/* File Preview */}
         {uploadedFiles.length > 0 && (
-          <div className="absolute -top-8 left-0 right-0 flex flex-wrap gap-1 max-w-full overflow-hidden">
-            {uploadedFiles.map((file, index) => (
-              <div
-                key={index}
-                className={`flex items-center gap-1 bg-[var(--color-accent)] text-[var(--color-primary)] px-2 py-1 rounded-md text-xs max-w-40 ${
-                  isSending ? "opacity-50" : ""
-                }`}>
-                <span className="truncate">{file.name}</span>
-                <button
-                  onClick={() =>
-                    setUploadedFiles((prev) =>
-                      prev.filter((_, i) => i !== index)
-                    )
-                  }
-                  className="text-[var(--color-primary)] hover:text-[var(--color-primary)]/80 ml-1"
-                  disabled={isSending}>
-                  ×
-                </button>
-              </div>
-            ))}
+          <div className="absolute -top-24 left-0 right-0 overflow-visible">
+            <FilePreviewList
+              files={uploadedFiles}
+              onRemoveFile={(index) =>
+                setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
+              }
+              isPreview={true}
+              className={isSending ? "opacity-50" : ""}
+            />
           </div>
         )}
       </div>
@@ -764,7 +784,13 @@ export function MessageInput({
               size="sm"
               className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
               onClick={handleMicClick}
-              disabled={disabled || isStreaming || !!audioError || isSending || mobileVerificationStatus?.active}>
+              disabled={
+                disabled ||
+                isStreaming ||
+                !!audioError ||
+                isSending ||
+                mobileVerificationStatus?.active
+              }>
               <Mic className="h-4 w-4 text-[var(--color-primary)]" />
             </Button>
           )}

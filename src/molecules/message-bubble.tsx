@@ -15,6 +15,7 @@ import { TipsDisplay } from "./tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { TDoctor } from "@/types/widget";
+import { FilePreviewList } from "./file-preview";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -259,10 +260,12 @@ export function MessageBubble({
             </div>
           )} */}
           {files && files.length > 0 && (
-            <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
-              <div className="text-sm text-[var(--color-primary)]">
-                📎 {files.length} files uploaded
-              </div>
+            <div className="mt-2">
+              <FilePreviewList
+                files={files}
+                isPreview={false}
+                className="grid grid-cols-3 gap-2"
+              />
             </div>
           )}
           {/* Display common content for bot messages */}
