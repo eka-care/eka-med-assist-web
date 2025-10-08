@@ -317,7 +317,7 @@ export class WebSocketService {
         // Create or update streaming message
         if (!this.currentStreamMessage) {
           this.currentStreamMessage = {
-            id: Date.now(),
+            id: message._id,
             content: "",
             timestamp: new Date(),
             type: "text",
@@ -328,7 +328,10 @@ export class WebSocketService {
         // Add the new word/chunk to the existing content
         this.currentStreamMessage.content += message.data.text;
         // Send the PROGRESSIVE (accumulated) text, not just the new word
-        this.triggerEvent("stream_chunk", this.currentStreamMessage.content);
+        this.triggerEvent("stream_chunk", {
+          content: this.currentStreamMessage.content,
+          messageId: message._id,
+        });
       }
     } else if (message.ct === ContentType.TIPS) {
       console.log("Tips message received:", message.data);

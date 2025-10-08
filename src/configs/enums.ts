@@ -34,3 +34,16 @@ export enum MULTI_SELECT_ADDITIONAL_OPTION {
   NOTA = "none_of_the_above",
   AOTA = "all_of_the_above",
 }
+
+export enum TOOL_NAME {
+  MOBILE_VERIFICATION = "mobile_verification",
+  AVAILABILITY_DATES = "availability_dates",
+  AVAILABILITY_SLOTS = "availability_slots",
+  DOCTOR_DETAILS = "doctor_details",
+}
+
+export enum USER_FEEDBACK  {
+  LIKE = "LIKE",
+  DISLIKE = "DISLIKE",
+  NONE = "NONE",
+}

@@ -3,15 +3,16 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { TDoctor, TDoctorDetails, TCallbacks } from "@/types/widget";
-import { getDoctorDetails } from "@/api/post-available-doctors";
 import AppointmentCard from "./appointment-card";
 import useMedAssistStore from "@/stores/medAssistStore";
+import getDoctorDetails from "@/utils/getDoctorDetails";
 
 type Props = {
   doctorDetails: TDoctorDetails;
   callbacks?: TCallbacks;
   onBook?: (info: { date: string; time: string; doctor: TDoctor }) => void;
   disabled?: boolean;
+  refreshSession: () => Promise<boolean>;
   getAvailabilityDatesForAppointment: (doctorData: {
     doctor_id: string;
     hospital_id?: string;
@@ -31,6 +32,7 @@ export function DoctorDetailsList({
   doctorDetails,
   callbacks,
   onBook,
+  refreshSession,
   disabled = false,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
@@ -59,7 +61,7 @@ export function DoctorDetailsList({
         // Load first 3 doctors in parallel
         const initialIds = doctorIds.slice(0, initialLoadCount);
         const doctorPromises = initialIds.map((doctorId) =>
-          getDoctorDetails(sessionId, { doctor_id: doctorId })
+          getDoctorDetails(doctorId, sessionId, refreshSession)
         );
 
         const results = await Promise.allSettled(doctorPromises);
@@ -99,7 +101,7 @@ export function DoctorDetailsList({
     try {
       const remainingIds = doctorIds.slice(loadedCount);
       const doctorPromises = remainingIds.map((doctorId) =>
-        getDoctorDetails(sessionId, { doctor_id: doctorId })
+        getDoctorDetails(doctorId, sessionId, refreshSession)
       );
 
       const results = await Promise.allSettled(doctorPromises);
@@ -171,7 +173,7 @@ export function DoctorDetailsList({
                   try {
                     const initialIds = doctorIds.slice(0, initialLoadCount);
                     const doctorPromises = initialIds.map((doctorId) =>
-                      getDoctorDetails(sessionId, { doctor_id: doctorId })
+                      getDoctorDetails(doctorId, sessionId, refreshSession)
                     );
                     const results = await Promise.allSettled(doctorPromises);
                     const successfulDoctors: TDoctor[] = [];

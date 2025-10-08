@@ -1,3 +1,4 @@
+import { USER_FEEDBACK } from "@/configs/enums";
 import { AudioData } from "@/services/audioService";
 import type { ThemeType } from "@ui/eka-ui/organisms/theme-provider";
 
@@ -70,6 +71,7 @@ export interface Message {
   isResponded?: boolean; // Track if this bot message has been responded to
   isStored: boolean;
   tool_use_params?: any;
+  feedback?: USER_FEEDBACK;
 }
 
 export type TDoctor = {

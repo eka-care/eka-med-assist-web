@@ -1,12 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-
-import { getAvailabilityDates } from "@/api/post-availability-dates";
-import { getAvailabilitySlots } from "@/api/post-availability-slots";
 import { getSessionDetails } from "@/api/get-session-details";
-import {
-  IMobileVerificationResponse,
-  TUhidDetails,
-} from "@/api/post-mobile-verification";
 import { useWebSocket } from "@/custom-hooks/useWebSocket";
 import type { AudioData } from "@/services/audioService";
 import useMedAssistStore from "@/stores/medAssistStore";
@@ -30,6 +23,11 @@ import { OTPInput } from "@/molecules/otp-input";
 import handleMobileVerification from "@/utils/handleMobileVerification";
 import handleOtpVerification from "@/utils/handleOtpVerification";
 import handleUhidVerification from "@/utils/handleUhidVerification";
+import { IMobileVerificationResponse, TUhidDetails } from "@/types/api";
+import getAvailabiltyDates from "@/utils/getAvailabiltyDates";
+import getAvailabilitySlots from "@/utils/getAvailabilitySlots";
+import { USER_FEEDBACK } from "@/configs/enums";
+import patchFeedbackMessage from "@/api/patch-feedback-message";
 
 export enum MOBILE_VERIFICATION_STAGE {
   MOBILE_NUMBER = "mobile",
@@ -74,6 +72,7 @@ export function ChatWidget({
         "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
       isBot: true,
       isStored: true,
+      feedback: USER_FEEDBACK.NONE,
     },
   ]);
   const [tips, setTips] = useState<string[] | null>(null);
@@ -213,6 +212,7 @@ export function ChatWidget({
             "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
           isBot: true,
           isStored: true,
+          feedback: USER_FEEDBACK.NONE,
         };
 
         addMessageToSession(sessionId, welcomeMessage);
@@ -247,21 +247,21 @@ export function ChatWidget({
     sendChatMessage,
     retryLastMessage,
     sendHiddenChatMessage,
+    triggerSessionRefresh,
   } = useWebSocket(
     socketConfig,
-    (botMessage: string) => {
+    (botMessage: string, messageId: string) => {
       // Clear waiting state when we receive a bot response
       setIsWaitingForResponse(false);
       setProgressMessage(null);
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
-        const lastMessage = prev[prev.length - 1];
-
+        const lastMessage = prev.find((message) => message.id == messageId);
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
           lastMessage &&
-          lastMessage.isBot &&
+          lastMessage?.isBot &&
           botMessage?.length > lastMessage?.content?.length
         ) {
           // Update the existing bot message with progressive text
@@ -275,18 +275,19 @@ export function ChatWidget({
           return updatedMessages;
         } else if (
           lastMessage &&
-          lastMessage.isBot &&
-          botMessage.length <= lastMessage.content.length
+          lastMessage?.isBot &&
+          botMessage?.length <= lastMessage?.content?.length
         ) {
           // If the incoming text is shorter or equal, it might be a duplicate, skip
           return prev;
         } else {
           // Create a new bot message
           const newMessage: Message = {
-            id: Date.now().toString(),
+            id: messageId || Date.now().toString(),
             content: botMessage,
             isBot: true,
             isStored: false,
+            feedback: USER_FEEDBACK.NONE,
           }; // Will be stored when streaming ends
           return [...prev, newMessage];
         }
@@ -304,51 +305,51 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
       setTips(tips);
     },
-    async (commonContentData: CommonHandlerData) => {
+    async (commonContentData: CommonHandlerData, messageId: string) => {
       // Clear waiting state when we receive common content data
       setIsWaitingForResponse(false);
 
       // Handle common content messages - merge with existing bot message
       console.log("Common content message received:", commonContentData);
       setMessages((prev) => {
-        // Find the last bot message to attach content to it
-        let lastBotMessageIndex = -1;
-        for (let i = prev.length - 1; i >= 0; i--) {
-          if (prev[i].isBot) {
-            lastBotMessageIndex = i;
-            break;
-          }
-        }
+        //find message by id
+        let messageIndex = -1;
+        messageIndex = messages.findIndex((message) => message.id == messageId);
+        // let lastBotMessageIndex = -1;
+        // for (let i = prev.length - 1; i >= 0; i--) {
+        //   if (prev[i].isBot) {
+        //     lastBotMessageIndex = i;
+        //     break;
+        //   }
+        // }
 
-        if (
-          lastBotMessageIndex !== -1 &&
-          !prev[lastBotMessageIndex].isResponded
-        ) {
+        if (messageIndex !== -1 && !prev[messageIndex].isResponded) {
           console.log(
             "Bot message found and not responded, updating with common content data",
             commonContentData
           );
           // Update the last bot message with common content data only if it hasn't been responded to
           const updatedMessages = [...prev];
-          updatedMessages[lastBotMessageIndex] = {
-            ...updatedMessages[lastBotMessageIndex],
+          updatedMessages[messageIndex] = {
+            ...updatedMessages[messageIndex],
             commonContentData: commonContentData, // Attach common content to the existing bot message
           };
           return updatedMessages;
         } else {
           console.log(
-            lastBotMessageIndex === -1
+            messageIndex === -1
               ? "No bot message found, creating a new one"
               : "Last bot message already responded, creating a new one",
             commonContentData
           );
           // If no bot message found or the last bot message has been responded to, create a new one
           const newMessage: Message = {
-            id: Date.now().toString(),
+            id: messageId || Date.now().toString(),
             content: "",
             isBot: true,
             commonContentData: commonContentData,
             isStored: true,
+            feedback: USER_FEEDBACK.NONE,
           };
           console.log(
             "Adding common content message to session store",
@@ -382,7 +383,8 @@ export function ChatWidget({
           try {
             const response = await handleMobileVerification(
               commonContentData?.data?.mobile_number,
-              sessionId
+              sessionId,
+              triggerSessionRefresh
             );
 
             if (response?.success && response?.data?.message) {
@@ -439,6 +441,7 @@ export function ChatWidget({
                   content: responseMessage,
                   isBot: true,
                   isStored: true,
+                  feedback: USER_FEEDBACK.NONE,
                 };
                 updatedMessages.push(newMessage);
                 addMessageToSession(sessionId, newMessage);
@@ -643,7 +646,11 @@ export function ChatWidget({
           // User is entering mobile number
           const mobileNumber =
             mobVerificationStatusRef.current.mobile_number || content;
-          response = await handleMobileVerification(mobileNumber, sessionId);
+          response = await handleMobileVerification(
+            mobileNumber,
+            sessionId,
+            triggerSessionRefresh
+          );
 
           if (response?.success) {
             setMobVerificationStatus((prev) => ({
@@ -673,7 +680,8 @@ export function ChatWidget({
           response = await handleOtpVerification(
             content,
             mobVerificationStatusRef.current.mobile_number,
-            sessionId
+            sessionId,
+            triggerSessionRefresh
           );
 
           if (
@@ -694,7 +702,9 @@ export function ChatWidget({
               stage: MOBILE_VERIFICATION_STAGE.UHID,
             }));
           } else {
-            const hiddenMessage = !response?.data?.uhids?.length? "Otp verification successful,but Uhids not found":"Otp verification failed";
+            const hiddenMessage = !response?.data?.uhids?.length
+              ? "Otp verification successful,but Uhids not found"
+              : "Otp verification failed";
             //send a hidden message chat messsage to BE
             await sendHiddenChatMessage({
               message: hiddenMessage,
@@ -710,7 +720,11 @@ export function ChatWidget({
           mobVerificationStatusRef.current.stage ===
           MOBILE_VERIFICATION_STAGE.UHID
         ) {
-          response = await handleUhidVerification(content, sessionId);
+          response = await handleUhidVerification(
+            content,
+            sessionId,
+            triggerSessionRefresh
+          );
           //update the last message as responded
           setMessages((prev) => {
             const updatedMessages = [...prev];
@@ -972,11 +986,11 @@ export function ChatWidget({
         } uploaded`, // Cleaner text
       isBot: false,
       files: fileArray,
-      isStored: true,
+      isStored: false,
+      feedback: USER_FEEDBACK.NONE,
     };
 
     setMessages((prev) => [...prev, newMessage]);
-
     try {
       // Set waiting state immediately when file upload request is sent
       setIsWaitingForResponse(true);
@@ -1189,8 +1203,6 @@ export function ChatWidget({
     });
   };
 
-  //TODO: add a wrapper for all too callbackes with trigger refresh session
-
   const clearMobileVerification = () => {
     setMobVerificationStatus({
       active: false,
@@ -1201,30 +1213,18 @@ export function ChatWidget({
       stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
     });
   };
+
   // New handlers for appointment-card to use
   const handleGetAvailabilityDatesForAppointment = async (doctorData: {
     doctor_id: string;
     hospital_id?: string;
     region_id?: string;
   }) => {
-    if (!doctorData?.doctor_id) {
-      return { success: false, data: null };
-    }
-    try {
-      const response = await getAvailabilityDates(sessionId, {
-        doctor_id: doctorData.doctor_id,
-        hospital_id: doctorData.hospital_id || "",
-        region_id: doctorData.region_id || "",
-      });
-      if (!response?.available_dates?.length) {
-        console.error("Available dates are not coming in response", response);
-        return { success: false, data: null };
-      }
-      return { success: true, data: response };
-    } catch (error) {
-      console.error("Error loading availability dates:", error);
-      return { success: false, data: null };
-    }
+    return await getAvailabiltyDates(
+      doctorData,
+      sessionId,
+      triggerSessionRefresh
+    );
   };
 
   const handleGetAvailableSlotsForAppointment = async (
@@ -1235,27 +1235,43 @@ export function ChatWidget({
       region_id?: string;
     }
   ) => {
-    if (!doctorData?.doctor_id || !appointment_date) {
-      return { success: false, data: null };
-    }
-    try {
-      const response = await getAvailabilitySlots(sessionId, {
-        doctor_id: doctorData.doctor_id,
-        appointment_date: appointment_date,
-        hospital_id: doctorData.hospital_id || "",
-        region_id: doctorData.region_id || "",
-      });
-      if (!response?.slots?.length) {
-        console.error("Available slots are not coming in response", response);
-        return { success: false, data: null };
-      }
-      return { success: true, data: response };
-    } catch (error) {
-      console.error("Error loading slots for date:", error);
-      return { success: false, data: null };
-    }
+    return await getAvailabilitySlots(
+      appointment_date,
+      doctorData,
+      sessionId,
+      triggerSessionRefresh
+    );
   };
 
+  const handleMessageFeedback = async (
+    messageId: string,
+    feedback: USER_FEEDBACK
+  ) => {
+    const messageIndex = messages.findIndex((msg) => msg.id === messageId);
+    if (messageIndex === -1) {
+      console.error("Message not found for feedback");
+      return;
+    }
+    try {
+      await patchFeedbackMessage(sessionId, messageId, feedback);
+    } catch (error) {
+      console.error("Failed to patch feedback:", error);
+    } finally {
+      setMessages((prev) => {
+        const updatedMessages = [...prev];
+        updatedMessages[messageIndex] = {
+          ...updatedMessages[messageIndex],
+          feedback: feedback,
+        };
+        updateMessageInSession(
+          sessionId,
+          messageId,
+          updatedMessages[messageIndex]
+        );
+        return updatedMessages;
+      });
+    }
+  };
   // Mobile full-screen styles
   const containerStyles = isMobile
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
@@ -1331,6 +1347,7 @@ export function ChatWidget({
                     isStreaming &&
                     index === messages.length - 1
                   }
+                  refreshSession={triggerSessionRefresh}
                   progressMessage={
                     message.isBot && index === messages.length - 1
                       ? progressMessage
@@ -1342,6 +1359,7 @@ export function ChatWidget({
                   getAvailableSlotsForAppointment={
                     handleGetAvailableSlotsForAppointment
                   }
+                  onUserFeedback={handleMessageFeedback}
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
                   }
@@ -1358,6 +1376,7 @@ export function ChatWidget({
                   audioData={message.audioData} // Pass audio data to MessageBubble
                   isResponded={message.isResponded}
                   files={message.files}
+                  feedback={message?.feedback || USER_FEEDBACK.NONE}
                 />
               ))}
 
