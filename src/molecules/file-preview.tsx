@@ -75,8 +75,8 @@ export function FilePreview({
         <button
           onClick={onRemove}
           aria-label={`Remove ${file.name}`}
-          className="absolute top-0 right-0 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center hover:bg-red-600 transition-colors z-10 transform translate-x-1 -translate-y-1">
-          <X className="h-3 w-3" />
+          className="absolute top-0 right-0 bg-[var(--color-muted)] text-black rounded-full w-5 h-5 flex items-center justify-center hover:bg-[var(--color-muted-foreground)] transition-colors z-10 transform translate-x-1 -translate-y-1">
+          <X className="h-3 w-3 text-black" />
         </button>
       )}
     </div>
