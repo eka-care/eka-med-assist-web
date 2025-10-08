@@ -16,6 +16,8 @@ import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { TDoctor } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { USER_FEEDBACK } from "@/configs/enums";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -76,8 +78,8 @@ interface MessageBubbleProps {
   isQuickActionsDisabled: boolean;
   isStreaming?: boolean;
   progressMessage?: string | null;
-  onLike?: () => void;
-  onDislike?: () => void;
+  feedback?: USER_FEEDBACK;
+  onUserFeedback: (messageId: string, feedback: USER_FEEDBACK) => void;
   refreshSession: () => Promise<boolean>;
   verificationStatus: boolean;
   clearMobileVerification: () => void;
@@ -118,10 +120,10 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({
+  messageId,
   message,
   isBot = false,
-  // onLike,
-  // onDislike,
+  onUserFeedback,
   // onRegenerate,
   quickActions,
   showActions,
@@ -140,12 +142,15 @@ export function MessageBubble({
   onTipsExpire,
   isResponded = false,
   files,
+  feedback,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
 }: MessageBubbleProps) {
   const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
-
+  const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
+    feedback || USER_FEEDBACK.NONE
+  );
   // Reset selected values when new commonContentData comes in
   useEffect(() => {
     if (commonContentData && commonContentData.type === ContentType.MULTI) {
@@ -197,6 +202,11 @@ export function MessageBubble({
       });
     }
   };
+
+  const handleToggleFeedback = (feedback: USER_FEEDBACK) => {
+    onUserFeedback(messageId, feedback);
+    setUserFeedback(feedback);
+  };
   return (
     <div className="px-4 py-2">
       <div
@@ -211,7 +221,7 @@ export function MessageBubble({
 
         <div className={`${isBot ? "flex-1" : "max-w-[80%]"}`}>
           <div
-            className={`text-sm leading-relaxed px-3 rounded-lg ${
+            className={`text-sm leading-relaxed px-1 rounded-lg ${
               isBot
                 ? "text-[var(--color-foreground)] bg-[var(--color-card)]"
                 : "text-[var(--color-black-800)] bg-blue-200"
@@ -441,23 +451,26 @@ export function MessageBubble({
             />
           )}
 
-          {/* {isBot && (
+          {isBot &&
+          !isStreaming &&
+          messageId !== "1" &&
+          userFeedback === USER_FEEDBACK.NONE ? (
             <div className="flex items-center gap-1 mt-3">
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-                onClick={onLike}>
+                onClick={() => handleToggleFeedback(USER_FEEDBACK.LIKE)}>
                 <ThumbsUp className="h-3 w-3 text-[var(--color-muted-foreground)]" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-                onClick={onDislike}>
+                onClick={() => handleToggleFeedback(USER_FEEDBACK.DISLIKE)}>
                 <ThumbsDown className="h-3 w-3 text-[var(--color-muted-foreground)]" />
               </Button>
-              <Button
+              {/* <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
@@ -468,9 +481,28 @@ export function MessageBubble({
                     isRegenerating || isStreaming ? "opacity-50" : ""
                   }`}
                 />
-              </Button>
+              </Button> */}
             </div>
-          )} */}
+          ) : userFeedback === USER_FEEDBACK.LIKE ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              disabled={true}>
+              <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
+            </Button>
+          ) : userFeedback === USER_FEEDBACK.DISLIKE ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              disabled={true}>
+              <ThumbsDown
+                className="h-3 w-3 text-primary"
+                fill="currentColor"
+              />
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>

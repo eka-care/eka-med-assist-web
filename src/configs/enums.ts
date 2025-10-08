@@ -41,3 +41,9 @@ export enum TOOL_NAME {
   AVAILABILITY_SLOTS = "availability_slots",
   DOCTOR_DETAILS = "doctor_details",
 }
+
+export enum USER_FEEDBACK  {
+  LIKE = "LIKE",
+  DISLIKE = "DISLIKE",
+  NONE = "NONE",
+}

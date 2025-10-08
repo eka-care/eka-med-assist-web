@@ -23,7 +23,7 @@ import { CONNECTION_STATUS } from "@/types/widget";
 
 export function useWebSocket(
   config: WebSocketConfig | null,
-  onTextMessage?: (message: string) => void,
+  onTextMessage?: (message: string, messageId: string) => void,
   onProgressMessage?: (message: string) => void,
   onTipsMessage?: (tips: string[]) => void,
   onCommonContent?: CommonContentCallback,
@@ -140,12 +140,13 @@ export function useWebSocket(
                 mobile_number: message.data.mobile_number,
               },
             };
-            onCommonContent(commonData);
+            onCommonContent(commonData, message._id);
           }
         } else if (
           message.ct === ContentType.TEXT &&
           message.data &&
-          message.data.text
+          message.data.text &&
+          message._id
         ) {
           //just is streaming is not live inside event callbacks
           const currentStreaming = useMedAssistStore.getState().isStreaming;
@@ -158,7 +159,7 @@ export function useWebSocket(
           // Update streaming activity timestamp
           setLastStreamingActivity(Date.now());
           if (onTextMessage) {
-            onTextMessage(message.data.text);
+            onTextMessage(message.data.text, message._id);
           }
           setTimeout(() => {
             if (useMedAssistStore.getState().isStreaming) {
@@ -207,29 +208,33 @@ export function useWebSocket(
           message.ct === ContentType.TEXT &&
           message.data &&
           message.data.text &&
+          message?._id &&
           onTextMessage
         ) {
           // Call the callback to display the bot response
-          onTextMessage(message.data.text);
+          onTextMessage(message.data.text, message._id);
         }
       }
     );
 
     // Listen to the accumulated streaming text instead of individual fragments
-    wsRef.current?.on("stream_chunk", (accumulatedText: string) => {
-      if (!isStreaming) {
-        setIsStreaming(true);
-        // Clear response timeout when streaming starts
-        clearResponseTimeout();
-        setError(null);
+    wsRef.current?.on(
+      "stream_chunk",
+      ({ content, messageId }: { content: string; messageId: string }) => {
+        if (!isStreaming) {
+          setIsStreaming(true);
+          // Clear response timeout when streaming starts
+          clearResponseTimeout();
+          setError(null);
+        }
+        // Update streaming activity timestamp
+        setLastStreamingActivity(Date.now());
+        if (onTextMessage) {
+          // Call the callback with the accumulated text
+          onTextMessage(content, messageId);
+        }
       }
-      // Update streaming activity timestamp
-      setLastStreamingActivity(Date.now());
-      if (onTextMessage) {
-        // Call the callback with the accumulated text
-        onTextMessage(accumulatedText);
-      }
-    });
+    );
 
     wsRef.current?.on(
       WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
@@ -345,18 +350,6 @@ export function useWebSocket(
       setLastStreamingActivity(Date.now());
       if (onTipsMessage) {
         onTipsMessage(tips);
-      }
-    });
-
-    // Handle progressive text updates
-    wsRef.current?.on("stream_chunk", (progressiveText: string) => {
-      setError(null);
-      if (onTextMessage) {
-        // Call the callback with the progressive text
-        onTextMessage(progressiveText);
-      }
-      if (!isStreaming) {
-        setIsStreaming(true);
       }
     });
 

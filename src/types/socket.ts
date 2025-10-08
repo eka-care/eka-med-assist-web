@@ -72,7 +72,13 @@ export interface ChatRequest extends BaseMessage {
     | typeof ContentType.FILE
     | typeof ContentType.DOCTOR_CARD;
   _id: string;
-  data?: { url?: string; text?: string; tool_use_id?: string, hidden?: boolean ,tool_use_params?: any}; // message content or S3 URL
+  data?: {
+    url?: string;
+    text?: string;
+    tool_use_id?: string;
+    hidden?: boolean;
+    tool_use_params?: any;
+  }; // message content or S3 URL
 }
 
 // Client to Server: Audio stream
@@ -114,6 +120,7 @@ export interface ChatResponseMessage extends BaseMessage {
     | typeof ContentType.TEXT
     | typeof ContentType.INLINE_TEXT
     | typeof ContentType.MOBILE_VERIFICATION;
+  _id: string;
   data: {
     url?: string;
     exp?: number;
@@ -146,6 +153,7 @@ export interface PillResponseMessage extends BaseMessage {
 export interface StreamResponseMessage extends BaseMessage {
   ev: typeof SocketEvent.STREAM;
   ct: typeof ContentType.TEXT | typeof ContentType.TIPS;
+  _id: string;
   data: { text?: string; progress_msg?: string; tips?: string[] }; // text chunk
 }
 
@@ -194,7 +202,7 @@ export type ClientMessage =
 
 // Chat message for UI
 export interface ChatMessage {
-  id: number; // timestamp as ID
+  id: string; // timestamp as ID
   content: string;
   timestamp: Date;
   type: "text" | "file" | "audio";
@@ -287,7 +295,7 @@ export const ERROR_MESSAGES: Record<string, ErrorMessageUI> = {
       "We had trouble processing your message. Please start a new session to continue.",
   },
   SESSION_TOKEN_MISMATCH: {
-    title: "Session Token Mismatch",//add user firendly message
+    title: "Session Token Mismatch", //add user firendly message
     description: "Please start a new session to continue.",
   },
 } as const;
@@ -331,4 +339,7 @@ export type ConnectionCallback = (connected: boolean) => void;
 export type ErrorCallback = (error: Error) => void;
 export type StreamCallback = (chunk: string) => void;
 export type FileUploadCallback = (url: string) => void;
-export type CommonContentCallback = (data: CommonHandlerData) => void;
+export type CommonContentCallback = (
+  data: CommonHandlerData,
+  messageId: string
+) => void;
