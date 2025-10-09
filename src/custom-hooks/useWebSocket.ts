@@ -109,16 +109,19 @@ export function useWebSocket(
         if (
           message.ct === ContentType.FILE &&
           message.data &&
-          "url" in message.data
+          "urls" in message.data
         ) {
-          service
-            .uploadFilesToPresignedUrl(message.data?.url || "")
-            .then(() => {
-              // setPendingFiles([]);
-            })
-            .catch((error) => {
-              console.error("Failed to upload files:", error);
-            });
+          const urls = message.data.urls || [];
+          if (urls.length > 0) {
+            service
+              .uploadFilesToPresignedUrl(urls)
+              .then(() => {
+                // setPendingFiles([]);
+              })
+              .catch((error) => {
+                console.error("Failed to upload files:", error);
+              });
+          }
         } else if (
           (message.ct === ContentType.PILL ||
             message.ct === ContentType.MULTI ||
