@@ -314,15 +314,7 @@ export function ChatWidget({
       setMessages((prev) => {
         //find message by id
         let messageIndex = -1;
-        messageIndex = messages.findIndex((message) => message.id == messageId);
-        // let lastBotMessageIndex = -1;
-        // for (let i = prev.length - 1; i >= 0; i--) {
-        //   if (prev[i].isBot) {
-        //     lastBotMessageIndex = i;
-        //     break;
-        //   }
-        // }
-
+        messageIndex = prev.findIndex((message) => message.id == messageId);
         if (messageIndex !== -1 && !prev[messageIndex].isResponded) {
           console.log(
             "Bot message found and not responded, updating with common content data",
@@ -1363,6 +1355,7 @@ export function ChatWidget({
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
                   }
+                  isLastMessage={index === messages.length - 1}
                   verificationStatus={
                     mobVerificationStatus.active &&
                     index === messages.length - 1

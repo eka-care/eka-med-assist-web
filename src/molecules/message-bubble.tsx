@@ -82,6 +82,7 @@ interface MessageBubbleProps {
   onUserFeedback: (messageId: string, feedback: USER_FEEDBACK) => void;
   refreshSession: () => Promise<boolean>;
   verificationStatus: boolean;
+  isLastMessage: boolean;
   clearMobileVerification: () => void;
   onRegenerate?: (messageId: string) => void;
   handleQuickAction: (action: string) => void;
@@ -125,6 +126,7 @@ export function MessageBubble({
   isBot = false,
   onUserFeedback,
   // onRegenerate,
+  isLastMessage,
   quickActions,
   showActions,
   isQuickActionsDisabled,
@@ -453,7 +455,7 @@ export function MessageBubble({
 
           {isBot &&
           !isStreaming &&
-          messageId !== "1" &&
+          messageId !== "1" && isLastMessage &&
           userFeedback === USER_FEEDBACK.NONE ? (
             <div className="flex items-center gap-1 mt-3">
               <Button
