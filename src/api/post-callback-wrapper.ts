@@ -13,11 +13,14 @@ export interface ApiWrapperOptions {
   onSessionRefresh?: () => Promise<boolean>;
 }
 
-
-export async function postCallbackWrapper<T>({toolParams, wrapperOptions, retryCount = 0}: {
-  toolParams:T,
-  wrapperOptions: ApiWrapperOptions,
-  retryCount?: number,
+export async function postCallbackWrapper<T>({
+  toolParams,
+  wrapperOptions,
+  retryCount = 0,
+}: {
+  toolParams: T;
+  wrapperOptions: ApiWrapperOptions;
+  retryCount?: number;
 }): Promise<Response> {
   const {
     timeout = 30000,
@@ -27,12 +30,13 @@ export async function postCallbackWrapper<T>({toolParams, wrapperOptions, retryC
   } = wrapperOptions;
   try {
     const url = `${config.BASE_API_URL}/med-assist/api-call-tool?session_id=${session_id}&tool_name=${tool_name}`;
-    const options = {
+    const options: RequestInit = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-agent-id": config.X_AGENT_ID,
       },
+      credentials: "include",
       body: JSON.stringify({
         tool_params: toolParams,
       }),
@@ -59,13 +63,13 @@ export async function postCallbackWrapper<T>({toolParams, wrapperOptions, retryC
         return await postCallbackWrapper({
           toolParams,
           wrapperOptions,
-          retryCount: retryCount + 1
-      });
+          retryCount: retryCount + 1,
+        });
       } else {
         console.error("Session refresh failed");
       }
     }
-    
+
     // Return the original response for non-401 errors or if refresh failed
     return response;
   } catch (error) {
