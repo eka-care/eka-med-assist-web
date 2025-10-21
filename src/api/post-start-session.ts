@@ -9,6 +9,7 @@ const startSession = async () => {
         "Content-Type": "application/json",
         "X-agent-id": config.X_AGENT_ID,
       },
+      credentials: "include",
     });
 
     if (!response.ok) {
