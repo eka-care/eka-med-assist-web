@@ -1,8 +1,4 @@
-// import { MobileVerificationRequest } from "@/api/post-mobile-verification";
 import { fetchWithTimeout } from "../utils/timeoutUtils";
-// import { AvailabilityDatesParams } from "@/api/post-availability-dates";
-// import { DoctorDetailsParams } from "@/api/post-available-doctors";
-// import { AvailabilitySlotsParams } from "@/api/post-availability-slots";
 import { TOOL_NAME } from "@/configs/enums";
 import { config } from "@/configs/constants";
 
@@ -13,11 +9,14 @@ export interface ApiWrapperOptions {
   onSessionRefresh?: () => Promise<boolean>;
 }
 
-
-export async function postCallbackWrapper<T>({toolParams, wrapperOptions, retryCount = 0}: {
-  toolParams:T,
-  wrapperOptions: ApiWrapperOptions,
-  retryCount?: number,
+export async function postCallbackWrapper<T>({
+  toolParams,
+  wrapperOptions,
+  retryCount = 0,
+}: {
+  toolParams: T;
+  wrapperOptions: ApiWrapperOptions;
+  retryCount?: number;
 }): Promise<Response> {
   const {
     timeout = 30000,
@@ -59,13 +58,13 @@ export async function postCallbackWrapper<T>({toolParams, wrapperOptions, retryC
         return await postCallbackWrapper({
           toolParams,
           wrapperOptions,
-          retryCount: retryCount + 1
-      });
+          retryCount: retryCount + 1,
+        });
       } else {
         console.error("Session refresh failed");
       }
     }
-    
+
     // Return the original response for non-401 errors or if refresh failed
     return response;
   } catch (error) {

@@ -1318,7 +1318,11 @@ export function ChatWidget({
               scrollBehavior: "smooth",
               scrollbarWidth: "thin",
               scrollbarColor: "var(--color-border) transparent",
-            }}>
+              overscrollBehavior: "contain",
+              WebkitOverflowScrolling: "touch",
+            }}
+            onTouchStart={(e) => isMobile && e.stopPropagation()}
+            onTouchMove={(e) => isMobile && e.stopPropagation()}>
             <div className="space-y-1">
               {messages.map((message, index) => (
                 <MessageBubble
