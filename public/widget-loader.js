@@ -45,6 +45,7 @@
         transition: all 0.3s ease;
         padding: 0;
         overflow: hidden;
+        font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
       }
       
       .eka-widget-button:hover {
@@ -75,6 +76,14 @@
         .eka-widget-button > div {
           width: 32px;
           height: 32px;
+        }
+        
+        /* Mobile oval button styles */
+        .eka-widget-button.inactive {
+          width: 260px !important;
+          height: 55px !important;
+          border-radius: 27.5px !important;
+          padding: 0 15px !important;
         }
       }
     `;
@@ -250,6 +259,93 @@
       "</div>";
   }
 
+  // Inactivity detection
+  function resetInactivityTimer() {
+    widgetState.lastActivityTime = Date.now();
+    if (widgetState.inactivityTimer) {
+      clearTimeout(widgetState.inactivityTimer);
+    }
+
+    // Set timer for 5 seconds of inactivity
+    widgetState.inactivityTimer = setTimeout(function () {
+      if (!widgetState.isVisible) {
+        widgetState.isInactive = true;
+        updateButtonAppearance();
+      }
+    }, 5000);
+  }
+
+  // Update button appearance based on state
+  function updateButtonAppearance() {
+    var button = window.EkaMedAssist._button;
+    if (!button) return;
+
+    // Check if mobile
+    var isMobile = window.innerWidth <= 768;
+
+    if (widgetState.isInactive && !widgetState.isVisible) {
+      // Show oval with text and icon
+      button.className = "eka-widget-button inactive";
+      button.style.width = isMobile ? "260px" : "280px";
+      button.style.height = isMobile ? "55px" : "60px";
+      button.style.borderRadius = isMobile ? "27.5px" : "30px";
+      button.style.padding = isMobile ? "0 15px" : "8px 8px 8px 24px";
+      button.style.justifyContent = "space-between";
+      button.style.background = "#fdb931";
+      button.style.color = "#000";
+      button.style.fontSize = isMobile ? "13px" : "16px";
+      button.style.fontWeight = "500";
+
+      // Update content
+      button.innerHTML = `
+        <div style="display: flex; flex-direction: column; align-items: flex-start; flex: 1;">
+          <div style="font-weight: 600; line-height: 1.2;">Hi, Need some help?</div>
+          <div style="font-weight: normal; font-size: ${
+            isMobile ? "11px" : "12px"
+          }; line-height: 1.2;">I'm happy to assist.</div>
+        </div>
+        <div style="width: ${isMobile ? "35px" : "40px"}; height: ${
+        isMobile ? "35px" : "40px"
+      }; display: flex; align-items: center; justify-content: center; background: #fff; border-radius: 50%; margin-left: 10px;">
+          <div style="width: ${isMobile ? "28px" : "32px"}; height: ${
+        isMobile ? "28px" : "32px"
+      }; position: relative;"></div>
+        </div>
+      `;
+
+      // Load icon in the new container
+      var iconContainer = button.querySelector("div:last-child div");
+      if (iconContainer) {
+        loadApolloIcon(iconContainer, isMobile ? 28 : 36);
+      }
+    } else {
+      // Show circular icon only
+      button.className = "eka-widget-button";
+      button.style.width = isMobile ? "50px" : "56px";
+      button.style.height = isMobile ? "50px" : "56px";
+      button.style.borderRadius = "50%";
+      button.style.padding = "0";
+      button.style.justifyContent = "center";
+      button.style.background = "white";
+      button.style.color = "white";
+      button.style.fontSize = "inherit";
+      button.style.fontWeight = "inherit";
+
+      // Reset content to icon only
+      button.innerHTML = `
+        <div style="width: ${isMobile ? "32px" : "40px"}; height: ${
+        isMobile ? "32px" : "40px"
+      }; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background: #fff;"></div>
+      `;
+
+      // Load icon in the container
+      var iconContainer = button.querySelector("div");
+      if (iconContainer) {
+        loadApolloIcon(iconContainer, isMobile ? 32 : 40);
+      }
+    }
+  }
+
   // Create widget button
   function createWidgetButton(config) {
     var button = document.createElement("button");
@@ -276,8 +372,29 @@
 
     button.addEventListener("click", function () {
       widgetState.config = config;
+      widgetState.isInactive = false;
+      resetInactivityTimer();
       toggleWidget(config);
     });
+
+    // Add hover event to reset inactivity
+    button.addEventListener("mouseenter", function () {
+      if (widgetState.isInactive) {
+        widgetState.isInactive = false;
+        updateButtonAppearance();
+      }
+      resetInactivityTimer();
+    });
+
+    // Add window resize listener for responsive updates
+    window.addEventListener("resize", function () {
+      if (widgetState.isInactive) {
+        updateButtonAppearance();
+      }
+    });
+
+    // Start inactivity timer
+    resetInactivityTimer();
 
     return button;
   }
@@ -288,6 +405,9 @@
     isVisible: false,
     instance: null,
     config: null,
+    isInactive: false,
+    inactivityTimer: null,
+    lastActivityTime: Date.now(),
   };
 
   // Load React app bundle
@@ -378,6 +498,7 @@
         }
       }
       widgetState.isVisible = true;
+      widgetState.isInactive = false;
       hideButton();
     }
   }
@@ -392,6 +513,8 @@
       }
       widgetState.isVisible = false;
       showButton();
+      // Reset inactivity timer when widget is closed
+      resetInactivityTimer();
     }
   }
 
@@ -399,6 +522,9 @@
   function showButton() {
     if (window.EkaMedAssist._button) {
       window.EkaMedAssist._button.style.display = "flex";
+      // Reset button to normal state when showing
+      widgetState.isInactive = false;
+      updateButtonAppearance();
     }
   }
 
