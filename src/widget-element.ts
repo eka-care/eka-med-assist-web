@@ -217,6 +217,7 @@ class EkaMedAssistWidgetElement extends HTMLElement {
 
     // Create app config with proper callbacks
     const appConfig = {
+      ...this.config,
       theme: this.getAttribute("theme") || "doctor-light",
       onMinimize:
         this.config.onMinimize ||

@@ -44,6 +44,7 @@ export type TMobileVerificationStatus = {
 };
 interface ChatWidgetProps {
   title?: string;
+  firstUserMessage?: string;
   className?: string;
   onClose?: () => void;
   onExpand?: () => void;
@@ -56,6 +57,7 @@ interface ChatWidgetProps {
 
 export function ChatWidget({
   title = "Apollo Assist",
+  firstUserMessage = "",
   className = "",
   onClose,
   onStartSession,
@@ -66,14 +68,14 @@ export function ChatWidget({
   isOnline = true,
 }: ChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
-    {
-      id: "1",
-      content:
-        "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
-      isBot: true,
-      isStored: true,
-      feedback: USER_FEEDBACK.NONE,
-    },
+    // {
+    //   id: "1",
+    //   content:
+    //     "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+    //   isBot: true,
+    //   isStored: true,
+    //   feedback: USER_FEEDBACK.NONE,
+    // },
   ]);
   const [tips, setTips] = useState<string[] | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
@@ -89,6 +91,8 @@ export function ChatWidget({
       tool_use_id: null,
       mobile_number: null,
     });
+  const [isFirstUserMessageSent, setIsFirstUserMessageSent] =
+    useState<boolean>(false);
   const mobVerificationStatusRef = useRef(mobVerificationStatus); //using ref to get rid of state updates issues
   const isUnmountingRef = useRef(false);
 
@@ -171,6 +175,34 @@ export function ChatWidget({
     };
   }, []); // Only run on mount
 
+  // Handle firstUserMessage from popup
+  useMemo(() => {
+    // Auto-send the first user message
+    console.log("firstUserMessage", firstUserMessage);
+    console.log("isSessionValidated", isSessionValidated);
+    console.log("sessionId", sessionId);
+    console.log("connectionStatus", connectionStatus);
+    console.log("isLoading", isLoading);
+    console.log("isStreaming", isStreaming);
+    //when u start a new session or refresh , it should not send the first user message
+    if (
+      firstUserMessage?.trim() &&
+      isSessionValidated &&
+      sessionId &&
+      !isLoading &&
+      connectionStatus === CONNECTION_STATUS.CONNECTED &&
+      !isStreaming &&
+      !isFirstUserMessageSent
+    ) {
+      const timer = setTimeout(() => {
+        handleSendMessage({ content: firstUserMessage.trim() });
+        setIsFirstUserMessageSent(true);
+      }, 0); // Small delay to ensure everything is ready
+
+      return () => clearTimeout(timer);
+    }
+  }, [firstUserMessage, isSessionValidated, sessionId, connectionStatus]);
+
   useEffect(() => {
     //on unmount save last message left in local state if not already stored
     return () => {
@@ -223,11 +255,6 @@ export function ChatWidget({
   // Create socket configuration when session data is available AND validated
   const socketConfig: WebSocketConfig | null = useMemo(() => {
     if (sessionId && sessionToken && isSessionValidated) {
-      console.log(
-        "usememo for socket connection triggered:",
-        sessionId,
-        sessionToken
-      );
       return {
         sessionId,
         auth: { token: sessionToken },
@@ -1158,6 +1185,22 @@ export function ChatWidget({
       throw error;
     }
   };
+  //TODO: Recheck and implement
+  // const clearInitialStates = () => {
+  //   setMessages([messages[0]]);
+  //   setIsWaitingForResponse(false);
+  //   setProgressMessage(null);
+  //   setTips(null);
+  //   setIsSessionValidated(false);
+  //   setMobVerificationStatus({
+  //     active: false,
+  //     isSending: false,
+  //     stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+  //     uhids: [],
+  //     tool_use_id: null,
+  //     mobile_number: null,
+  //   });
+  // };
 
   const handleRetry = async () => {
     if (connectionStatus !== CONNECTION_STATUS.CONNECTED) {
@@ -1330,7 +1373,9 @@ export function ChatWidget({
                   messageId={message.id}
                   message={message.content}
                   isBot={message.isBot}
-                  showActions={messages.length === 1}
+                  showActions={
+                    messages.length === 1 && message.isBot
+                  }
                   handleQuickAction={handleQuickAction}
                   quickActions={quickActions}
                   isQuickActionsDisabled={

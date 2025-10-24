@@ -6,10 +6,10 @@ import useSessionStore from "./stores/medAssistStore";
 
 interface AppProps {
   config?: {
+    firstUserMessage?: string;
     theme?: string;
     onMinimize?: () => void;
     onClose?: () => void;
-    isProduction?: boolean;
   };
 }
 
@@ -139,6 +139,7 @@ function App({ config }: AppProps = {}) {
           {isWidgetOpen && (
             <ChatWidget
               title="Apollo Assist"
+              firstUserMessage={config?.firstUserMessage || ""}
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}
               isExpanded={isExpanded}
