@@ -66,7 +66,9 @@
         background: #fdb931;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         padding: 8px 8px 8px 24px;
-        justify-content: space-between;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;]  transition: all 0.8s cubic-bezier(0.4, 0, 0.2, 1);
       }
 
       .eka-stage-2-content {
@@ -74,7 +76,7 @@
         align-items: center;
         justify-content: space-between;
         width: 100%;
-        gap: 12px;
+        gap: 16px;
       }
 
       .eka-stage-2-text {
@@ -122,24 +124,27 @@
 
       .eka-stage-3-overlay {
         position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
+        bottom: 20px;  /* Same as widget button */
+        right: 20px;   /* Same as widget button */
+        width: auto;
+        height: auto;
         pointer-events: none;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-end;
+        gap: 16px;
       }
 
       /* Chat bubble */
       .eka-chat-bubble {
-        position: absolute;
-        bottom: 160px;
-        right: 20px;
+        position: relative;
         background: #fdb931;
         border-radius: 16px;
         padding: 14px 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
         max-width: 340px;
         pointer-events: auto;
+        order: 1;
       }
 
       .eka-chat-bubble-content {
@@ -200,16 +205,14 @@
 
       /* Pills container */
       .eka-pills-container {
-        position: absolute;
-        bottom: 90px;
-        right: 20px;
+        position: relative;
         display: flex;
         flex-direction: row;
         gap: 8px;
         pointer-events: auto;
-        max-width: calc(100vw - 40px);
         justify-content: flex-end;
         flex-wrap: wrap;
+        order: 2;
       }
 
       .eka-pill {
@@ -236,9 +239,7 @@
 
       /* Widget icon button */
       .eka-widget-icon-button {
-        position: absolute;
-        bottom: 20px;
-        right: 20px;
+        position: relative;
         width: 54px;
         height: 54px;
         background: white;
@@ -252,6 +253,7 @@
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         border: none;
         padding: 0;
+        order: 3;
       }
 
       .eka-widget-icon-button:hover {
@@ -297,10 +299,10 @@
         }
 
         .eka-widget-button.stage-2 {
-          width: 260px;
+          width: auto;
           height: 55px;
           border-radius: 27.5px;
-          padding: 0 15px;
+          padding: 2px 15px;
         }
 
         .eka-stage-2-icon {
@@ -317,8 +319,6 @@
         }
 
         .eka-chat-bubble {
-          bottom: 16px;
-          right: 16px;
           max-width: 300px;
           padding: 12px 14px;
         }
@@ -373,6 +373,28 @@
       .eka-pills-container,
       .eka-widget-icon-button {
         animation: fadeIn 0.3s ease;
+      }
+
+      @keyframes stage2FadeIn {
+        from {
+          opacity: 0;
+          transform: scale(0.8) translateX(20px);
+        }
+        to {
+          opacity: 1;
+          transform: scale(1) translateX(0);
+        }
+      }
+
+      @keyframes stage1FadeOut {
+        from {
+          opacity: 1;
+          transform: scale(1);
+        }
+        to {
+          opacity: 0;
+          transform: scale(0.9);
+        }
       }
     `;
     document.head.appendChild(style);
@@ -504,8 +526,8 @@
             <button class="eka-pill focused" data-action="doctor">
               🔍 Help me find a doctor
             </button>
-            <button class="eka-pill" data-action="services">
-              ❓ Know about our services
+            <button class="eka-pill" data-action="emergency">
+              🆘 I'm in emergency
             </button>
           </div>
 
@@ -632,7 +654,7 @@
         } else if (
           action === "appointment" ||
           action === "doctor" ||
-          action === "services"
+          action === "emergency"
         ) {
           handlePillClick(action, config);
         }
