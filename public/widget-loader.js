@@ -69,8 +69,6 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
-        transition: all 0.8s ease-in-out;
-        transition: all 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94);
       }
 
       .eka-stage-2-content {
@@ -79,12 +77,6 @@
         justify-content: space-between;
         width: 100%;
         gap: 16px;
-        opacity: 0;
-        transition: opacity 0.3s ease 0.8s;
-      }
-
-      .eka-widget-button.stage-2 .eka-stage-2-content {
-        opacity: 1;
       }
 
       .eka-stage-2-text {
