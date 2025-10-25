@@ -27,7 +27,7 @@ import { IMobileVerificationResponse, TUhidDetails } from "@/types/api";
 import getAvailabiltyDates from "@/utils/getAvailabiltyDates";
 import getAvailabilitySlots from "@/utils/getAvailabilitySlots";
 import { USER_FEEDBACK } from "@/configs/enums";
-import patchFeedbackMessage from "@/api/patch-feedback-message";
+// import patchFeedbackMessage from "@/api/patch-feedback-message";
 
 export enum MOBILE_VERIFICATION_STAGE {
   MOBILE_NUMBER = "mobile",
@@ -1278,35 +1278,35 @@ export function ChatWidget({
     );
   };
 
-  const handleMessageFeedback = async (
-    messageId: string,
-    feedback: USER_FEEDBACK
-  ) => {
-    const messageIndex = messages.findIndex((msg) => msg.id === messageId);
-    if (messageIndex === -1) {
-      console.error("Message not found for feedback");
-      return;
-    }
-    try {
-      await patchFeedbackMessage(sessionId, messageId, feedback);
-    } catch (error) {
-      console.error("Failed to patch feedback:", error);
-    } finally {
-      setMessages((prev) => {
-        const updatedMessages = [...prev];
-        updatedMessages[messageIndex] = {
-          ...updatedMessages[messageIndex],
-          feedback: feedback,
-        };
-        updateMessageInSession(
-          sessionId,
-          messageId,
-          updatedMessages[messageIndex]
-        );
-        return updatedMessages;
-      });
-    }
-  };
+  // const handleMessageFeedback = async (
+  //   messageId: string,
+  //   feedback: USER_FEEDBACK
+  // ) => {
+  //   const messageIndex = messages.findIndex((msg) => msg.id === messageId);
+  //   if (messageIndex === -1) {
+  //     console.error("Message not found for feedback");
+  //     return;
+  //   }
+  //   try {
+  //     await patchFeedbackMessage(sessionId, messageId, feedback);
+  //   } catch (error) {
+  //     console.error("Failed to patch feedback:", error);
+  //   } finally {
+  //     setMessages((prev) => {
+  //       const updatedMessages = [...prev];
+  //       updatedMessages[messageIndex] = {
+  //         ...updatedMessages[messageIndex],
+  //         feedback: feedback,
+  //       };
+  //       updateMessageInSession(
+  //         sessionId,
+  //         messageId,
+  //         updatedMessages[messageIndex]
+  //       );
+  //       return updatedMessages;
+  //     });
+  //   }
+  // };
   // Mobile full-screen styles
   const containerStyles = isMobile
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
@@ -1400,7 +1400,7 @@ export function ChatWidget({
                   getAvailableSlotsForAppointment={
                     handleGetAvailableSlotsForAppointment
                   }
-                  onUserFeedback={handleMessageFeedback}
+                  // onUserFeedback={handleMessageFeedback}
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
                   }
@@ -1418,7 +1418,7 @@ export function ChatWidget({
                   audioData={message.audioData} // Pass audio data to MessageBubble
                   isResponded={message.isResponded}
                   files={message.files}
-                  feedback={message?.feedback || USER_FEEDBACK.NONE}
+                  // feedback={message?.feedback || USER_FEEDBACK.NONE}
                 />
               ))}
 
