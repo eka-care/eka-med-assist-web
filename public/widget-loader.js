@@ -287,6 +287,18 @@
       }
 
       /* Mobile responsive styles */
+      @media (max-width: 992px) {
+        .eka-stage-3-overlay {
+          bottom: 82px;
+        }
+      }
+
+      @media (max-width: 767px) {
+        .eka-stage-3-overlay {
+          bottom: 246px;
+        }
+      }
+
       @media (max-width: 768px) {
         .eka-widget-button {
           bottom: 16px;
