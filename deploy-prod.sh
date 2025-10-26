@@ -14,7 +14,7 @@ echo "🚀 Deploying Eka Medical Assistant Widget to AWS Prod..."
 
 rm -rf dist/
 yarn install
-VITE_VERSION=$tag yarn build --mode prod
+yarn build-prod
 
 
 cd dist
