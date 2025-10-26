@@ -133,6 +133,7 @@
         flex-direction: column;
         align-items: flex-end;
         gap: 16px;
+        z-index: 2147483647;
       }
 
       /* Chat bubble */
@@ -145,6 +146,7 @@
         max-width: 340px;
         pointer-events: auto;
         order: 1;
+        z-index: 2147483647;
       }
 
       .eka-chat-bubble-content {
@@ -213,6 +215,7 @@
         justify-content: flex-end;
         flex-wrap: wrap;
         order: 2;
+        z-index: 2147483647;
       }
 
       .eka-pill {
@@ -254,6 +257,7 @@
         border: none;
         padding: 0;
         order: 3;
+        z-index: 2147483647;
       }
 
       .eka-widget-icon-button:hover {
@@ -287,6 +291,18 @@
       }
 
       /* Mobile responsive styles */
+      @media (max-width: 992px) {
+        .eka-stage-3-overlay {
+          bottom: 82px;
+        }
+      }
+
+      @media (max-width: 767px) {
+        .eka-stage-3-overlay {
+          bottom: 246px;
+        }
+      }
+
       @media (max-width: 768px) {
         .eka-widget-button {
           bottom: 16px;
