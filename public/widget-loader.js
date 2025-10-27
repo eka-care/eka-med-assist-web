@@ -122,6 +122,9 @@
         border-radius: 50%;
         background: #ffffff;
         flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
       }
 
       /* Stage 3: Full overlay with floating elements */
@@ -179,6 +182,7 @@
         font-size: 28px;
         line-height: 1;
         flex-shrink: 0;
+        padding-bottom: 24px;
       }
 
       .eka-chat-message {
@@ -230,7 +234,6 @@
         display: flex;
         flex-direction: row;
         gap: 8px;
-        pointer-events: auto;
         justify-content: flex-end;
         flex-wrap: wrap;
         order: 2;
@@ -244,6 +247,7 @@
         padding: 10px 18px;
         font-size: 13px;
         font-weight: 500;
+        pointer-events: auto;
         cursor: pointer;
         box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
         white-space: nowrap;
@@ -591,14 +595,32 @@
     clearTimeout(widgetState.inactivityTimer);
     clearTimeout(widgetState.stage2Timer);
 
+    const isRootPath =
+      window.location.pathname === "/" ||
+      window.location.pathname === "/widget-test.html";
+
+    // If on a subpath (/**) or if closed, stay in stage 1
+    if (!isRootPath || widgetState.isClosed) {
+      return;
+    }
     // After 3 seconds of inactivity, go to stage 2
     widgetState.inactivityTimer = setTimeout(function () {
-      if (!widgetState.isVisible && widgetState.stage === 1 && !widgetState.isClosed) {
+      if (
+        !widgetState.isVisible &&
+        widgetState.stage === 1 &&
+        !widgetState.isClosed &&
+        isRootPath
+      ) {
         setStage(2);
 
         // After 3 more seconds, go to stage 3
         widgetState.stage2Timer = setTimeout(function () {
-          if (!widgetState.isVisible && widgetState.stage === 2 && !widgetState.isClosed) {
+          if (
+            !widgetState.isVisible &&
+            widgetState.stage === 2 &&
+            !widgetState.isClosed &&
+            isRootPath
+          ) {
             setStage(3);
           }
         }, 10000);
