@@ -15,7 +15,7 @@
     isVisible: false,
     instance: null,
     config: null,
-    stage: 1, // 1: icon only, 2: oval with text, 3: chat bubble with pills
+    stage: 1,
     inactivityTimer: null,
     stage2Timer: null,
     firstUserMessage: null,
@@ -63,7 +63,7 @@
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: #fdb931;
+        background: #FDE047;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         padding: 8px 8px 8px 24px;
         display: flex;
@@ -139,7 +139,7 @@
       /* Chat bubble */
       .eka-chat-bubble {
         position: relative;
-        background: #fdb931;
+        background: #fde047;
         border-radius: 16px;
         padding: 14px 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -219,7 +219,7 @@
       }
 
       .eka-pill {
-        background: #fdb931;
+        background: #fde047;
         border: none;
         border-radius: 24px;
         padding: 10px 18px;
@@ -236,7 +236,7 @@
       }
 
       .eka-pill.focused {
-        border: 2px solid #fdb931;
+        border: 2px solid #fde047;
         padding: 8px 16px;
       }
 
@@ -464,14 +464,14 @@
       <div style="width: ${size}px; height: ${size}px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background: #fff;">
         <div style="position: absolute; border-radius: 50%; overflow: hidden; width: ${blueSize}px; height: ${blueSize}px; left: ${blueLeft}px; top: ${blueTop}px;">
           <div style="position: absolute; inset: 0; border-radius: 50%;">
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fdb931); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeA 16s ease-in-out infinite;"></div>
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fdb931, #2582a1); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeB 16s ease-in-out infinite;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fde047); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeA 16s ease-in-out infinite;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fde047, #2582a1); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeB 16s ease-in-out infinite;"></div>
           </div>
         </div>
         <div style="position: absolute; border-radius: 50%; overflow: hidden; width: ${yellowSize}px; height: ${yellowSize}px; left: ${yellowLeft}px; top: ${yellowTop}px;">
           <div style="position: absolute; inset: 0; border-radius: 50%;">
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fdb931, #2582a1); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeB 16s ease-in-out infinite 0.8s;"></div>
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fdb931); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeA 16s ease-in-out infinite 0.8s;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fde047, #2582a1); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeB 16s ease-in-out infinite 0.8s;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fde047); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeA 16s ease-in-out infinite 0.8s;"></div>
           </div>
         </div>
       </div>
@@ -528,7 +528,7 @@
             <div class="eka-chat-bubble-content" data-action="open">
               <div class="eka-chat-avatar">🤖</div>
               <div class="eka-chat-message">
-                <p class="eka-chat-text">Hi 👋 Need help booking an appointment or finding the right doctor?</p>
+                <p class="eka-chat-text">Hi 👋🏻 Need help booking an appointment or finding the right doctor?</p>
                 <p class="eka-chat-timestamp">Apollo Assist • ${messageTimeAgo}</p>
               </div>
             </div>
