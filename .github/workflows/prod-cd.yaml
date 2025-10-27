@@ -31,4 +31,6 @@ jobs:
         env:
           DEPLOYMENT_PHASE: ${{ github.event.inputs.deployment_phase }}
         run: |
+          git config user.name "orbi-ci-bot"
+          git config user.email "devops@eka.care"
           bash deploy-prod.sh ${DEPLOYMENT_PHASE}
