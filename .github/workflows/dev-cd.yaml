@@ -29,6 +29,8 @@ jobs:
       - name: Install Submodule Dependencies
         run: |
           cd packages/ui/base
+          echo "------------------------------------------------------"
+          ls packages/ui/base
           yarn install --frozen-lockfile
 
       - name: Run dev script
