@@ -53,6 +53,12 @@
         background: #ffffff;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         padding: 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .eka-widget-button.stage-1:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
 
       /* Stage 2: Oval with text */
@@ -69,6 +75,12 @@
         display: flex;
         align-items: center;
         justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .eka-widget-button.stage-2:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
 
       .eka-stage-2-content {
@@ -147,6 +159,12 @@
         pointer-events: auto;
         order: 1;
         z-index: 2147483647;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .eka-chat-bubble:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
       }
 
       .eka-chat-bubble-content {
@@ -233,6 +251,11 @@
         display: flex;
         align-items: center;
         gap: 6px;
+      }
+
+      .eka-pill:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
       }
 
       .eka-pill.focused {
