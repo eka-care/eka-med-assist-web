@@ -30,7 +30,7 @@ jobs:
         run: |
           cd packages/ui/base
           echo "------------------------------------------------------"
-          ls
+          ls /home/ec2-user/actions-runner/_work/eka-med-assist-web/eka-med-assist-web/packages/ui/base/src/eka-ui/icons
           yarn install --frozen-lockfile
 
       - name: Run dev script
