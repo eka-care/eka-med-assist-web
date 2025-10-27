@@ -26,5 +26,4 @@ jobs:
         env: 
           TAG: ${{ github.event.inputs.name }}
         run: |
-          git tag -l
-          bash deploy-revert-prod.sh
+          bash deploy-revert-prod.sh ${TAG}
