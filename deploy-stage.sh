@@ -13,7 +13,7 @@ ENV="dev"
 BUCKET_NAME="m-dev-medassist"
 REGION="ap-south-1"
 WIDGET_CDN_URL="https://dev-cdn.ekacare.co/apollo"
-WIDGET_VERSION_URL="https://dev-cdn.ekacare.co/apollo/dev-$tag"
+WIDGET_VERSION_URL="https://dev-cdn.ekacare.co/apollo/$ENV-$tag"
 CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q 
 
 set -e

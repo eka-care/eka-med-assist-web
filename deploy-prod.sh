@@ -1,5 +1,23 @@
 #!/bin/bash
-tag="$1"
+deployment_type="$1"
+
+rm -rf dist/
+yarn install
+
+if [ "$deployment_type" == "patch" ]; then
+  yarn build:prod:patch
+else if [ "$deployment_type" == "minor" ]; then
+  yarn build:prod:minor
+else if [ "$deployment_type" == "major" ]; then
+  yarn build:prod:major
+else
+  echo "Invalid deployment type"
+  exit 1
+fi
+
+# Read version from package.json
+tag=$(node -p "require('./package.json').version")
+git push --follow-tags
 
 # Configuration - Update these values
 ENV="prod"
@@ -11,10 +29,6 @@ CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q
 
 set -e
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Prod..."
-
-rm -rf dist/
-yarn install
-yarn build-prod
 
 
 cd dist
