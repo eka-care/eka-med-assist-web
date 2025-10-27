@@ -15,10 +15,11 @@
     isVisible: false,
     instance: null,
     config: null,
-    stage: 1, // 1: icon only, 2: oval with text, 3: chat bubble with pills
+    stage: 1,
     inactivityTimer: null,
     stage2Timer: null,
     firstUserMessage: null,
+    isClosed: false,
   };
 
   // Create isolated CSS with best practices
@@ -53,6 +54,12 @@
         background: #ffffff;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         padding: 0;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .eka-widget-button.stage-1:hover {
+        transform: scale(1.05);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
 
       /* Stage 2: Oval with text */
@@ -63,12 +70,18 @@
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: #fdb931;
+        background: #FDE047;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
         padding: 8px 8px 8px 24px;
         display: flex;
         align-items: center;
         justify-content: space-between;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .eka-widget-button.stage-2:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
 
       .eka-stage-2-content {
@@ -139,7 +152,7 @@
       /* Chat bubble */
       .eka-chat-bubble {
         position: relative;
-        background: #fdb931;
+        background: #fde047;
         border-radius: 16px;
         padding: 14px 16px;
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
@@ -147,6 +160,12 @@
         pointer-events: auto;
         order: 1;
         z-index: 2147483647;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+      }
+
+      .eka-chat-bubble:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
       }
 
       .eka-chat-bubble-content {
@@ -219,7 +238,7 @@
       }
 
       .eka-pill {
-        background: #fdb931;
+        background: #fde047;
         border: none;
         border-radius: 24px;
         padding: 10px 18px;
@@ -235,8 +254,13 @@
         gap: 6px;
       }
 
+      .eka-pill:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+      }
+
       .eka-pill.focused {
-        border: 2px solid #fdb931;
+        border: 2px solid #fde047;
         padding: 8px 16px;
       }
 
@@ -464,14 +488,14 @@
       <div style="width: ${size}px; height: ${size}px; position: relative; display: flex; align-items: center; justify-content: center; overflow: hidden; border-radius: 50%; background: #fff;">
         <div style="position: absolute; border-radius: 50%; overflow: hidden; width: ${blueSize}px; height: ${blueSize}px; left: ${blueLeft}px; top: ${blueTop}px;">
           <div style="position: absolute; inset: 0; border-radius: 50%;">
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fdb931); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeA 16s ease-in-out infinite;"></div>
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fdb931, #2582a1); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeB 16s ease-in-out infinite;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fde047); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeA 16s ease-in-out infinite;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fde047, #2582a1); background-size: 200% 200%; animation: spinBlue 16s linear infinite, fadeB 16s ease-in-out infinite;"></div>
           </div>
         </div>
         <div style="position: absolute; border-radius: 50%; overflow: hidden; width: ${yellowSize}px; height: ${yellowSize}px; left: ${yellowLeft}px; top: ${yellowTop}px;">
           <div style="position: absolute; inset: 0; border-radius: 50%;">
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fdb931, #2582a1); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeB 16s ease-in-out infinite 0.8s;"></div>
-            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fdb931); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeA 16s ease-in-out infinite 0.8s;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #fde047, #2582a1); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeB 16s ease-in-out infinite 0.8s;"></div>
+            <div style="position: absolute; inset: 0; border-radius: 50%; background: linear-gradient(0deg, #2582a1, #fde047); background-size: 200% 200%; animation: spinYellow 17s linear infinite 0.8s, fadeA 16s ease-in-out infinite 0.8s;"></div>
           </div>
         </div>
       </div>
@@ -528,7 +552,7 @@
             <div class="eka-chat-bubble-content" data-action="open">
               <div class="eka-chat-avatar">🤖</div>
               <div class="eka-chat-message">
-                <p class="eka-chat-text">Hi 👋 Need help booking an appointment or finding the right doctor?</p>
+                <p class="eka-chat-text">Hi 👋🏻 Need help booking an appointment or finding the right doctor?</p>
                 <p class="eka-chat-timestamp">Apollo Assist • ${messageTimeAgo}</p>
               </div>
             </div>
@@ -569,17 +593,17 @@
 
     // After 3 seconds of inactivity, go to stage 2
     widgetState.inactivityTimer = setTimeout(function () {
-      if (!widgetState.isVisible && widgetState.stage === 1) {
+      if (!widgetState.isVisible && widgetState.stage === 1 && !widgetState.isClosed) {
         setStage(2);
 
         // After 3 more seconds, go to stage 3
         widgetState.stage2Timer = setTimeout(function () {
-          if (!widgetState.isVisible && widgetState.stage === 2) {
+          if (!widgetState.isVisible && widgetState.stage === 2 && !widgetState.isClosed) {
             setStage(3);
           }
-        }, 3000);
+        }, 10000);
       }
-    }, 3000);
+    }, 5000);
   }
 
   //function to format time ago
@@ -665,6 +689,7 @@
         if (action === "close") {
           console.log("close");
           setStage(1);
+          widgetState.isClosed = true;
         } else if (action === "open") {
           toggleWidget(config);
         } else if (
@@ -789,6 +814,7 @@
         widgetState.instance.destroy();
         widgetState.instance = null;
       }
+      widgetState.isClosed = true;
       widgetState.isVisible = false;
       showButton();
       resetInactivityTimer();
