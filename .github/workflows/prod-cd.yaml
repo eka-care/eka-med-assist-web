@@ -2,6 +2,11 @@ name: Prod Build and Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      deployment_phase:
+        description: "Specify the deployment phase (e.g., patch, minor, major)"
+        required: true
+        default: "patch"
 
 jobs:
   build-and-upload:
@@ -24,6 +29,6 @@ jobs:
         
       - name: Running Prod Deploy Script
         env:
-          TAG: ${{ github.ref_name }}
+          DEPLOYMENT_PHASE: ${{ github.event.inputs.deployment_phase }}
         run: |
-          bash deploy-prod.sh
+          bash deploy-prod.sh ${DEPLOYMENT_PHASE}
