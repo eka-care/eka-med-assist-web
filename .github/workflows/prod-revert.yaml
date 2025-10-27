@@ -26,32 +26,4 @@ jobs:
         env: 
           TAG: ${{ github.event.inputs.name }}
         run: |
-          # Validate tag format (x.x.x)
-          if ! [[ "${{ github.event.inputs.name }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "Error: Tag '${{ github.event.inputs.name }}' does not follow the required format x.x.x (e.g., 1.2.3)"
-            exit 1
-          fi
-          
-          # Verify tag exists in git
-          if ! git tag -l | grep -q "^${{ github.event.inputs.name }}$"; then
-            echo "Error: Tag '${{ github.event.inputs.name }}' does not exist in git tags"
-            echo "Available tags:"
-            git tag -l | head -10
-            exit 1
-          fi
-          
-          echo "Tag validation successful: ${{ github.event.inputs.name }}"
-
-      - name: Run Revert script which just edits widget.js file to point to the old Tag
-        env:
-          TAG: ${{ github.event.inputs.name }}
-        run: |
-            ls
-            #aws s3 cp s3://m-prod-medassist/apollo/prod-${TAG}/widget-loader.js  s3://m-prod-medassist/main/apollo/widget-loader.js
-
-      - name: Invalidate CloudFront Cache
-        env:
-          CLOUDFRONT_DISTRIBUTION_ID: EFEE4LLA508Q 
-        run: |
-            ls
-            #aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/*"
+           bash deploy-revert-prod.sh
