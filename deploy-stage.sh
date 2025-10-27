@@ -1,20 +1,24 @@
 #!/bin/bash
-tag="$1"
 
-# Configuration - Update these values
+# Configuration - Update these value
+rm -rf dist/
+yarn install
+yarn build:stage
+
+tag=$(node -p "require('./package.json').version")
+git push --follow-tags
+
+# Read version from package.json
 ENV="dev"
 BUCKET_NAME="m-dev-medassist"
 REGION="ap-south-1"
 WIDGET_CDN_URL="https://dev-cdn.ekacare.co/apollo"
-WIDGET_VERSION_URL="https://dev-cdn.ekacare.co/apollo/$ENV-$tag"
+WIDGET_VERSION_URL="https://dev-cdn.ekacare.co/apollo/dev-$tag"
 CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q 
 
 set -e
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Dev..."
-
-rm -rf dist/
-yarn install
-yarn build-stage-update
+echo "📦 Using version: $tag"
 
 
 cd dist
