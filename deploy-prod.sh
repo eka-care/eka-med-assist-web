@@ -6,9 +6,9 @@ yarn install
 
 if [ "$deployment_type" == "patch" ]; then
   yarn build:prod:patch
-else if [ "$deployment_type" == "minor" ]; then
+elif [ "$deployment_type" == "minor" ]; then
   yarn build:prod:minor
-else if [ "$deployment_type" == "major" ]; then
+elif [ "$deployment_type" == "major" ]; then
   yarn build:prod:major
 else
   echo "Invalid deployment type"
@@ -29,6 +29,7 @@ CLOUDFRONT_DISTRIBUTION_ID=EFEE4LLA508Q
 
 set -e
 echo "🚀 Deploying Eka Medical Assistant Widget to AWS Prod..."
+echo "📦 Using version: $tag"
 
 
 cd dist
