@@ -19,6 +19,7 @@
     inactivityTimer: null,
     stage2Timer: null,
     firstUserMessage: null,
+    isClosed: false,
   };
 
   // Create isolated CSS with best practices
@@ -592,17 +593,17 @@
 
     // After 3 seconds of inactivity, go to stage 2
     widgetState.inactivityTimer = setTimeout(function () {
-      if (!widgetState.isVisible && widgetState.stage === 1) {
+      if (!widgetState.isVisible && widgetState.stage === 1 && !widgetState.isClosed) {
         setStage(2);
 
         // After 3 more seconds, go to stage 3
         widgetState.stage2Timer = setTimeout(function () {
-          if (!widgetState.isVisible && widgetState.stage === 2) {
+          if (!widgetState.isVisible && widgetState.stage === 2 && !widgetState.isClosed) {
             setStage(3);
           }
-        }, 3000);
+        }, 10000);
       }
-    }, 3000);
+    }, 5000);
   }
 
   //function to format time ago
@@ -688,6 +689,7 @@
         if (action === "close") {
           console.log("close");
           setStage(1);
+          widgetState.isClosed = true;
         } else if (action === "open") {
           toggleWidget(config);
         } else if (
@@ -812,6 +814,7 @@
         widgetState.instance.destroy();
         widgetState.instance = null;
       }
+      widgetState.isClosed = true;
       widgetState.isVisible = false;
       showButton();
       resetInactivityTimer();
