@@ -68,14 +68,14 @@ export function ChatWidget({
   isOnline = true,
 }: ChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
-    // {
-    //   id: "1",
-    //   content:
-    //     "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
-    //   isBot: true,
-    //   isStored: true,
-    //   feedback: USER_FEEDBACK.NONE,
-    // },
+    {
+      id: "1",
+      content:
+        "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+      isBot: true,
+      isStored: true,
+      feedback: USER_FEEDBACK.NONE,
+    },
   ]);
   const [tips, setTips] = useState<string[] | null>(null);
   const [progressMessage, setProgressMessage] = useState<string | null>(null);
@@ -1373,9 +1373,7 @@ export function ChatWidget({
                   messageId={message.id}
                   message={message.content}
                   isBot={message.isBot}
-                  showActions={
-                    messages.length === 1 && message.isBot
-                  }
+                  showActions={messages.length === 1 && message.isBot}
                   handleQuickAction={handleQuickAction}
                   quickActions={quickActions}
                   isQuickActionsDisabled={
