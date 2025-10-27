@@ -1,0 +1,57 @@
+name: Prod Revert Workflow
+
+on:
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Please enter Production tag in format : 0.0.0"
+        default: ""
+        required: true
+
+jobs:
+  build-and-upload:
+    runs-on: prod-ec2-server-2
+    steps:
+
+      - name: Get the version
+        id: get_version
+        run: echo VERSION=$(echo $GITHUB_REF | cut -d / -f 3) >> $GITHUB_OUTPUT
+
+      - name: Checkout code to access git tags
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all tags
+
+      - name: Check tag input and validate format
+        env: 
+          TAG: ${{ github.event.inputs.name }}
+        run: |
+          # Validate tag format (x.x.x)
+          if ! [[ "${{ github.event.inputs.name }}" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "Error: Tag '${{ github.event.inputs.name }}' does not follow the required format x.x.x (e.g., 1.2.3)"
+            exit 1
+          fi
+          
+          # Verify tag exists in git
+          if ! git tag -l | grep -q "^${{ github.event.inputs.name }}$"; then
+            echo "Error: Tag '${{ github.event.inputs.name }}' does not exist in git tags"
+            echo "Available tags:"
+            git tag -l | head -10
+            exit 1
+          fi
+          
+          echo "Tag validation successful: ${{ github.event.inputs.name }}"
+
+      - name: Run Revert script which just edits widget.js file to point to the old Tag
+        env:
+          TAG: ${{ github.event.inputs.name }}
+        run: |
+            ls
+            #aws s3 cp s3://m-prod-medassist/apollo/prod-${TAG}/widget-loader.js  s3://m-prod-medassist/main/apollo/widget-loader.js
+
+      - name: Invalidate CloudFront Cache
+        env:
+          CLOUDFRONT_DISTRIBUTION_ID: EFEE4LLA508Q 
+        run: |
+            ls
+            #aws cloudfront create-invalidation --distribution-id ${CLOUDFRONT_DISTRIBUTION_ID} --paths "/*"
