@@ -22,6 +22,32 @@
     isClosed: false,
   };
 
+  // Cookie utilities for medassist-preferences
+  function getCookie(name) {
+    const value = "; " + document.cookie;
+    const parts = value.split("; " + name + "=");
+    if (parts.length === 2) {
+      return parts.pop().split(";").shift();
+    }
+    return null;
+  }
+
+  function setCookie(name, value, days = 1) {
+    const expires = new Date();
+    expires.setTime(expires.getTime() + days * 24 * 60 * 60 * 1000);
+    const cookieDomain = window.location.hostname;
+    document.cookie =
+      name +
+      "=" +
+      value +
+      ";expires=" +
+      expires.toUTCString() +
+      ";path=/; domain=" +
+      cookieDomain +
+      "; SameSite=Lax; " +
+      " Secure;";
+  }
+
   // Create isolated CSS with best practices
   function createIsolatedCSS() {
     var style = document.createElement("style");
@@ -598,21 +624,25 @@
     clearTimeout(widgetState.inactivityTimer);
     clearTimeout(widgetState.stage2Timer);
 
-    const isRootPath =
-      window.location.pathname === "/" ||
-      window.location.pathname === "/widget-test.html";
+    // Read cookie to check if widget should stay closed
+    const preference = getCookie("medassist-preferences");
+    const shouldStayClosed = preference === "close";
 
-    // If on a subpath (/**) or if closed, stay in stage 1
-    if (!isRootPath || widgetState.isClosed) {
+    // Update widgetState based on cookie
+    if (shouldStayClosed) {
+      widgetState.isClosed = true;
+    }
+
+    if (widgetState.isClosed) {
       return;
     }
+
     // After 3 seconds of inactivity, go to stage 2
     widgetState.inactivityTimer = setTimeout(function () {
       if (
         !widgetState.isVisible &&
         widgetState.stage === 1 &&
-        !widgetState.isClosed &&
-        isRootPath
+        !widgetState.isClosed
       ) {
         setStage(2);
 
@@ -621,8 +651,7 @@
         //   if (
         //     !widgetState.isVisible &&
         //     widgetState.stage === 2 &&
-        //     !widgetState.isClosed &&
-        //     isRootPath
+        //     !widgetState.isClosed
         //   ) {
         //     setStage(3);
         //   }
@@ -706,15 +735,14 @@
     button.addEventListener("click", function (e) {
       console.log("click", e);
       var target = e.target.closest("[data-action]");
-      console.log("target", target);
       if (target) {
         var action = target.getAttribute("data-action");
         e.stopPropagation();
-        console.log("action", action);
         if (action === "close") {
           console.log("close");
           setStage(1);
           widgetState.isClosed = true;
+          setCookie("medassist-preferences", "close");
         } else if (action === "open") {
           toggleWidget(config);
         } else if (
@@ -817,6 +845,10 @@
 
   // Show widget
   function showWidget(config) {
+    // Set cookie to "open" when opening widget
+    setCookie("medassist-preferences", "open");
+    widgetState.isClosed = false;
+
     if (!widgetState.isLoaded) {
       loadReactApp(config, function () {
         mountWidget(config);
@@ -841,6 +873,7 @@
       }
       widgetState.isClosed = true;
       widgetState.isVisible = false;
+      setCookie("medassist-preferences", "close");
       showButton();
       resetInactivityTimer();
     }
@@ -870,6 +903,9 @@
     config = Object.assign({}, defaultConfig, config);
     createIsolatedCSS();
 
+    // Initialize from cookie
+    initializeFromCookie();
+
     var button = createWidgetButton(config);
     document.body.appendChild(button);
 
@@ -881,6 +917,19 @@
     console.log("Widget initialized");
   }
 
+  // Initialize widget state from cookie
+  function initializeFromCookie() {
+    const preference = getCookie("medassist-preferences");
+    if (preference === null) {
+      // Cookie doesn't exist, set default to "open"
+      setCookie("medassist-preferences", "open");
+      widgetState.isClosed = false;
+    } else if (preference === "close") {
+      widgetState.isClosed = true;
+    } else {
+      widgetState.isClosed = false;
+    }
+  }
   // Global API
   window.EkaMedAssist = {
     init: function (config) {
