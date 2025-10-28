@@ -34,7 +34,7 @@ const refreshSession = async (
           "X-agent-id": config.X_AGENT_ID,
           "x-sess-token": sessionToken,
         },
-        credentials: "include" // crucial line
+        // credentials: "include" // crucial line
       }
     );
 

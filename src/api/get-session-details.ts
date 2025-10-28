@@ -15,7 +15,7 @@ export const getSessionDetails = async (
         "Content-Type": "application/json",
         "X-agent-id": config.X_AGENT_ID,
       },
-      credentials: "include", // crucial line
+    //   credentials: "include", // crucial line
     });
 
     console.log("📡 API response status:", response.status, response.ok);

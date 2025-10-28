@@ -32,7 +32,7 @@ export async function postCallbackWrapper<T>({
         "Content-Type": "application/json",
         "x-agent-id": config.X_AGENT_ID,
       },
-      credentials: "include",
+    //   credentials: "include",
       body: JSON.stringify({
         tool_params: toolParams,
       }),

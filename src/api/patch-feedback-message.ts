@@ -14,7 +14,7 @@ const patchFeedbackMessage = async (
         "Content-Type": "application/json",
         "X-agent-id": config.X_AGENT_ID,
       },
-      credentials: "include", // crucial line
+    //   credentials: "include", // crucial line
       body: JSON.stringify({
         feedback: feedBack,
       }),
