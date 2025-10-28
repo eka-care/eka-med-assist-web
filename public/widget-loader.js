@@ -117,7 +117,7 @@
         justify-content: space-between;
         width: 100%;
         gap: 16px;
-        padding: 8px 12px;
+        padding: 8px 24px 8px 8px;
       }
 
       .eka-stage-2-text {
@@ -244,7 +244,7 @@
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 18px;
+        font-size: 22px;
         color: #666666;
         line-height: 1;
         padding: 0;
