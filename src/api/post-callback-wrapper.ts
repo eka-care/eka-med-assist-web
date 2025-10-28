@@ -26,12 +26,13 @@ export async function postCallbackWrapper<T>({
   } = wrapperOptions;
   try {
     const url = `${config.BASE_API_URL}/med-assist/api-call-tool?session_id=${session_id}&tool_name=${tool_name}`;
-    const options = {
+    const options: RequestInit = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
         "x-agent-id": config.X_AGENT_ID,
       },
+      credentials: "include",
       body: JSON.stringify({
         tool_params: toolParams,
       }),

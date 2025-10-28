@@ -123,6 +123,7 @@ export interface ChatResponseMessage extends BaseMessage {
   _id: string;
   data: {
     url?: string;
+    urls?: string[];
     exp?: number;
     text?: string;
     tool_use_id?: string;

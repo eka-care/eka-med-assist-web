@@ -113,11 +113,14 @@ export function MessageInput({
     if (isStreaming || error || !disabled) {
       setIsSending(false); // Reset sending state when streaming starts
     }
+    // Remove auto focus on mobile devices
     if (
       !isStreaming &&
       !disabled &&
       connectionStatus === CONNECTION_STATUS.CONNECTED &&
-      messageInputRef.current
+      messageInputRef.current &&
+      window.innerWidth &&
+      window.innerWidth > 768 // Only auto focus on desktop
     ) {
       // Small delay to ensure DOM is ready
       const timer = setTimeout(() => {
@@ -702,7 +705,8 @@ export function MessageInput({
               autoFocus={
                 !disabled &&
                 connectionStatus === CONNECTION_STATUS.CONNECTED &&
-                !isStreaming
+                !isStreaming &&
+                window.innerWidth > 768 // Only auto focus on desktop
               }
               placeholder={
                 mobVerificationPlaceholder

@@ -109,16 +109,20 @@ export function useWebSocket(
         if (
           message.ct === ContentType.FILE &&
           message.data &&
-          "url" in message.data
+          "urls" in message.data
         ) {
-          service
-            .uploadFilesToPresignedUrl(message.data?.url || "")
-            .then(() => {
-              // setPendingFiles([]);
-            })
-            .catch((error) => {
-              console.error("Failed to upload files:", error);
-            });
+          const urls = message.data.urls || [];
+          if (urls.length > 0) {
+            service
+              .uploadFilesToPresignedUrl(urls)
+              .then(() => {
+                // setPendingFiles([]);
+              })
+              .catch((error) => {
+                console.error("Failed to upload files:", error);
+                setError(ERROR_MESSAGES.FILE_UPLOAD_FAILED);
+              });
+          }
         } else if (
           (message.ct === ContentType.PILL ||
             message.ct === ContentType.MULTI ||
@@ -559,16 +563,11 @@ export function useWebSocket(
   };
 
   // Send file upload request
+  //TODO: in this function itself collect files
+  //merge with setFilesForUpload
   const sendFileUploadRequest = () => {
     if (wsRef.current && connectionStatus === CONNECTION_STATUS.CONNECTED) {
       wsRef.current.sendFileUploadRequest();
-    }
-  };
-
-  // Send file upload completion
-  const sendFileUploadComplete = (s3Url: string) => {
-    if (wsRef.current && connectionStatus === CONNECTION_STATUS.CONNECTED) {
-      wsRef.current.sendFileUploadComplete(s3Url);
     }
   };
 
@@ -587,14 +586,6 @@ export function useWebSocket(
     // setPendingFiles(files);
     if (wsRef.current) {
       wsRef.current.setFilesForUpload(files, message);
-    }
-  };
-
-  // Clear pending files
-  const clearPendingFiles = () => {
-    // setPendingFiles([]);
-    if (wsRef.current) {
-      wsRef.current.clearPendingFiles();
     }
   };
 
@@ -703,9 +694,7 @@ export function useWebSocket(
     sendChatMessage,
     sendAudioData,
     sendFileUploadRequest,
-    sendFileUploadComplete,
     setFilesForUpload,
-    clearPendingFiles,
     clearError,
     regenerateResponse,
     triggerSessionRefresh,

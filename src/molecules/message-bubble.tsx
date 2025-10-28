@@ -13,8 +13,8 @@ import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { TDoctor } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
-// import { ThumbsDown, ThumbsUp } from "lucide-react";
-// import { USER_FEEDBACK } from "@/configs/enums";
+import { ThumbsDown, ThumbsUp } from "lucide-react";
+import { USER_FEEDBACK } from "@/configs/enums";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -75,8 +75,8 @@ interface MessageBubbleProps {
   isQuickActionsDisabled: boolean;
   isStreaming?: boolean;
   progressMessage?: string | null;
-  // feedback?: USER_FEEDBACK;
-  // onUserFeedback: (messageId: string, feedback: USER_FEEDBACK) => void;
+  feedback?: USER_FEEDBACK;
+  onUserFeedback: (messageId: string, feedback: USER_FEEDBACK) => void;
   refreshSession: () => Promise<boolean>;
   verificationStatus: boolean;
   isLastMessage: boolean;
@@ -118,12 +118,12 @@ interface MessageBubbleProps {
 }
 
 export function MessageBubble({
-  // messageId,
+  messageId,
   message,
   isBot = false,
-  // onUserFeedback,
+  onUserFeedback,
   // onRegenerate,
-  // isLastMessage,
+  isLastMessage,
   quickActions,
   showActions,
   isQuickActionsDisabled,
@@ -131,7 +131,6 @@ export function MessageBubble({
   progressMessage,
   handleQuickAction,
   refreshSession,
-  // messageId,
   verificationStatus,
   clearMobileVerification,
   isRegenerating = false,
@@ -141,15 +140,15 @@ export function MessageBubble({
   onTipsExpire,
   isResponded = false,
   files,
-  // feedback,
+  feedback,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
 }: MessageBubbleProps) {
   const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
-  // const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
-  //   feedback || USER_FEEDBACK.NONE
-  // );
+  const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
+    feedback || USER_FEEDBACK.NONE
+  );
   // Reset selected values when new commonContentData comes in
   useEffect(() => {
     if (commonContentData && commonContentData.type === ContentType.MULTI) {
@@ -202,10 +201,10 @@ export function MessageBubble({
     }
   };
 
-  // const handleToggleFeedback = (feedback: USER_FEEDBACK) => {
-  //   onUserFeedback(messageId, feedback);
-  //   setUserFeedback(feedback);
-  // };
+  const handleToggleFeedback = (feedback: USER_FEEDBACK) => {
+    onUserFeedback(messageId, feedback);
+    setUserFeedback(feedback);
+  };
   return (
     <div className="px-4 py-2">
       <div
@@ -450,62 +449,62 @@ export function MessageBubble({
             />
           )}
 
-     
+          {isBot &&
+          !isStreaming &&
+          messageId !== "1" &&
+          isLastMessage &&
+          userFeedback === USER_FEEDBACK.NONE ? (
+            <div className="flex items-center gap-1 mt-3">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+                onClick={() => handleToggleFeedback(USER_FEEDBACK.LIKE)}>
+                <ThumbsUp className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+                onClick={() => handleToggleFeedback(USER_FEEDBACK.DISLIKE)}>
+                <ThumbsDown className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+              </Button>
+              {/* <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+        onClick={() => onRegenerate?.(messageId)}
+        disabled={isRegenerating || isStreaming}>
+        <RotateCcw
+          className={`h-3 w-3 text-[var(--color-muted-foreground)] ${
+            isRegenerating || isStreaming ? "opacity-50" : ""
+          }`}
+        />
+      </Button> */}
+            </div>
+          ) : userFeedback === USER_FEEDBACK.LIKE ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              disabled={true}>
+              <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
+            </Button>
+          ) : userFeedback === USER_FEEDBACK.DISLIKE ? (
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              disabled={true}>
+              <ThumbsDown
+                className="h-3 w-3 text-primary"
+                fill="currentColor"
+              />
+            </Button>
+          ) : null}
         </div>
       </div>
     </div>
   );
 }
 //***********************Add this after proper implementation of feedback */
-// {isBot &&
-//   !isStreaming &&
-//   messageId !== "1" && isLastMessage &&
-//   userFeedback === USER_FEEDBACK.NONE ? (
-//     <div className="flex items-center gap-1 mt-3">
-//       <Button
-//         variant="ghost"
-//         size="sm"
-//         className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-//         onClick={() => handleToggleFeedback(USER_FEEDBACK.LIKE)}>
-//         <ThumbsUp className="h-3 w-3 text-[var(--color-muted-foreground)]" />
-//       </Button>
-//       <Button
-//         variant="ghost"
-//         size="sm"
-//         className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-//         onClick={() => handleToggleFeedback(USER_FEEDBACK.DISLIKE)}>
-//         <ThumbsDown className="h-3 w-3 text-[var(--color-muted-foreground)]" />
-//       </Button>
-//       {/* <Button
-//         variant="ghost"
-//         size="sm"
-//         className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-//         onClick={() => onRegenerate?.(messageId)}
-//         disabled={isRegenerating || isStreaming}>
-//         <RotateCcw
-//           className={`h-3 w-3 text-[var(--color-muted-foreground)] ${
-//             isRegenerating || isStreaming ? "opacity-50" : ""
-//           }`}
-//         />
-//       </Button> */}
-//     </div>
-//   ) : userFeedback === USER_FEEDBACK.LIKE ? (
-//     <Button
-//       variant="ghost"
-//       size="sm"
-//       className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-//       disabled={true}>
-//       <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
-//     </Button>
-//   ) : userFeedback === USER_FEEDBACK.DISLIKE ? (
-//     <Button
-//       variant="ghost"
-//       size="sm"
-//       className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
-//       disabled={true}>
-//       <ThumbsDown
-//         className="h-3 w-3 text-primary"
-//         fill="currentColor"
-//       />
-//     </Button>
-//   ) : null} 

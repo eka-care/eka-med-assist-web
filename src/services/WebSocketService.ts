@@ -681,14 +681,23 @@ export class WebSocketService {
   }
 
   /**
-   * Upload files to presigned URL
+   * Upload files to presigned URLs
    */
-  public async uploadFilesToPresignedUrl(presignedUrl: string): Promise<void> {
+  public async uploadFilesToPresignedUrl(
+    presignedUrls: string[]
+  ): Promise<void> {
     console.log("hi from uploadFilesToPresignedUrl");
+    let successCount = 0;
+
+    // Filter out invalid URLs
+    const validUrls = presignedUrls.filter((url) => url && url.trim());
 
     try {
+      if (validUrls.length === 0) {
+        throw new Error("No valid presigned URLs provided");
+      }
       console.log(
-        `Uploading ${this.pendingFiles.length} files to presigned URL ${presignedUrl}`
+        `Uploading ${this.pendingFiles.length} files to ${presignedUrls.length} presigned URL(s)`
       );
 
       let fileToUpload: File;
@@ -722,29 +731,45 @@ export class WebSocketService {
         );
       }
 
-      // Upload the file (either zipped or single)
-      const response = await fetch(presignedUrl, {
-        method: "PUT",
-        body: fileToUpload,
-        headers: {
-          "Content-Type": contentType,
-        },
-      });
+      // Upload to all presigned URLs
+      for (let i = 0; i < validUrls.length; i++) {
+        const url = validUrls[i];
+        console.log(`Uploading to URL ${i + 1}/${validUrls.length}: ${url}`);
 
-      if (!response.ok) {
-        throw new Error(
-          `Failed to upload ${fileToUpload.name}: ${response.status} ${response.statusText}`
+        const response = await fetch(url, {
+          method: "PUT",
+          body: fileToUpload,
+          headers: {
+            "Content-Type": contentType,
+            "x-ms-blob-type": "BlockBlob",
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error(
+            `Failed to upload ${fileToUpload.name} to URL ${i + 1}: ${
+              response.status
+            } ${response.statusText}`
+          );
+        }
+        successCount++;
+        console.log(
+          `Successfully uploaded to URL ${i + 1}/${validUrls.length}`,
+          response
         );
       }
 
-      console.log(`Successfully uploaded ${fileToUpload.name}`, response);
       console.log(
-        "File upload completed successfully, calling sendFileUploadComplete"
+        "All file uploads completed successfully, calling sendFileUploadComplete"
       );
 
-      // Call sendFileUploadComplete with the presigned URL
-      this.sendFileUploadComplete(presignedUrl);
+      // Call sendFileUploadComplete only once with the first presigned URL
+      this.sendFileUploadComplete(validUrls[0]);
     } catch (error) {
+      if (successCount > 0) {
+        this.sendFileUploadComplete(validUrls[0]);
+        return;
+      }
       console.error("Error uploading files to presigned URL:", error);
       throw error;
     }
