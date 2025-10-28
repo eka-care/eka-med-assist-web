@@ -85,11 +85,13 @@
       }
 
       .eka-stage-2-content {
+        position: relative;
         display: flex;
         align-items: center;
         justify-content: space-between;
         width: 100%;
         gap: 16px;
+        padding: 8px 12px;
       }
 
       .eka-stage-2-text {
@@ -206,17 +208,17 @@
 
       .eka-chat-close {
         position: absolute;
-        top: 8px;
+        top: 2px;
         right: 8px;
-        width: 24px;
-        height: 24px;
+        width: 12px;
+        height: 12px;
         background: transparent;
         border: none;
         cursor: pointer;
         display: flex;
         align-items: center;
         justify-content: center;
-        font-size: 24px;
+        font-size: 18px;
         color: #666666;
         line-height: 1;
         padding: 0;
@@ -346,7 +348,7 @@
           width: auto;
           height: 55px;
           border-radius: 27.5px;
-          padding: 2px 15px;
+          // padding: 2px 15px;
         }
 
         .eka-stage-2-icon {
@@ -531,6 +533,7 @@
       button.className = "eka-widget-button stage-2";
       button.innerHTML = `
         <div class="eka-stage-2-content" data-action="open">
+         <button class="eka-chat-close" data-action="close">×</button>
           <div class="eka-stage-2-text">
             <p class="eka-stage-2-title">Hi, Need some help?</p>
             <p class="eka-stage-2-subtitle">I'm happy to assist.</p>
@@ -614,16 +617,16 @@
         setStage(2);
 
         // After 3 more seconds, go to stage 3
-        widgetState.stage2Timer = setTimeout(function () {
-          if (
-            !widgetState.isVisible &&
-            widgetState.stage === 2 &&
-            !widgetState.isClosed &&
-            isRootPath
-          ) {
-            setStage(3);
-          }
-        }, 10000);
+        // widgetState.stage2Timer = setTimeout(function () {
+        //   if (
+        //     !widgetState.isVisible &&
+        //     widgetState.stage === 2 &&
+        //     !widgetState.isClosed &&
+        //     isRootPath
+        //   ) {
+        //     setStage(3);
+        //   }
+        // }, 10000);
       }
     }, 5000);
   }
