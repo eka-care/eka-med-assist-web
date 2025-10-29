@@ -1,7 +1,7 @@
 import { config } from "@/configs/constants";
 
 // Default JWT payload for the session
-const startSession = async () => {
+const startSession = async (user_id: string) => {
     try {
         const response = await fetch(`${config.BASE_API_URL}/med-assist/session`, {
             method: "POST",
@@ -10,6 +10,7 @@ const startSession = async () => {
                 "X-agent-id": config.X_AGENT_ID,
             },
             //   credentials: "include",
+            body: JSON.stringify({ user_id }),
         });
 
         if (!response.ok) {
