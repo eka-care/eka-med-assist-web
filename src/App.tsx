@@ -3,7 +3,7 @@ import startSession from "./api/post-start-session";
 import { useNetworkStatus } from "./custom-hooks/useNetworkStatus";
 import { ChatWidget } from "./organisms/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
-
+import { v4 as uuidv4 } from 'uuid';
 interface AppProps {
   config?: {
     firstUserMessage?: string;
@@ -69,7 +69,12 @@ function App({ config }: AppProps = {}) {
 
     try {
       console.log("Calling startSession API...");
-      const { session_id, session_token } = await startSession();
+      let user_id = localStorage.getItem("user_id");
+      if(!user_id) {
+        user_id = uuidv4();
+        localStorage.setItem("user_id", user_id);
+      }
+      const { session_id, session_token } = await startSession(user_id);
 
       if (!session_id || !session_token) {
         throw new Error(
@@ -77,7 +82,6 @@ function App({ config }: AppProps = {}) {
         );
       }
 
-      console.log("Setting session in store...");
       setSessionId(session_id);
       setSessionToken(session_token);
       console.log("Session started successfully, widget opened with session:");

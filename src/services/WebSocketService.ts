@@ -4,7 +4,6 @@ import {
   WEBSOCKET_SERVER_EVENTS,
 } from "@/configs/enums";
 import type {
-  AudioEndOfStreamRequest,
   AudioStreamRequest,
   AuthRequest,
   ChatMessage,
@@ -53,8 +52,15 @@ export class WebSocketService {
   private pingInterval: TimeoutHandle | null = null;
   private connectionTimeout: TimeoutHandle | null = null;
   private currentStreamMessage: ChatMessage | null = null;
-  private pendingFiles: File[] = [];
-  private pendingMessage: string | null = null;
+  private pendingFileData: {
+    files: File[];
+    message?: string;
+    format?: string;
+  } = {
+    files: [],
+    message: "",
+    format: undefined,
+  };
 
   constructor(config: WebSocketConfig) {
     this.config = {
@@ -482,6 +488,9 @@ export class WebSocketService {
       ct: ContentType.FILE,
       ts: Date.now(),
       _id: Date.now().toString(),
+      data: {
+        extension: this.pendingFileData.format,
+      },
     };
 
     this.sendMessage(message);
@@ -507,7 +516,7 @@ export class WebSocketService {
       throw new Error("WebSocket is not connected");
     }
 
-    const text = this.pendingMessage;
+    const text = this.pendingFileData?.message;
     const message: ChatRequest = {
       ev: SocketEvent.CHAT,
       ct: ContentType.FILE,
@@ -527,9 +536,10 @@ export class WebSocketService {
    * Set files for upload when presigned URL is received
    */
   public setFilesForUpload(files: File[], message?: string): void {
-    this.pendingFiles = files;
+    this.pendingFileData.files = files;
+    this.pendingFileData.format = files.length > 1 ? "zip" : files[0].type?.split?.("/")?.[1] || undefined;
     if (message?.trim()) {
-      this.pendingMessage = message;
+      this.pendingFileData.message = message;
     }
 
     console.log(`Set ${files.length} files for upload`);
@@ -539,11 +549,10 @@ export class WebSocketService {
    * Clear pending files
    */
   public clearPendingFiles(): void {
-    this.pendingFiles = [];
-    this.pendingMessage = "";
-    console.log("Cleared pending files");
+    this.pendingFileData.files = [];
+    this.pendingFileData.message = "";
+    this.pendingFileData.format = undefined;
   }
-
   /**
    * Clear streaming state
    */
@@ -620,42 +629,6 @@ export class WebSocketService {
     }
   }
 
-  // private attemptReconnection(): void {
-  //   if (this.reconnectAttempts >= this.maxReconnectAttempts) {
-  //     this.updateConnectionState(ConnectionState.ERROR);
-  //     this.triggerEvent(
-  //       WEBSOCKET_SERVER_EVENTS.ERROR,
-  //       new Error("Reconnect failed")
-  //     );
-  //     return;
-  //   }
-
-  //   // Prevent multiple simultaneous reconnection attempts
-  //   if (this.isReconnecting) {
-  //     console.log("Reconnection already in progress, skipping from attemptReconnection function");
-  //     return;
-  //   }
-
-  //   const delay = this.reconnectDelay * Math.pow(2, this.reconnectAttempts);
-  //   console.log(
-  //     `Scheduling reconnection attempt ${
-  //       this.reconnectAttempts + 1
-  //     } in ${delay}ms`
-  //   );
-
-  //   setTimeout(() => {
-  //     if (!this.isConnected() && !this.isReconnecting) {
-  //       console.log(
-  //         `Attempting reconnection ${this.reconnectAttempts + 1}/${
-  //           this.maxReconnectAttempts
-  //         }`
-  //       );
-  //       // Use the unified reconnect function
-  //       this.reconnect(`automatic attempt ${this.reconnectAttempts + 1}`);
-  //     }
-  //   }, delay);
-  // }
-
   /**
    * Regenerate response for a specific chat
    */
@@ -668,7 +641,6 @@ export class WebSocketService {
 
     // Clear any existing streaming message when regenerating
     this.clearStreamingState();
-
     const message: ChatRequest = {
       ev: SocketEvent.CHAT,
       ct: ContentType.TEXT,
@@ -697,22 +669,24 @@ export class WebSocketService {
         throw new Error("No valid presigned URLs provided");
       }
       console.log(
-        `Uploading ${this.pendingFiles.length} files to ${presignedUrls.length} presigned URL(s)`
+        `Uploading ${this.pendingFileData?.files?.length} files to ${presignedUrls.length} presigned URL(s)`
       );
 
       let fileToUpload: File;
       let contentType: string;
 
-      if (shouldZipFiles(this.pendingFiles)) {
+      if (shouldZipFiles(this.pendingFileData.files)) {
         // Zip multiple files into a single file
         console.log("Multiple files detected, zipping before upload...");
-        const zipBlob = await zipFiles(this.pendingFiles);
-        const zipFileName = getUploadFileName(this.pendingFiles);
+        const zipBlob = await zipFiles(this.pendingFileData.files);
+        const zipFileName = getUploadFileName(this.pendingFileData.files);
         fileToUpload = blobToFile(zipBlob, zipFileName);
         contentType = "application/zip";
 
         console.log(
-          `Zipped ${this.pendingFiles.length} files into ${zipFileName} (${(
+          `Zipped ${
+            this.pendingFileData?.files?.length
+          } files into ${zipFileName} (${(
             fileToUpload.size /
             1024 /
             1024
@@ -720,7 +694,7 @@ export class WebSocketService {
         );
       } else {
         // Single file, upload as is
-        fileToUpload = this.pendingFiles[0];
+        fileToUpload = this.pendingFileData?.files?.[0];
         contentType = fileToUpload.type;
         console.log(
           `Uploading single file: ${fileToUpload.name} (${(
@@ -776,46 +750,6 @@ export class WebSocketService {
   }
 
   /**
-   * Send audio stream start
-   */
-  public sendAudioStreamStart(): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
-    }
-    const message: AudioStreamRequest = {
-      ev: SocketEvent.STREAM,
-      ct: ContentType.AUDIO,
-      ts: Date.now(),
-      _id: Date.now().toString(),
-      data: { audio: "start", format: "audio/mp4" },
-    };
-    this.sendMessage(message);
-  }
-
-  /**
-   * Send full audio data (AudioService format) - CHANGED FROM ORIGINAL
-   */
-  public sendAudioStream(audioData: AudioData): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
-    }
-
-    const message: AudioStreamRequest = {
-      ev: SocketEvent.STREAM,
-      ct: ContentType.AUDIO,
-      ts: Date.now(),
-      _id: Date.now().toString(),
-      data: {
-        audio: audioData.audio, // Base64 encoded audio
-        format: audioData.format, // MIME type
-      },
-    };
-
-    console.log("Sending full audio data:", message);
-    this.sendMessage(message);
-  }
-
-  /**
    * Send full audio data to backend (AudioService format) - NEW METHOD
    */
   public sendAudioData(audioData: AudioData): void {
@@ -838,60 +772,6 @@ export class WebSocketService {
     this.sendMessage(message);
   }
 
-  /**
-   * Send audio end of stream - CHANGED FROM ORIGINAL
-   */
-  public sendAudioEndOfStream(): void {
-    if (!this.isConnected()) {
-      throw new Error("WebSocket is not connected");
-    }
-    console.log("Sending audio end of stream");
-    const message: AudioEndOfStreamRequest = {
-      ev: SocketEvent.END_OF_STREAM,
-      ct: ContentType.AUDIO,
-      _id: Date.now().toString(),
-      ts: Date.now(),
-    };
-
-    this.sendMessage(message);
-  }
-
-  // /**
-  //  * Send pill message
-  //  */
-  // public sendPillMessage(pillMessage: string, tool_use_id: string): void {
-  //   if (!this.isConnected()) {
-  //     throw new Error("WebSocket is not connected");
-  //   }
-  //   const message: ChatRequest = {
-  //     ev: SocketEvent.CHAT,
-  //     ct: ContentType.TEXT,
-  //     ts: Date.now(),
-  //     _id: Date.now().toString(),
-  //     data: { text: pillMessage, tool_use_id: tool_use_id },
-  //   };
-  //   this.sendMessage(message);
-  // }
-
-  // /**
-  //  * Send doctor card message
-  //  */
-  // public sendDoctorCardMessage(
-  //   doctorCardMessage: string,
-  //   tool_use_id: string
-  // ): void {
-  //   if (!this.isConnected()) {
-  //     throw new Error("WebSocket is not connected");
-  //   }
-  //   const message: ChatRequest = {
-  //     ev: SocketEvent.CHAT,
-  //     ct: ContentType.DOCTOR_CARD,
-  //     ts: Date.now(),
-  //     _id: Date.now().toString(),
-  //     data: { text: doctorCardMessage, tool_use_id: tool_use_id },
-  //   };
-  //   this.sendMessage(message);
-  // }
   /**
    * Send ping message
    */
@@ -1032,6 +912,9 @@ export class WebSocketService {
       clearTimeout(this.connectionTimeout);
       this.connectionTimeout = null;
     }
+
+    this.clearPendingFiles();
+    this.clearStreamingState();
 
     if (this.ws) {
       this.ws.onopen = null;
