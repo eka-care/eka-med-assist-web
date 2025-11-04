@@ -64,6 +64,7 @@ export interface Message {
   content: string;
   isBot: boolean;
   files?: File[];
+  errorMessage?: string;
   originalUserMessage?: string; // Store the original user message for regeneration
   isRegenerating?: boolean; // Track if this message is being regenerated
   commonContentData?: import("./socket").CommonHandlerData; // Add common content data support

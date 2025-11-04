@@ -88,6 +88,7 @@ interface MessageBubbleProps {
   messageId: string; // Add messageId prop
   isRegenerating?: boolean; // Add isRegenerating prop
   commonContentData?: CommonHandlerData; // Add common content data prop
+  errorMessage?: string;
   onContentClick?: ({
     content,
     tool_use_id,
@@ -115,6 +116,9 @@ interface MessageBubbleProps {
       region_id?: string;
     }
   ) => Promise<{ success: boolean; data: any }>;
+  getDoctorDetails: (
+    doctorId: string
+  ) => Promise<{ success: boolean; data: any }>;
 }
 
 export function MessageBubble({
@@ -141,8 +145,10 @@ export function MessageBubble({
   isResponded = false,
   files,
   feedback,
+  errorMessage,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
+  getDoctorDetails,
 }: MessageBubbleProps) {
   const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
@@ -230,6 +236,11 @@ export function MessageBubble({
                 <ReactMarkdown>{message}</ReactMarkdown>
               </div>
             )}
+            {isBot && errorMessage && (
+              <div className="markdown-content">
+                <ReactMarkdown>{errorMessage}</ReactMarkdown>
+              </div>
+            )}
             {message && !isBot && (
               <div className="text-sm p-4 break-word">{message}</div>
             )}
@@ -276,6 +287,7 @@ export function MessageBubble({
               />
             </div>
           )}
+
           {/* Display common content for bot messages */}
           {isBot && commonContentData && (
             <>
@@ -393,6 +405,7 @@ export function MessageBubble({
                   getAvailableSlotsForAppointment={
                     getAvailableSlotsForAppointment
                   }
+                  getDoctorDetails={getDoctorDetails}
                 />
               )}
               {commonContentData.type === ContentType.MOBILE_VERIFICATION &&

@@ -1,4 +1,3 @@
-
 import { postCallbackWrapper } from "@/api/post-callback-wrapper";
 import { TOOL_NAME } from "@/configs/enums";
 import { DoctorDetailsParams } from "@/types/api";
@@ -8,6 +7,9 @@ const getDoctorDetails = async (
   sessionId: string,
   onSessionRefresh: () => Promise<boolean>
 ) => {
+  if (!doctorId) {
+    return { success: false, data: null };
+  }
   try {
     const response = await postCallbackWrapper<DoctorDetailsParams>({
       toolParams: { doctor_id: doctorId },
@@ -18,14 +20,21 @@ const getDoctorDetails = async (
       },
     });
 
-    if(!response?.ok) {
+    if (!response?.ok) {
+      const responseData = await response.json();
+      if (
+        responseData?.error?.code === "bot_error_display" &&
+        !!responseData?.error?.msg
+      ) {
+        return { success: false, data: null, error: responseData?.error };
+      }
       throw new Error("Failed to load doctor details");
     }
     const data = await response.json();
-    return data;
+    return { success: true, data };
   } catch (error) {
     console.error("Error loading doctor details:", error);
-    throw error;
+    return { success: false, data: null };
   }
 };
 
