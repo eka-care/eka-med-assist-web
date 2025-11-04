@@ -4,6 +4,8 @@ import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { TDoctor, TDoctorDetails, TCallbacks } from "@/types/widget";
 import AppointmentCard from "./appointment-card";
+import useMedAssistStore from "@/stores/medAssistStore";
+import getDoctorDetails from "@/utils/getDoctorDetails";
 
 type Props = {
   doctorDetails: TDoctorDetails;
@@ -24,24 +26,23 @@ type Props = {
       region_id?: string;
     }
   ) => Promise<{ success: boolean; data: any }>;
-  getDoctorDetails: (
-    doctorId: string
-  ) => Promise<{ success: boolean; data: any }>;
 };
 
 export function DoctorDetailsList({
   doctorDetails,
   callbacks,
   onBook,
+  refreshSession,
   disabled = false,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
-  getDoctorDetails,
 }: Props) {
   const [doctors, setDoctors] = useState<TDoctor[]>([]);
   const [loading, setLoading] = useState(false);
   const [loadedCount, setLoadedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+
+  const sessionId = useMedAssistStore((state) => state.sessionId);
 
   const doctorIds = doctorDetails.doctor_ids || [];
   const totalDoctors = doctorIds.length;
@@ -50,7 +51,7 @@ export function DoctorDetailsList({
 
   // Load initial doctors (max 3)
   useEffect(() => {
-    if (doctorIds.length === 0) return;
+    if (doctorIds.length === 0 || !sessionId ) return;
 
     const loadInitialDoctors = async () => {
       setLoading(true);
@@ -60,23 +61,19 @@ export function DoctorDetailsList({
         // Load first 3 doctors in parallel
         const initialIds = doctorIds.slice(0, initialLoadCount);
         const doctorPromises = initialIds.map((doctorId) =>
-          getDoctorDetails(doctorId)
+          getDoctorDetails(doctorId, sessionId, refreshSession)
         );
 
         const results = await Promise.allSettled(doctorPromises);
         const successfulDoctors: TDoctor[] = [];
 
         results.forEach((result, index) => {
-          if (
-            result.status === "fulfilled" &&
-            result.value.success &&
-            result.value.data
-          ) {
-            successfulDoctors.push(result.value.data);
+          if (result.status === "fulfilled") {
+            successfulDoctors.push(result.value);
           } else {
             console.error(
               `Failed to load doctor ${initialIds[index]}:`,
-              result.status === "fulfilled" ? result.value : result.reason
+              result.reason
             );
           }
         });
@@ -92,11 +89,11 @@ export function DoctorDetailsList({
     };
 
     loadInitialDoctors();
-  }, [doctorIds, initialLoadCount]);
+  }, [doctorIds, sessionId, initialLoadCount]);
 
   // Load remaining doctors when "Show more" is clicked
   const loadRemainingDoctors = async () => {
-    if (loadedCount >= totalDoctors) return;
+    if (loadedCount >= totalDoctors || !sessionId) return;
 
     setLoading(true);
     setError(null);
@@ -104,23 +101,19 @@ export function DoctorDetailsList({
     try {
       const remainingIds = doctorIds.slice(loadedCount);
       const doctorPromises = remainingIds.map((doctorId) =>
-        getDoctorDetails(doctorId)
+        getDoctorDetails(doctorId, sessionId, refreshSession)
       );
 
       const results = await Promise.allSettled(doctorPromises);
       const newDoctors: TDoctor[] = [];
 
       results.forEach((result, index) => {
-        if (
-          result.status === "fulfilled" &&
-          result.value.success &&
-          result.value.data
-        ) {
-          newDoctors.push(result.value.data);
+        if (result.status === "fulfilled") {
+          newDoctors.push(result.value);
         } else {
           console.error(
             `Failed to load doctor ${remainingIds[index]}:`,
-            result.status === "fulfilled" ? result.value : result.reason
+            result.reason
           );
         }
       });
@@ -144,13 +137,13 @@ export function DoctorDetailsList({
     }
   };
 
-  //   if (disabled) {
-  //     return (
-  //       <div className="flex items-center justify-center py-2">
-  //         <p className="text-sm text-gray-500">Doctor Selected</p>
-  //       </div>
-  //     );
-  //   }
+//   if (disabled) {
+//     return (
+//       <div className="flex items-center justify-center py-2">
+//         <p className="text-sm text-gray-500">Doctor Selected</p>
+//       </div>
+//     );
+//   }
 
   if (loading && doctors.length === 0) {
     return (
@@ -174,23 +167,19 @@ export function DoctorDetailsList({
             onClick={() => {
               setError(null);
               // Retry loading
-              if (doctorIds.length > 0) {
+              if (doctorIds.length > 0 && sessionId) {
                 const loadInitialDoctors = async () => {
                   setLoading(true);
                   try {
                     const initialIds = doctorIds.slice(0, initialLoadCount);
                     const doctorPromises = initialIds.map((doctorId) =>
-                      getDoctorDetails(doctorId)
+                      getDoctorDetails(doctorId, sessionId, refreshSession)
                     );
                     const results = await Promise.allSettled(doctorPromises);
                     const successfulDoctors: TDoctor[] = [];
                     results.forEach((result, _) => {
-                      if (
-                        result.status === "fulfilled" &&
-                        result.value.success &&
-                        result.value.data
-                      ) {
-                        successfulDoctors.push(result.value.data);
+                      if (result.status === "fulfilled") {
+                        successfulDoctors.push(result.value);
                       }
                     });
                     setDoctors(successfulDoctors);

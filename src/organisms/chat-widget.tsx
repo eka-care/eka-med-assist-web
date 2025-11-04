@@ -26,7 +26,6 @@ import handleUhidVerification from "@/utils/handleUhidVerification";
 import { IMobileVerificationResponse, TUhidDetails } from "@/types/api";
 import getAvailabiltyDates from "@/utils/getAvailabiltyDates";
 import getAvailabilitySlots from "@/utils/getAvailabilitySlots";
-import getDoctorDetails from "@/utils/getDoctorDetails";
 import { USER_FEEDBACK } from "@/configs/enums";
 import patchFeedbackMessage from "@/api/patch-feedback-message";
 
@@ -1256,26 +1255,11 @@ export function ChatWidget({
     hospital_id?: string;
     region_id?: string;
   }) => {
-    const result = await getAvailabiltyDates(
+    return await getAvailabiltyDates(
       doctorData,
       sessionId,
       triggerSessionRefresh
     );
-    if (
-      !result.success &&
-      result.error?.code === "bot_error_display" &&
-      !!result.error?.msg
-    ) {
-      setMessages((prev) => {
-        const updatedMessages = [...prev];
-        updatedMessages[updatedMessages.length - 1] = {
-          ...updatedMessages[updatedMessages.length - 1],
-          errorMessage: result.error?.msg,
-        };
-        return updatedMessages;
-      });
-    }
-    return result;
   };
 
   const handleGetAvailableSlotsForAppointment = async (
@@ -1286,50 +1270,12 @@ export function ChatWidget({
       region_id?: string;
     }
   ) => {
-    const result = await getAvailabilitySlots(
+    return await getAvailabilitySlots(
       appointment_date,
       doctorData,
       sessionId,
       triggerSessionRefresh
     );
-    if (
-      !result.success &&
-      result.error?.code === "bot_error_display" &&
-      !!result.error?.msg
-    ) {
-      setMessages((prev) => {
-        const updatedMessages = [...prev];
-        updatedMessages[updatedMessages.length - 1] = {
-          ...updatedMessages[updatedMessages.length - 1],
-          errorMessage: result.error?.msg,
-        };
-        return updatedMessages;
-      });
-    }
-    return result;
-  };
-
-  const handleGetDoctorDetails = async (doctorId: string) => {
-    const result = await getDoctorDetails(
-      doctorId,
-      sessionId,
-      triggerSessionRefresh
-    );
-    if (
-      !result.success &&
-      result.error?.code === "bot_error_display" &&
-      !!result.error?.msg
-    ) {
-      setMessages((prev) => {
-        const updatedMessages = [...prev];
-        updatedMessages[updatedMessages.length - 1] = {
-          ...updatedMessages[updatedMessages.length - 1],
-          errorMessage: result.error?.msg,
-        };
-        return updatedMessages;
-      });
-    }
-    return result;
   };
 
   const handleMessageFeedback = async (
@@ -1452,7 +1398,6 @@ export function ChatWidget({
                   getAvailableSlotsForAppointment={
                     handleGetAvailableSlotsForAppointment
                   }
-                  getDoctorDetails={handleGetDoctorDetails}
                   onUserFeedback={handleMessageFeedback}
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null

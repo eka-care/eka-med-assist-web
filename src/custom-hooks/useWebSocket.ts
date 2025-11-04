@@ -135,7 +135,14 @@ export function useWebSocket(
             const commonData: CommonHandlerData = {
               type: message.ct,
               tool_use_id: message.data.tool_use_id,
-              data: message.data,
+              data: {
+                choices: message.data.choices,
+                doctor_details: message.data.doctor_details,
+                callbacks: message.data.callbacks,
+                additional_option: message.data.additional_option,
+                url: message.data.url,
+                mobile_number: message.data.mobile_number,
+              },
             };
             onCommonContent(commonData, message._id);
           }

@@ -37,22 +37,13 @@ export interface AvailabilitySlotsParams {
 
 export interface AvailabilitySlotsResponse {
   slots: string[];
-  error?: {
-    code?: string;
-    msg?: string;
-  };
 }
 
 export interface DoctorDetailsParams {
   doctor_id: string;
 }
 
-export interface DoctorDetailsResponse extends TDoctor {
-  error?: {
-    code?: string;
-    msg?: string;
-  };
-}
+export interface DoctorDetailsResponse extends TDoctor {}
 
 export interface AvailabilityDatesParams {
   doctor_id: string;
@@ -62,8 +53,4 @@ export interface AvailabilityDatesParams {
 
 export interface AvailabilityDatesResponse {
   available_dates: string[];
-  error?: {
-    code?: string;
-    msg?: string;
-  };
 }
