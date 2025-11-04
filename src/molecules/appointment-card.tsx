@@ -59,7 +59,7 @@ export function AppointmentCard({
   const [callbackAvailability, setCallbackAvailability] =
     useState<TAvailability | null>(null);
   const [userHasSelectedDate, setUserHasSelectedDate] = useState(false);
-
+  const [error, setError] = useState<string | null>(null);
   // Get session data from store
   const sessionId = useSessionStore((state) => state.sessionId);
 
@@ -319,7 +319,11 @@ export function AppointmentCard({
       });
 
       if (!result.success) {
-        console.error("Failed to load availability dates via handler");
+
+        if(result.data?.error?.msg){
+          setError(result.data?.error?.msg);
+        };
+        console.error("Failed to load availability dates via handler",result);
         return;
       }
       response = result.data;
@@ -684,7 +688,7 @@ export function AppointmentCard({
             ) : (
               <div className="px-1 pb-2 pt-1">
                 <p className="text-sm text-slate-500">
-                  No availability provided.
+                 {error ? error : "No availability provided."}
                 </p>
               </div>
             )}
@@ -692,7 +696,7 @@ export function AppointmentCard({
         )}
         {open && !currentAvailability?.slots_details?.length && (
           <div className="px-1 pb-2 pt-1">
-            <p className="text-sm text-slate-500">No availability provided.</p>
+            <p className="text-sm text-slate-500">{error ? error : "No availability provided."}</p>
           </div>
         )}
       </CardContent>

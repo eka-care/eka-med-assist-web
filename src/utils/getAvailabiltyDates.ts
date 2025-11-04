@@ -25,6 +25,10 @@ const getAvailabiltyDates = async (doctorData: {
         });
           
         if(!response?.ok) {
+          const errorData = await response.json();
+          if (response.status === 412 && errorData?.error?.code === 'bot_error_display' && !!errorData?.error?.msg) {
+            return { success: false, data: { error: { msg: errorData?.error?.msg } } };
+           }
           throw new Error("Failed to load availability dates");
         }
         const data = await response.json();
