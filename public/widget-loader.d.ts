@@ -22,6 +22,9 @@ export type ThemeType =
  * Configuration options for initializing the widget
  */
 export interface EkaMedAssistConfig {
+  /** Agent ID (required) - Unique identifier for the agent */
+  agentId: string;
+
   /** Widget title displayed in the header */
   widgetTitle?: string;
 
@@ -68,6 +71,7 @@ export interface EkaMedAssistGlobal {
    * @example
    * ```typescript
    * window.EkaMedAssist.init({
+   *   agentId: "1234567890",
    *   widgetTitle: "Chat Support",
    *   firstBotMessage: "Hello! How can I help you today?",
    *   onClose: () => {
@@ -76,7 +80,7 @@ export interface EkaMedAssistGlobal {
    * });
    * ```
    */
-  init: (config?: EkaMedAssistConfig) => void;
+  init: (config: EkaMedAssistConfig) => void;
 
   /**
    * Close the widget

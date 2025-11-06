@@ -8,6 +8,7 @@
  * // Basic usage
  * window.EkaMedAssist.init({
  *   widgetTitle: "Chat Support",
+ *   agentId: "1234567890",
  *   firstBotMessage: "Hello! How can I help?",
  *   onClose: () => console.log("Widget closed")
  * });
@@ -18,6 +19,7 @@
 
   /**
    * @typedef {Object} WidgetConfig
+   * @property {string} agentId - Agent ID (required)
    * @property {string} [theme="doctor-light"] - Theme for the widget
    * @property {string} [position="bottom-right"] - Widget position
    * @property {string} [scriptUrl] - Custom script URL
@@ -97,6 +99,7 @@
 
     // Initialize widget with config
     widgetState.instance = window.EkaMedAssistWidget.init({
+      agentId: config.agentId,
       theme: config.theme || defaultConfig.theme,
       onClose: function () {
         // closeWidget will handle the callback and state cleanup
@@ -169,6 +172,20 @@
         "EkaMedAssist widget already initialized. Use closeMedAssist() first if you want to reinitialize."
       );
       return;
+    }
+
+    // Validate required agentId parameter
+    if (
+      !config ||
+      !config.agentId ||
+      typeof config.agentId !== "string" ||
+      config.agentId.trim() === ""
+    ) {
+      const error = new Error(
+        "agentId is required and must be a non-empty string"
+      );
+      console.error("EkaMedAssist initialization error:", error.message);
+      throw error;
     }
 
     // Merge with defaults

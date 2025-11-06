@@ -1,4 +1,5 @@
 import { config } from "@/configs/constants";
+import useSessionStore from "@/stores/medAssistStore";
 
 interface RefreshSessionResponse {
   session_id: string;
@@ -24,6 +25,13 @@ const refreshSession = async (
   sessionToken: string
 ): Promise<RefreshSessionResponse> => {
   try {
+    // Get agentId from store
+    const agentId = useSessionStore.getState().agentId;
+
+    if (!agentId || agentId.trim() === "") {
+      throw new Error("agentId is required to refresh a session");
+    }
+
     const response = await fetch(
       `${config.BASE_API_URL}/med-assist/session/${sessionId}/refresh`,
       {
@@ -31,7 +39,7 @@ const refreshSession = async (
         headers: {
           // "ngrok-skip-browser-warning": "69420",
           "Content-Type": "application/json",
-          "X-agent-id": config.X_AGENT_ID,
+          "X-agent-id": agentId,
           "x-sess-token": sessionToken,
         },
         // credentials: "include" // crucial line

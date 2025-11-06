@@ -23,6 +23,7 @@ Add the widget-loader.js script to your HTML:
     <!-- Initialize widget -->
     <script>
       window.EkaMedAssist.init({
+        agentId: "your-agent-id-here", // Required!
         widgetTitle: "Chat Support",
         firstBotMessage: "Hello! How can I help you?",
         onClose: function () {
@@ -54,7 +55,8 @@ For type safety in TypeScript projects:
 
 ```typescript
 // TypeScript will now provide autocomplete and type checking
-window.EkaMedAssist.initMedAssist({
+window.EkaMedAssist.init({
+  agentId: "your-agent-id-here", // Required!
   widgetTitle: "Chat Support",
   firstBotMessage: "Hello!",
   onClose: () => {
@@ -65,7 +67,7 @@ window.EkaMedAssist.initMedAssist({
 
 ## API Reference
 
-### `window.EkaMedAssist.initMedAssist(config)`
+### `window.EkaMedAssist.init(config)`
 
 Initializes and opens the widget with the provided configuration.
 
@@ -73,20 +75,20 @@ Initializes and opens the widget with the provided configuration.
 
 | Parameter          | Type                                                                   | Required | Default          | Description                                        |
 | ------------------ | ---------------------------------------------------------------------- | -------- | ---------------- | -------------------------------------------------- |
+| `agentId`          | `string`                                                               | **Yes**  | -                | **Required** - Unique identifier for the agent     |
 | `widgetTitle`      | `string`                                                               | No       | -                | Title displayed in the widget header               |
 | `firstBotMessage`  | `string`                                                               | No       | -                | First message sent by the bot when widget opens    |
 | `firstUserMessage` | `string`                                                               | No       | -                | First message sent by the user (auto-sent on open) |
 | `theme`            | `"doctor-light" \| "doctor-dark" \| "patient-light" \| "patient-dark"` | No       | `"doctor-light"` | Theme for the widget                               |
 | `onClose`          | `() => void`                                                           | No       | -                | Callback function called when widget is closed     |
-| `onMinimize`       | `() => void`                                                           | No       | -                | Callback function called when widget is minimized  |
 | `scriptUrl`        | `string`                                                               | No       | CDN URL          | Custom script URL (for self-hosting)               |
 | `cssUrl`           | `string`                                                               | No       | CDN URL          | Custom CSS URL (for self-hosting)                  |
-| `position`         | `string`                                                               | No       | `"bottom-right"` | Widget position (currently not used)               |
 
 #### Example
 
 ```javascript
-window.EkaMedAssist.initMedAssist({
+window.EkaMedAssist.init({
+  agentId: "your-agent-id-here", // Required!
   widgetTitle: "Medical Assistant",
   firstBotMessage: "Hi! I'm here to help with your medical questions.",
   firstUserMessage: "Hello",
@@ -117,6 +119,7 @@ window.EkaMedAssist.close();
 <script src="https://cdn.ekacare.co/apollo/widget-loader.js"></script>
 <script>
   window.EkaMedAssist.init({
+    agentId: "your-agent-id-here", // Required!
     widgetTitle: "Chat Support",
     firstBotMessage: "Hello! How can I help?",
     onClose: () => console.log("Widget closed"),
@@ -127,7 +130,8 @@ window.EkaMedAssist.close();
 ### Example 2: With Custom Callbacks
 
 ```javascript
-window.EkaMedAssist.initMedAssist({
+window.EkaMedAssist.init({
+  agentId: "your-agent-id-here", // Required!
   widgetTitle: "Support Chat",
   firstBotMessage: "Welcome! How can I assist you?",
   onClose: function () {
@@ -140,13 +144,12 @@ window.EkaMedAssist.initMedAssist({
 });
 ```
 
-### Example 3: TypeScript with Helper Functions
+### Example 3: TypeScript Usage
 
 ```typescript
-import { initEkaMedAssist, closeEkaMedAssist } from "./widget-loader-example";
-
-// Initialize
-initEkaMedAssist({
+// Initialize with full type safety
+window.EkaMedAssist.init({
+  agentId: "your-agent-id-here", // Required!
   widgetTitle: "Chat Support",
   firstBotMessage: "Hello!",
   onClose: () => {
@@ -155,7 +158,7 @@ initEkaMedAssist({
 });
 
 // Close programmatically
-closeEkaMedAssist();
+window.EkaMedAssist.close();
 ```
 
 ### Example 4: React Integration
@@ -171,6 +174,7 @@ function MyApp() {
     script.onload = () => {
       // Initialize widget after script loads
       window.EkaMedAssist?.init({
+        agentId: "your-agent-id-here", // Required!
         widgetTitle: "Chat Support",
         firstBotMessage: "Hello!",
         onClose: () => {
@@ -193,9 +197,11 @@ function MyApp() {
 ## How It Works
 
 1. **Load widget-loader.js**: This small script (~5KB) sets up the global `window.EkaMedAssist` API
-2. **Call initMedAssist()**: This loads the React bundle (widget.js) and CSS asynchronously
-3. **Widget mounts**: Once loaded, the widget is automatically mounted and displayed
-4. **Manage lifecycle**: Use `close()` to close, or callbacks to handle events
+2. **Call init() with agentId**: Provide your `agentId` (required) and configuration options
+3. **Validation**: The loader validates that `agentId` is provided and is a non-empty string
+4. **Load bundle**: The React bundle (widget.js) and CSS are loaded asynchronously
+5. **Widget mounts**: Once loaded, the widget is automatically mounted and displayed
+6. **Manage lifecycle**: Use `close()` to close, or callbacks to handle events
 
 ## Benefits
 
@@ -213,12 +219,32 @@ function MyApp() {
 2. Verify `widget-loader.js` is loaded: `console.log(window.EkaMedAssist)`
 3. Check network tab to ensure `widget.js` and CSS are loading
 4. Verify no CSP (Content Security Policy) blocking the scripts
+5. **Ensure `agentId` is provided**: The widget will not initialize without a valid `agentId`
+
+### Missing agentId error
+
+If you see an error about `agentId` being required:
+
+```javascript
+// ❌ This will throw an error
+window.EkaMedAssist.init({
+  widgetTitle: "Chat Support",
+  // Missing agentId!
+});
+
+// ✅ Correct usage
+window.EkaMedAssist.init({
+  agentId: "your-agent-id-here", // Required!
+  widgetTitle: "Chat Support",
+});
+```
 
 ### TypeScript errors
 
 1. Make sure `widget-loader.d.ts` is included in your project
 2. Add it to `tsconfig.json` types array
 3. Restart your TypeScript server
+4. Ensure `agentId` is provided in your config (TypeScript will enforce this)
 
 ### Widget already initialized error
 
@@ -227,6 +253,7 @@ If you see this warning, call `close()` first:
 ```javascript
 window.EkaMedAssist.close();
 window.EkaMedAssist.init({
+  agentId: "your-agent-id-here", // Required!
   /* new config */
 });
 ```

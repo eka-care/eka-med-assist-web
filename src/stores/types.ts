@@ -2,6 +2,9 @@ import { ErrorMessageUI } from "@/types/socket";
 import { CONNECTION_STATUS, Message } from "@/types/widget";
 
 export type TMedAssistStore = {
+  agentId: string;
+  setAgentId: (agentId: string) => void;
+
   sessionId: string;
   setSessionId: (sessionId: string) => void;
 

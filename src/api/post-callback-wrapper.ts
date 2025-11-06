@@ -1,6 +1,7 @@
 import { fetchWithTimeout } from "../utils/timeoutUtils";
 import { TOOL_NAME } from "@/configs/enums";
 import { config } from "@/configs/constants";
+import useSessionStore from "@/stores/medAssistStore";
 
 export interface ApiWrapperOptions {
   session_id: string;
@@ -25,14 +26,21 @@ export async function postCallbackWrapper<T>({
     tool_name,
   } = wrapperOptions;
   try {
+    // Get agentId from store
+    const agentId = useSessionStore.getState().agentId;
+
+    if (!agentId || agentId.trim() === "") {
+      throw new Error("agentId is required to make API calls");
+    }
+
     const url = `${config.BASE_API_URL}/med-assist/api-call-tool?session_id=${session_id}&tool_name=${tool_name}`;
     const options: RequestInit = {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "x-agent-id": config.X_AGENT_ID,
+        "x-agent-id": agentId,
       },
-    //   credentials: "include",
+      //   credentials: "include",
       body: JSON.stringify({
         tool_params: toolParams,
       }),
