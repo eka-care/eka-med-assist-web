@@ -86,11 +86,11 @@ export function ChatHeader({
         isExpanded || isMobile ? "sticky top-0 z-10" : ""
       }`}>
       <div className="flex items-center gap-2">
-          <img
-            src={import.meta.env.BASE_URL + "assets/apollo-icon.svg"}
+          {/* <img
+            src={import.meta.env.BASE_URL + "assets/agent-icon.svg"}
             alt="Apollo Icon"
             className={`flex-shrink-0 w-6 h-6`}
-          />
+          /> */}
         <h2 className="font-semibold text-[var(--color-foreground)] text-lg">
           {title}
         </h2>

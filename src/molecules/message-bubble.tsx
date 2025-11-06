@@ -9,7 +9,6 @@ import ReactMarkdown from "react-markdown";
 import DoctorDetailsList from "./doctor-details-list";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
-import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
 import { TDoctor } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
@@ -144,7 +143,9 @@ export function MessageBubble({
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
 }: MessageBubbleProps) {
-  const { isBotIconAnimating } = useMedAssistStore();
+  const isBotIconAnimating = useMedAssistStore(
+    (state) => state.isBotIconAnimating
+  );
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
   const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
     feedback || USER_FEEDBACK.NONE
@@ -212,8 +213,24 @@ export function MessageBubble({
           !isBot ? "justify-end" : ""
         }`}>
         {isBot && (
-          <div className="flex-shrink-0">
-            <ApolloAssistIcon size={32} isAnimating={isBotIconAnimating} />
+          <div className="flex-shrink-0 py-1">
+            {/* TODO: based on isAnimating state, render cdn links of animatimg and  nonanimating states */}
+            {isBotIconAnimating ? (
+              <img
+                key="animated"
+                src={import.meta.env.BASE_URL + "assets/animated-bot-icon.svg"}
+                alt="Bot Icon"
+                className={`flex-shrink-0 w-6 h-6`}
+              />
+            ) : (
+              <img
+                key="static"
+                src={import.meta.env.BASE_URL + "assets/static-bot-icon.svg"}
+                alt="Bot Icon"
+                className={`flex-shrink-0 w-6 h-6`}
+              />
+            )}
+            {/* <ApolloAssistIcon size={32} isAnimating={isBotIconAnimating} /> */}
           </div>
         )}
 
@@ -259,14 +276,6 @@ export function MessageBubble({
             )}
           </div>
 
-          {/* Display audio data for user messages */}
-          {/* {!isBot && audioData && (
-            <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
-              <div className="text-sm text-[var(--color-primary)]">
-                🎤 Voice message sent
-              </div>
-            </div>
-          )} */}
           {files && files.length > 0 && (
             <div className="mt-2">
               <FilePreviewList
@@ -507,4 +516,3 @@ export function MessageBubble({
     </div>
   );
 }
-//***********************Add this after proper implementation of feedback */
