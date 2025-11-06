@@ -99,10 +99,8 @@
     widgetState.instance = window.EkaMedAssistWidget.init({
       theme: config.theme || defaultConfig.theme,
       onClose: function () {
+        // closeWidget will handle the callback and state cleanup
         closeWidget();
-        if (config.onClose) {
-          config.onClose();
-        }
       },
       widgetTitle: config.widgetTitle,
       firstBotMessage: config.firstBotMessage,
@@ -134,15 +132,29 @@
   }
 
   /**
-   * Close the widget
+   * Close the widget and reset all state
    */
   function closeWidget() {
-    if (widgetState.instance && widgetState.isVisible) {
+    // Destroy widget instance if it exists
+    if (widgetState.instance) {
       if (widgetState.instance.destroy) {
         widgetState.instance.destroy();
-        widgetState.instance = null;
       }
-      widgetState.isVisible = false;
+      widgetState.instance = null;
+    }
+
+    // Call onClose callback if provided
+    if (widgetState.config && widgetState.config.onClose) {
+      widgetState.config.onClose();
+    }
+
+    // Reset all state
+    widgetState.isVisible = false;
+    widgetState.config = null;
+
+    // Clear initialization flag
+    if (window.EkaMedAssist) {
+      window.EkaMedAssist._initialized = false;
     }
   }
 

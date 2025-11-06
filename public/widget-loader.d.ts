@@ -4,7 +4,7 @@
  * Usage:
  * ```typescript
  * // After loading widget-loader.js
- * window.EkaMedAssist.initMedAssist({
+ * window.EkaMedAssist.init({
  *   widgetTitle: "My Chat Assistant",
  *   firstBotMessage: "Hello! How can I help?",
  *   onClose: () => console.log("Widget closed"),
@@ -42,9 +42,6 @@ export interface EkaMedAssistConfig {
 
   /** Custom CSS URL (optional, defaults to CDN) */
   cssUrl?: string;
-
-  /** Widget position (optional, defaults to "bottom-right") */
-  position?: "bottom-right" | "bottom-left" | "top-right" | "top-left";
 }
 
 /**
@@ -70,7 +67,7 @@ export interface EkaMedAssistGlobal {
    * @param config - Configuration options for the widget
    * @example
    * ```typescript
-   * window.EkaMedAssist.initMedAssist({
+   * window.EkaMedAssist.init({
    *   widgetTitle: "Chat Support",
    *   firstBotMessage: "Hello! How can I help you today?",
    *   onClose: () => {
@@ -79,12 +76,12 @@ export interface EkaMedAssistGlobal {
    * });
    * ```
    */
-  initMedAssist: (config?: EkaMedAssistConfig) => void;
+  init: (config?: EkaMedAssistConfig) => void;
 
   /**
    * Close the widget
    */
-  closeMedAssist: () => void;
+  close: () => void;
 
   /** Internal flag to track initialization state */
   _initialized?: boolean;
