@@ -6,6 +6,8 @@ import useSessionStore from "./stores/medAssistStore";
 import { v4 as uuidv4 } from 'uuid';
 interface AppProps {
   config?: {
+    widgetTitle?: string;
+    firstBotMessage?: string;
     firstUserMessage?: string;
     theme?: string;
     onMinimize?: () => void;
@@ -142,8 +144,9 @@ function App({ config }: AppProps = {}) {
           }>
           {isWidgetOpen && (
             <ChatWidget
-              title="Apollo Assist"
+              title={config?.widgetTitle || "Eka Med Assist"}
               firstUserMessage={config?.firstUserMessage || ""}
+              firstBotMessage={config?.firstBotMessage || ""}
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}
               isExpanded={isExpanded}

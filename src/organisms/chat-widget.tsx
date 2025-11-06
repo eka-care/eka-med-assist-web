@@ -12,7 +12,6 @@ import {
   STREAMING_TIMEOUT,
 } from "@/types/widget";
 import { Card } from "@ui/index";
-// import ApolloAssistIcon from "../components/ApollossistIcon";
 import { ChatHeader } from "../molecules/chat-header";
 import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
@@ -43,8 +42,9 @@ export type TMobileVerificationStatus = {
   uhids: TUhidDetails[];
 };
 interface ChatWidgetProps {
-  title?: string;
+  title: string;
   firstUserMessage?: string;
+  firstBotMessage?: string;
   className?: string;
   onClose?: () => void;
   onExpand?: () => void;
@@ -56,8 +56,9 @@ interface ChatWidgetProps {
 }
 
 export function ChatWidget({
-  title = "Apollo Assist",
+  title = "Eka Med Assist",
   firstUserMessage = "",
+  firstBotMessage = "",
   className = "",
   onClose,
   onStartSession,
@@ -71,7 +72,8 @@ export function ChatWidget({
     {
       id: "1",
       content:
-        "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+        firstBotMessage ||
+        "Hi, I'm Eka Med Assist, your personal support for all medical needs. How can I help you?",
       isBot: true,
       isStored: true,
       feedback: USER_FEEDBACK.NONE,
@@ -241,7 +243,8 @@ export function ChatWidget({
         const welcomeMessage = {
           id: "1",
           content:
-            "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+            firstBotMessage ||
+            `Hi, I'm ${title}, your personal support for all medical needs. How can I help you?`,
           isBot: true,
           isStored: true,
           feedback: USER_FEEDBACK.NONE,
