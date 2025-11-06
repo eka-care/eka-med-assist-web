@@ -10,7 +10,6 @@ interface AppProps {
     firstBotMessage?: string;
     firstUserMessage?: string;
     theme?: string;
-    onMinimize?: () => void;
     onClose?: () => void;
   };
 }
