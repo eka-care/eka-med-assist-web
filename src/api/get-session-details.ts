@@ -1,10 +1,19 @@
 import { config } from "@/configs/constants";
+import useSessionStore from "@/stores/medAssistStore";
 
 export const getSessionDetails = async (
   sessionId: string
 ): Promise<{ success: boolean; retry: boolean }> => {
   console.log("🔍 getSessionDetails called with sessionId:", sessionId);
   try {
+    // Get agentId from store
+    const agentId = useSessionStore.getState().agentId;
+
+    if (!agentId || agentId.trim() === "") {
+      console.error("agentId is required to get session details");
+      return { success: false, retry: false };
+    }
+
     const url = `${config.BASE_API_URL}/med-assist/session/${sessionId}`;
     console.log("🌐 Making API call to:", url);
 
@@ -13,9 +22,9 @@ export const getSessionDetails = async (
       headers: {
         // "ngrok-skip-browser-warning": "69420",
         "Content-Type": "application/json",
-        "X-agent-id": config.X_AGENT_ID,
+        "X-agent-id": agentId,
       },
-    //   credentials: "include", // crucial line
+      //   credentials: "include", // crucial line
     });
 
     console.log("📡 API response status:", response.status, response.ok);

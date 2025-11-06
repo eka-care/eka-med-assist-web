@@ -1436,7 +1436,7 @@ export function ChatWidget({
                             "assets/animated-bot-icon.svg"
                           }
                           alt="Bot Icon"
-                          className={`flex-shrink-0 w-8 h-8`}
+                          className={`flex-shrink-0 w-6 h-6`}
                         />
                       ) : (
                         <img
@@ -1446,7 +1446,7 @@ export function ChatWidget({
                             "assets/static-bot-icon.svg"
                           }
                           alt="Bot Icon"
-                          className={`flex-shrink-0 w-8 h-8`}
+                          className={`flex-shrink-0 w-6 h-6`}
                         />
                       )}
                     </div>
