@@ -12,7 +12,7 @@ import {
   STREAMING_TIMEOUT,
 } from "@/types/widget";
 import { Card } from "@ui/index";
-import ApolloAssistIcon from "../components/ApollossistIcon";
+// import ApolloAssistIcon from "../components/ApollossistIcon";
 import { ChatHeader } from "../molecules/chat-header";
 import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
@@ -1431,13 +1431,30 @@ export function ChatWidget({
 
               {/* Show loading indicator when waiting for response */}
               {isWaitingForResponse && !isStreaming && (
-                <div className="px-2 py-4">
+                <div className="px-4 py-2">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0">
-                      <ApolloAssistIcon
-                        size={32}
-                        isAnimating={isBotIconAnimating}
-                      />
+                      {isBotIconAnimating ? (
+                        <img
+                          key="animated-waiting"
+                          src={
+                            import.meta.env.BASE_URL +
+                            "assets/animated-bot-icon.svg"
+                          }
+                          alt="Bot Icon"
+                          className={`flex-shrink-0 w-8 h-8`}
+                        />
+                      ) : (
+                        <img
+                          key="static-waiting"
+                          src={
+                            import.meta.env.BASE_URL +
+                            "assets/static-bot-icon.svg"
+                          }
+                          alt="Bot Icon"
+                          className={`flex-shrink-0 w-8 h-8`}
+                        />
+                      )}
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
@@ -1448,13 +1465,34 @@ export function ChatWidget({
                 </div>
               )}
               {progressMessage && !isStreaming && (
-                <div className="px-2 py-4">
+                <div className="px-4 py-2">
                   <div className="flex gap-1 items-start justify-center">
-                    <div className="flex-shrink-0">
-                      <ApolloAssistIcon
+                    <div className="flex-shrink-0 py-1">
+                      {isBotIconAnimating ? (
+                        <img
+                          key="animated-progress"
+                          src={
+                            import.meta.env.BASE_URL +
+                            "assets/animated-bot-icon.svg"
+                          }
+                          alt="Bot Icon"
+                          className={`flex-shrink-0 w-6 h-6`}
+                        />
+                      ) : (
+                        <img
+                          key="static-progress"
+                          src={
+                            import.meta.env.BASE_URL +
+                            "assets/static-bot-icon.svg"
+                          }
+                          alt="Bot Icon"
+                          className={`flex-shrink-0 w-8 h-8`}
+                        />
+                      )}
+                      {/* <ApolloAssistIcon
                         size={32}
                         isAnimating={isBotIconAnimating}
-                      />
+                      /> */}
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
