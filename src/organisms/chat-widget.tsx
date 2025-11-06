@@ -56,7 +56,7 @@ interface ChatWidgetProps {
 }
 
 export function ChatWidget({
-  title = "Apollo Assist",
+  title = "HealthBot",
   firstUserMessage = "",
   className = "",
   onClose,
@@ -71,7 +71,7 @@ export function ChatWidget({
     {
       id: "1",
       content:
-        "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+        "Hi, I'm HealthBot, your personal support for all medical questions. How can I help you?",
       isBot: true,
       isStored: true,
       feedback: USER_FEEDBACK.NONE,
@@ -241,7 +241,7 @@ export function ChatWidget({
         const welcomeMessage = {
           id: "1",
           content:
-            "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+            "Hi, I'm HealthBot, your personal support for all medical questions. How can I help you?",
           isBot: true,
           isStored: true,
           feedback: USER_FEEDBACK.NONE,
@@ -484,9 +484,9 @@ export function ChatWidget({
   );
 
   const [quickActions] = useState([
-    { id: "doctor", label: "Help me find a doctor" },
-    { id: "appointment", label: "I want to book appointment" },
-    { id: "emergency", label: "I have an emergency" },
+    { id: "doctor", label: "Create a diet chart for db2 patient" },
+    { id: "appointment", label: "Help me understand a medical document" },
+    { id: "emergency", label: "What are the side effects of ibuprofen?" },
   ]);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);

@@ -142,7 +142,7 @@ function App({ config }: AppProps = {}) {
           }>
           {isWidgetOpen && (
             <ChatWidget
-              title="Apollo Assist"
+              title="HealthBot"
               firstUserMessage={config?.firstUserMessage || ""}
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}

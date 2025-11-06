@@ -585,8 +585,8 @@
             <div class="eka-chat-bubble-content" data-action="open">
               <div class="eka-chat-avatar">🤖</div>
               <div class="eka-chat-message">
-                <p class="eka-chat-text">Hi 👋🏻 Need help booking an appointment or finding the right doctor?</p>
-                <p class="eka-chat-timestamp">Apollo Assist • ${messageTimeAgo}</p>
+                <p class="eka-chat-text">Hi 👋🏻 Do you need any help?</p>
+                <p class="eka-chat-timestamp">HealthBot • ${messageTimeAgo}</p>
               </div>
             </div>
           </div>
@@ -594,10 +594,10 @@
           <!-- Pills -->
           <div class="eka-pills-container">
             <button class="eka-pill" data-action="appointment">
-              📅 Book an appointment
+              📝 Create a diet chart for db2 patient
             </button>
             <button class="eka-pill focused" data-action="doctor">
-              🔍 Help me find a doctor
+              🔍 Help me understand a medical document
             </button>
             <button class="eka-pill" data-action="emergency">
               🆘 I'm in emergency
@@ -701,10 +701,10 @@
     var firstUserMessage = "";
     switch (action) {
       case "appointment":
-        firstUserMessage = "Book an appointment";
+        firstUserMessage = "Create a diet chart for db2 patient";
         break;
       case "doctor":
-        firstUserMessage = "Help me find a doctor";
+        firstUserMessage = "what are the precautionary measures for covid19";
         break;
       case "emergency":
         firstUserMessage = "I'm in emergency";

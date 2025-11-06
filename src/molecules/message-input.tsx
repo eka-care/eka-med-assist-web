@@ -60,7 +60,7 @@ export function MessageInput({
   onFileUpload,
   onInputChange,
   inlineText,
-  placeholder = "Message Apollo Assist...",
+  placeholder = "Message HealthBot...",
   disabled = false,
   setError,
   mobileVerificationStatus,

@@ -87,7 +87,8 @@ export function ChatHeader({
       }`}>
       <div className="flex items-center gap-2">
           <img
-            src={import.meta.env.BASE_URL + "assets/apollo-icon.svg"}
+            // src={import.meta.env.BASE_URL + "assets/apollo-icon.svg"}
+            src={"https://dr.eka.care/images/docAssistAiIcon.svg"}
             alt="Apollo Icon"
             className={`flex-shrink-0 w-6 h-6`}
           />

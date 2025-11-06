@@ -13,7 +13,7 @@ const DEVELOPMENT_CONFIG = { // can be used for local development
 const STAGING_CONFIG = {
     WEBSOCKET_URL: "wss://matrix-ws.dev.eka.care",
     BASE_API_URL: "https://matrix.dev.eka.care",
-    X_AGENT_ID: "NDBkNmM4OTEtNGEzMC00MDBlLWE4NjEtN2ZkYjliMDY2MDZhI2ItMTYxNDY3NzU2MDQ0MjAz",
+    X_AGENT_ID: "NDBkNmM4OTEtNGEzMC00MDBlLWE4NjEtN2ZkYjliMDY2MDZhI2VrYV9waHI=",
 };
 
 // Use build mode instead of environment variable to avoid local .env dependency
