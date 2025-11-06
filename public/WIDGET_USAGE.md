@@ -19,10 +19,10 @@ Add the widget-loader.js script to your HTML:
 
     <!-- Include widget loader -->
     <script src="https://cdn.ekacare.co/apollo/widget-loader.js"></script>
-
+    <!-- <script scr="https://cdn-dev.eka.care/apollo/widget-loader.js"></script> -->
     <!-- Initialize widget -->
     <script>
-      window.EkaMedAssist.initMedAssist({
+      window.EkaMedAssist.init({
         widgetTitle: "Chat Support",
         firstBotMessage: "Hello! How can I help you?",
         onClose: function () {
@@ -116,7 +116,7 @@ window.EkaMedAssist.closeMedAssist();
 ```html
 <script src="https://cdn.ekacare.co/apollo/widget-loader.js"></script>
 <script>
-  window.EkaMedAssist.initMedAssist({
+  window.EkaMedAssist.init({
     widgetTitle: "Chat Support",
     firstBotMessage: "Hello! How can I help?",
     onClose: () => console.log("Widget closed"),
@@ -170,7 +170,7 @@ function MyApp() {
     script.src = "https://cdn.ekacare.co/apollo/widget-loader.js";
     script.onload = () => {
       // Initialize widget after script loads
-      window.EkaMedAssist?.initMedAssist({
+      window.EkaMedAssist?.init({
         widgetTitle: "Chat Support",
         firstBotMessage: "Hello!",
         onClose: () => {
@@ -182,7 +182,7 @@ function MyApp() {
 
     return () => {
       // Cleanup
-      window.EkaMedAssist?.closeMedAssist();
+      window.EkaMedAssist?.close();
     };
   }, []);
 
