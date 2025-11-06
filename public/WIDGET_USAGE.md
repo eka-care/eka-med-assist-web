@@ -98,7 +98,7 @@ window.EkaMedAssist.initMedAssist({
 });
 ```
 
-### `window.EkaMedAssist.closeMedAssist()`
+### `window.EkaMedAssist.close()`
 
 Closes the widget programmatically.
 
@@ -106,7 +106,7 @@ Closes the widget programmatically.
 
 ```javascript
 // Close the widget
-window.EkaMedAssist.closeMedAssist();
+window.EkaMedAssist.close();
 ```
 
 ## Usage Examples
@@ -195,7 +195,7 @@ function MyApp() {
 1. **Load widget-loader.js**: This small script (~5KB) sets up the global `window.EkaMedAssist` API
 2. **Call initMedAssist()**: This loads the React bundle (widget.js) and CSS asynchronously
 3. **Widget mounts**: Once loaded, the widget is automatically mounted and displayed
-4. **Manage lifecycle**: Use `closeMedAssist()` to close, or callbacks to handle events
+4. **Manage lifecycle**: Use `close()` to close, or callbacks to handle events
 
 ## Benefits
 
@@ -222,11 +222,11 @@ function MyApp() {
 
 ### Widget already initialized error
 
-If you see this warning, call `closeMedAssist()` first:
+If you see this warning, call `close()` first:
 
 ```javascript
-window.EkaMedAssist.closeMedAssist();
-window.EkaMedAssist.initMedAssist({
+window.EkaMedAssist.close();
+window.EkaMedAssist.init({
   /* new config */
 });
 ```
