@@ -1313,13 +1313,11 @@ export function ChatWidget({
     : isExpanded
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
     : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
-
-  const baseChatAreaClasses = "flex flex-col overflow-hidden";
   const chatHeight = isMobile
-    ? `${baseChatAreaClasses} flex-1 min-h-0`
+    ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
-    ? `${baseChatAreaClasses} flex-1 min-h-0`
-    : `${baseChatAreaClasses} h-[500px]`;
+    ? "flex-1 min-h-0"
+    : "h-[500px]";
 
   return (
     <Card className={containerStyles}>
@@ -1354,10 +1352,11 @@ export function ChatWidget({
         </div>
       )} */}
       {!isLoading && (
-        <div className={`${chatHeight} max-h-screen`}>
+        <div
+          className={`${chatHeight} flex flex-col overflow-hidden max-h-screen`}>
           <div
             ref={scrollAreaRef}
-            className="flex-1 min-h-0 overflow-y-auto overscroll-y-contain"
+            className="flex-1 min-h-0 overflow-y-auto"
             style={{
               scrollBehavior: "smooth",
               scrollbarWidth: "thin",

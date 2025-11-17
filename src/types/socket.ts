@@ -4,7 +4,7 @@ import { TUhidDetails } from "./api";
 
 // WebSocket event types for chatbot
 export const SocketEvent = {
-  // Client to Server /server to clientevents
+  // Client to Server events
   PING: "ping",
   PONG: "pong",
   CHAT: "chat",
