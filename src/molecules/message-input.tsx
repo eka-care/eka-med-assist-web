@@ -638,44 +638,62 @@ export function MessageInput({
     }
   };
 
+  const showFilePreview =
+    uploadedFiles.length > 0 && !isListening && !isRecording;
+  const shouldExpandInput = textareaHeight > 40 || showFilePreview;
+
   return (
     <div
-      className={`flex gap-2 px-2 py-0.5 bg-[var(--color-background)] border border-[var(--color-primary)] mx-4 flex-shrink-0 ${
-        textareaHeight > 40
-          ? "rounded-lg items-end"
-          : "rounded-full items-center"
-      }`}>
-      <input
-        ref={fileInputRef}
-        type="file"
-        multiple
-        accept="image/*,.pdf"
-        onChange={handleFileChange}
-        className="hidden"
-        data-max-size={MAX_FILE_SIZE.toString()}
-      />
-
-      {isListening || isRecording ? (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 text-red-600 hover:bg-red-100 flex-shrink-0"
-          onClick={cancelRecording}
-          disabled={isSending}>
-          <Trash2 className="h-4 w-4" />
-        </Button>
-      ) : (
-        <Button
-          variant="ghost"
-          size="sm"
-          className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
-          onClick={handleFileClick}
-          disabled={isInputDisabled || mobileVerificationStatus?.active}>
-          <Plus className="h-4 w-4 text-[var(--color-primary)]" />
-        </Button>
+      className={`bg-[var(--color-background)] border border-[var(--color-primary)] mx-4 flex-shrink-0 ${
+        shouldExpandInput ? "rounded-lg px-3 py-2" : "rounded-full px-2 py-0.5"
+      } flex flex-col ${showFilePreview ? "gap-2" : "gap-0"}`}>
+      {showFilePreview && (
+        <div className="w-full">
+          <FilePreviewList
+            files={uploadedFiles}
+            onRemoveFile={(index) =>
+              setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
+            }
+            isPreview={true}
+            className={`w-full ${isSending ? "opacity-50" : ""}`}
+          />
+        </div>
       )}
 
-      <div className="flex-1 relative">
+      <div
+        className={`flex w-full gap-2 ${
+          showFilePreview ? "items-end" : "items-center"
+        }`}>
+        <input
+          ref={fileInputRef}
+          type="file"
+          multiple
+          accept="image/*,.pdf"
+          onChange={handleFileChange}
+          className="hidden"
+          data-max-size={MAX_FILE_SIZE.toString()}
+        />
+
+        {isListening || isRecording ? (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 text-red-600 hover:bg-red-100 flex-shrink-0"
+            onClick={cancelRecording}
+            disabled={isSending}>
+            <Trash2 className="h-4 w-4" />
+          </Button>
+        ) : (
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
+            onClick={handleFileClick}
+            disabled={isInputDisabled || mobileVerificationStatus?.active}>
+            <Plus className="h-4 w-4 text-[var(--color-primary)]" />
+          </Button>
+        )}
+
         {isListening || isRecording ? (
           <div className="flex items-center justify-center px-3 py-2">
             {isRecording && (
@@ -732,74 +750,57 @@ export function MessageInput({
             />
           </div>
         )}
-
-        {/* File Preview */}
-        {uploadedFiles.length > 0 && (
-          <div className="absolute -top-24 left-0 right-0 overflow-visible">
-            <FilePreviewList
-              files={uploadedFiles}
-              onRemoveFile={(index) =>
-                setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
-              }
-              isPreview={true}
-              className={isSending ? "opacity-50" : ""}
-            />
+        {(isListening || isRecording) && (
+          <div className="flex flex-col items-end text-sm font-mono text-[var(--color-primary)]">
+            <span className={isSending ? "opacity-50" : ""}>
+              {formatTime(recordingTime)}
+            </span>
           </div>
         )}
-      </div>
 
-      {/* Timer and Remaining Time */}
-      {(isListening || isRecording) && (
-        <div className="flex flex-col items-end text-sm font-mono text-[var(--color-primary)]">
-          <span className={isSending ? "opacity-50" : ""}>
-            {formatTime(recordingTime)}
-          </span>
-        </div>
-      )}
-
-      {/* Voice Recording Controls */}
-      {isListening || isRecording ? (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 flex-shrink-0 rounded-full"
-            onClick={handleMicClick}
-            disabled={isSending}>
-            <Check className="h-4 w-4 white" />
-          </Button>
-        </div>
-      ) : (
-        <>
-          {hasContent ? (
+        {isListening || isRecording ? (
+          <div className="flex items-center gap-2">
             <Button
               size="sm"
-              className="h-8 w-8 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 flex-shrink-0 rounded-full"
-              onClick={handleSend}
-              disabled={isInputDisabled || isSending}>
-              {isSending ? (
-                <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-foreground)]" />
-              ) : (
-                <Send className="h-4 w-4 text-[var(--color-primary-foreground)]" />
-              )}
-            </Button>
-          ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
+              className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 flex-shrink-0 rounded-full"
               onClick={handleMicClick}
-              disabled={
-                disabled ||
-                isStreaming ||
-                !!audioError ||
-                isSending ||
-                mobileVerificationStatus?.active
-              }>
-              <Mic className="h-4 w-4 text-[var(--color-primary)]" />
+              disabled={isSending}>
+              <Check className="h-4 w-4 white" />
             </Button>
-          )}
-        </>
-      )}
+          </div>
+        ) : (
+          <>
+            {hasContent ? (
+              <Button
+                size="sm"
+                className="h-8 w-8 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 flex-shrink-0 rounded-full"
+                onClick={handleSend}
+                disabled={isInputDisabled || isSending}>
+                {isSending ? (
+                  <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-foreground)]" />
+                ) : (
+                  <Send className="h-4 w-4 text-[var(--color-primary-foreground)]" />
+                )}
+              </Button>
+            ) : (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
+                onClick={handleMicClick}
+                disabled={
+                  disabled ||
+                  isStreaming ||
+                  !!audioError ||
+                  isSending ||
+                  mobileVerificationStatus?.active
+                }>
+                <Mic className="h-4 w-4 text-[var(--color-primary)]" />
+              </Button>
+            )}
+          </>
+        )}
+      </div>
     </div>
   );
 }
