@@ -284,10 +284,10 @@ export function ChatWidget({
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
-        const lastMessage = prev.find((message) => message.id == messageId);
+        const lastMessage = prev[prev.length - 1];
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
-          lastMessage &&
+          lastMessage?.id === messageId &&
           lastMessage?.isBot &&
           botMessage?.length > lastMessage?.content?.length
         ) {
@@ -301,7 +301,7 @@ export function ChatWidget({
           };
           return updatedMessages;
         } else if (
-          lastMessage &&
+          lastMessage?.id === messageId &&
           lastMessage?.isBot &&
           botMessage?.length <= lastMessage?.content?.length
         ) {
@@ -831,9 +831,17 @@ export function ChatWidget({
 
         return;
       } else {
+        let updatedContent = content;
+        if (
+          messages.length > 0 &&
+          messages[messages.length - 1].isBot &&
+          messages[messages.length - 1].feedback === USER_FEEDBACK.DISLIKE
+        ) {
+          updatedContent = `User disliked the previous response. ${content}`;
+        }
         // Normal chat flow - clear mobile verification if active
         await sendChatMessage({
-          message: content,
+          message: updatedContent,
           tool_use_id: tool_use_id,
           ...(tool_use_params && { tool_use_params }),
         });
@@ -1280,7 +1288,8 @@ export function ChatWidget({
 
   const handleMessageFeedback = async (
     messageId: string,
-    feedback: USER_FEEDBACK
+    feedback: USER_FEEDBACK,
+    feedbackReason?: string
   ) => {
     const messageIndex = messages.findIndex((msg) => msg.id === messageId);
     if (messageIndex === -1) {
@@ -1288,7 +1297,7 @@ export function ChatWidget({
       return;
     }
     try {
-      await patchFeedbackMessage(sessionId, messageId, feedback);
+      await patchFeedbackMessage(sessionId, messageId, feedback, feedbackReason);
     } catch (error) {
       console.error("Failed to patch feedback:", error);
     } finally {

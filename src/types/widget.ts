@@ -1,6 +1,7 @@
 import { USER_FEEDBACK } from "@/configs/enums";
 import { AudioData } from "@/services/audioService";
 import type { ThemeType } from "@ui/eka-ui/organisms/theme-provider";
+import { PillItem } from "@ui/index";
 
 export interface PillConfig {
   id: string;
@@ -147,3 +148,22 @@ export const MOBILE_VERIFICATION_ERROR_MESSAGES = {
     msg: "Uhid is invalid, please try again",
   },
 };
+
+
+export const DISLIKE_FEEDBACK_OPTIONS: PillItem[] = [
+  {
+    id: "irrelevant_response",
+    label: "Irrelevant response",
+    value: "Irrelevant response",
+  },
+  {
+    id: "facing_some_errors",
+    label: "Facing some errors",
+    value: "Facing some errors",
+  },
+  {
+    id: "other",
+    label: "Other",
+    value: "Other",
+  },
+];

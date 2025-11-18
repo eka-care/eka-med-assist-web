@@ -2,6 +2,7 @@ import {
   Button,
   MultiSelectGroup,
   MULTI_SELECT_ADDITIONAL_OPTION,
+  PillItem,
 } from "@ui/index";
 import { QuickActions } from "./quick-actions";
 import { useState, useEffect, useRef } from "react";
@@ -11,10 +12,11 @@ import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
-import { TDoctor } from "@/types/widget";
+import { DISLIKE_FEEDBACK_OPTIONS, TDoctor } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { USER_FEEDBACK } from "@/configs/enums";
+import { FeedbackFollowUp } from "./feedback-followup";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -76,7 +78,11 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   progressMessage?: string | null;
   feedback?: USER_FEEDBACK;
-  onUserFeedback: (messageId: string, feedback: USER_FEEDBACK) => void;
+  onUserFeedback: (
+    messageId: string,
+    feedback: USER_FEEDBACK,
+    feedbackReason?: string
+  ) => void;
   refreshSession: () => Promise<boolean>;
   verificationStatus: boolean;
   isLastMessage: boolean;
@@ -94,7 +100,7 @@ interface MessageBubbleProps {
     tool_use_params,
   }: {
     content: string;
-    tool_use_id: string;
+    tool_use_id?: string;
     tool_use_params?: any;
   }) => void; // Add common content click handler
   audioData?: any; // Add audio data support
@@ -149,12 +155,22 @@ export function MessageBubble({
   const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
     feedback || USER_FEEDBACK.NONE
   );
+  const [showFeedbackFollowUp, setShowFeedbackFollowUp] =
+    useState<boolean>(false);
   // Reset selected values when new commonContentData comes in
   useEffect(() => {
     if (commonContentData && commonContentData.type === ContentType.MULTI) {
       setSelectedMultiValues([]);
     }
   }, [commonContentData]);
+
+  useEffect(() => {
+    if (feedback === USER_FEEDBACK.DISLIKE && isLastMessage) {
+      setShowFeedbackFollowUp(true);
+    } else {
+      setShowFeedbackFollowUp(false);
+    }
+  }, [feedback, isLastMessage]);
 
   const handleMultiSelect = (values: string[]) => {
     setSelectedMultiValues(values);
@@ -205,6 +221,16 @@ export function MessageBubble({
     onUserFeedback(messageId, feedback);
     setUserFeedback(feedback);
   };
+
+  const handleCloseFeedbackPrompt = () => {
+    setShowFeedbackFollowUp(false);
+  };
+
+  const handleDislikeReasonSelect = (option: PillItem) => {
+    console.log("Selected dislike reason:", option);
+    onUserFeedback(messageId, USER_FEEDBACK.DISLIKE, option.value);
+  };
+
   return (
     <div className="px-4 py-2">
       <div
@@ -454,7 +480,7 @@ export function MessageBubble({
           messageId !== "1" &&
           isLastMessage &&
           userFeedback === USER_FEEDBACK.NONE ? (
-            <div className="flex items-center gap-1 mt-3">
+            <div className="flex items-center gap-1 mt-3 pb-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -486,7 +512,7 @@ export function MessageBubble({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              className="h-6 w-6 pb-4 mt-3 hover:bg-[var(--color-muted)]"
               disabled={true}>
               <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
             </Button>
@@ -494,7 +520,7 @@ export function MessageBubble({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              className="h-6 w-6 pb-4 mt-3 hover:bg-[var(--color-muted)]"
               disabled={true}>
               <ThumbsDown
                 className="h-3 w-3 text-primary"
@@ -502,6 +528,16 @@ export function MessageBubble({
               />
             </Button>
           ) : null}
+
+          {/* Connection Status */}
+          {showFeedbackFollowUp && (
+            <FeedbackFollowUp
+              title="Tell us what went wrong"
+              options={DISLIKE_FEEDBACK_OPTIONS}
+              onClose={handleCloseFeedbackPrompt}
+              onOptionSelect={handleDislikeReasonSelect}
+            />
+          )}
         </div>
       </div>
     </div>
