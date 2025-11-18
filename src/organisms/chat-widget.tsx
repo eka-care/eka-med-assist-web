@@ -831,9 +831,17 @@ export function ChatWidget({
 
         return;
       } else {
+        let updatedContent = content;
+        if (
+          messages.length > 0 &&
+          messages[messages.length - 1].isBot &&
+          messages[messages.length - 1].feedback === USER_FEEDBACK.DISLIKE
+        ) {
+          updatedContent = `User disliked the previous response. ${content}`;
+        }
         // Normal chat flow - clear mobile verification if active
         await sendChatMessage({
-          message: content,
+          message: updatedContent,
           tool_use_id: tool_use_id,
           ...(tool_use_params && { tool_use_params }),
         });
