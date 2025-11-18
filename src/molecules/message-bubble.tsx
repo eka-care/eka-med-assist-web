@@ -454,7 +454,7 @@ export function MessageBubble({
           messageId !== "1" &&
           isLastMessage &&
           userFeedback === USER_FEEDBACK.NONE ? (
-            <div className="flex items-center gap-1 mt-3">
+            <div className="flex items-center gap-1 mt-3 pb-4">
               <Button
                 variant="ghost"
                 size="sm"

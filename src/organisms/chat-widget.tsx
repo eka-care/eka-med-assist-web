@@ -284,10 +284,10 @@ export function ChatWidget({
       // Handle bot response messages
       setMessages((prev) => {
         // Check if there's already a bot message at the end
-        const lastMessage = prev.find((message) => message.id == messageId);
+        const lastMessage = prev[prev.length - 1];
         // If we have a bot message and it's shorter than the incoming text, update it
         if (
-          lastMessage &&
+          lastMessage?.id === messageId &&
           lastMessage?.isBot &&
           botMessage?.length > lastMessage?.content?.length
         ) {
@@ -301,7 +301,7 @@ export function ChatWidget({
           };
           return updatedMessages;
         } else if (
-          lastMessage &&
+          lastMessage?.id === messageId &&
           lastMessage?.isBot &&
           botMessage?.length <= lastMessage?.content?.length
         ) {
