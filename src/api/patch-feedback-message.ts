@@ -1,5 +1,6 @@
 import { config } from "@/configs/constants";
 import { USER_FEEDBACK } from "@/configs/enums";
+import useSessionStore from "@/stores/medAssistStore";
 
 const patchFeedbackMessage = async (
   sessionId: string,
@@ -8,14 +9,21 @@ const patchFeedbackMessage = async (
   feedbackReason?: string
 ) => {
   try {
+    // Get agentId from store
+    const agentId = useSessionStore.getState().agentId;
+
+    if (!agentId || agentId.trim() === "") {
+      throw new Error("agentId is required to patch feedback");
+    }
+
     const url = `${config.BASE_API_URL}/med-assist/session/${sessionId}/${messageId}`;
     const response = await fetch(url, {
       method: "PATCH",
       headers: {
         "Content-Type": "application/json",
-        "X-agent-id": config.X_AGENT_ID,
+        "X-agent-id": agentId,
       },
-    //   credentials: "include", // crucial line
+      //   credentials: "include", // crucial line
       body: JSON.stringify({
         feedback: feedBack,
         feedback_reason: feedbackReason,

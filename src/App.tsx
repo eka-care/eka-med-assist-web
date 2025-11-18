@@ -3,12 +3,14 @@ import startSession from "./api/post-start-session";
 import { useNetworkStatus } from "./custom-hooks/useNetworkStatus";
 import { ChatWidget } from "./organisms/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 interface AppProps {
   config?: {
+    agentId: string;
+    widgetTitle?: string;
+    firstBotMessage?: string;
     firstUserMessage?: string;
     theme?: string;
-    onMinimize?: () => void;
     onClose?: () => void;
   };
 }
@@ -22,6 +24,7 @@ function App({ config }: AppProps = {}) {
   const setSessionId = useSessionStore((state) => state.setSessionId);
   const setSessionToken = useSessionStore((state) => state.setSessionToken);
   const setError = useSessionStore((state) => state.setError);
+  const setAgentId = useSessionStore((state) => state.setAgentId);
   const setStartNewConnection = useSessionStore(
     (state) => state.setStartNewConnection
   );
@@ -46,10 +49,42 @@ function App({ config }: AppProps = {}) {
   }, []);
 
   useEffect(() => {
+    // Validate and store the agentId in medAssist store
+    if (
+      !config?.agentId ||
+      typeof config.agentId !== "string" ||
+      config.agentId.trim() === ""
+    ) {
+      console.error(
+        "Cannot start session: agentId is required and must be a non-empty string"
+      );
+      setError({
+        title: "Configuration Error",
+        description:
+          "agentId is required to initialize the widget. Please provide a valid agentId.",
+      });
+      return;
+    }
+
+    setAgentId(config.agentId);
     setIsWidgetOpen(true);
-  }, []);
+  }, [config?.agentId]);
 
   const handleOpenWidget = async (newSession: boolean = false) => {
+    // Get agentId from store (should be set during initialization)
+    const agentId = useSessionStore.getState().agentId;
+
+    if (!agentId || agentId.trim() === "") {
+      console.error("Cannot start session: agentId is not available");
+      setError({
+        title: "Configuration Error",
+        description:
+          "agentId is required to start a session. Please reinitialize the widget with a valid agentId.",
+      });
+      setStartNewConnection(true);
+      return;
+    }
+
     // Check if user is online before proceeding
     if (!isOnline) {
       console.warn("Cannot start session: user is offline");
@@ -70,7 +105,7 @@ function App({ config }: AppProps = {}) {
     try {
       console.log("Calling startSession API...");
       let user_id = localStorage.getItem("user_id");
-      if(!user_id) {
+      if (!user_id) {
         user_id = uuidv4();
         localStorage.setItem("user_id", user_id);
       }
@@ -142,8 +177,9 @@ function App({ config }: AppProps = {}) {
           }>
           {isWidgetOpen && (
             <ChatWidget
-              title="Apollo Assist"
+              title={config?.widgetTitle || "Eka Med Assist"}
               firstUserMessage={config?.firstUserMessage || ""}
+              firstBotMessage={config?.firstBotMessage || ""}
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}
               isExpanded={isExpanded}

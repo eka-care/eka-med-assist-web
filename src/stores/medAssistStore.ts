@@ -24,6 +24,9 @@ const storeInitialState = {
 const useMedAssistStore = create<TMedAssistStore>()(
   persist(
     (set, get) => ({
+      agentId: "",
+      setAgentId: (agentId) => set({ agentId }),
+
       sessionId: "",
       setSessionId: (sessionId) => set({ sessionId }),
 
@@ -190,6 +193,7 @@ const useMedAssistStore = create<TMedAssistStore>()(
       storage: createJSONStorage(() => localStorage), // use localStorage
       partialize: (state) => ({
         // Only persist these fields, exclude methods and sensitive data
+        agentId: state.agentId,
         chats: state.chats,
         sessionId: state.sessionId,
         sessionToken: state.sessionToken,

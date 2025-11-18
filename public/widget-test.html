@@ -15,6 +15,16 @@
     <!-- Widget automatically initializes when loaded -->
     <!-- <script src="./widget-loader.js"></script> -->
     <script src="./widget-loader.js"></script>
+    <script>
+      window.EkaMedAssist.init({
+        agentId: "NDBkNmM4OTEtNGEzMC00MDBlLWE4NjEtN2ZkYjliMDY2MDZhI25ldy10ZXN0LWFnZW50",
+        widgetTitle: "Chat Support",
+        firstBotMessage: "Hello! How can I help you?",
+        onClose: function () {
+          console.log("Widget closed");
+        },
+      });
+    </script>
     <!-- <script src="https://dev-cdn.ekacare.co/apollo/widget-loader.js"></script> -->
     <!-- <script src='https://cdn.ekacare.co/apollo/widget-loader.js'></script> -->
   </body>
