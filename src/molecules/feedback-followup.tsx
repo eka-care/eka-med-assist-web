@@ -1,6 +1,7 @@
 import { X } from "lucide-react";
 import { Pills, type PillItem } from "@ui/index";
 import { cn } from "@/lib/utils";
+import { useState } from "react";
 
 interface FeedbackFollowUpProps {
   title?: string;
@@ -20,6 +21,13 @@ export function FeedbackFollowUp({
   onOptionSelect,
   className = "",
 }: FeedbackFollowUpProps) {
+  const [feedbackSubmitted, setFeedbackSubmitted] = useState<boolean>(false);
+
+  const handleOptionSelect = (option: PillItem) => {
+    setFeedbackSubmitted(true);
+    onOptionSelect?.(option);
+  };
+
   return (
     <div
       className={cn(
@@ -29,7 +37,7 @@ export function FeedbackFollowUp({
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-medium text-[var(--color-foreground)]">
-            {title}
+            {feedbackSubmitted ? "Thank you for your feedback" : title}
           </p>
           {subtitle && (
             <p className="text-xs text-[var(--color-muted-foreground)]">
@@ -44,12 +52,12 @@ export function FeedbackFollowUp({
           <X className="h-4 w-4" />
         </button>
       </div>
-      <Pills
+    {!feedbackSubmitted && <Pills
         className="mt-3"
         pillClassName="bg-white text-[var(--color-foreground)] hover:bg-white/80"
         items={options}
-        onItemClick={(option) => onOptionSelect?.(option)}
-      />
+        onItemClick={(option) => handleOptionSelect(option)}
+      />}
     </div>
   );
 }

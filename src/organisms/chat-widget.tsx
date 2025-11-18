@@ -1288,7 +1288,8 @@ export function ChatWidget({
 
   const handleMessageFeedback = async (
     messageId: string,
-    feedback: USER_FEEDBACK
+    feedback: USER_FEEDBACK,
+    feedbackReason?: string
   ) => {
     const messageIndex = messages.findIndex((msg) => msg.id === messageId);
     if (messageIndex === -1) {
@@ -1296,7 +1297,7 @@ export function ChatWidget({
       return;
     }
     try {
-      await patchFeedbackMessage(sessionId, messageId, feedback);
+      await patchFeedbackMessage(sessionId, messageId, feedback, feedbackReason);
     } catch (error) {
       console.error("Failed to patch feedback:", error);
     } finally {

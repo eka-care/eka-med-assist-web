@@ -4,7 +4,8 @@ import { USER_FEEDBACK } from "@/configs/enums";
 const patchFeedbackMessage = async (
   sessionId: string,
   messageId: string,
-  feedBack: USER_FEEDBACK
+  feedBack: USER_FEEDBACK,
+  feedbackReason?: string
 ) => {
   try {
     const url = `${config.BASE_API_URL}/med-assist/session/${sessionId}/${messageId}`;
@@ -17,6 +18,7 @@ const patchFeedbackMessage = async (
     //   credentials: "include", // crucial line
       body: JSON.stringify({
         feedback: feedBack,
+        feedback_reason: feedbackReason,
       }),
     });
     if (!response.ok) {

@@ -154,16 +154,16 @@ export const DISLIKE_FEEDBACK_OPTIONS: PillItem[] = [
   {
     id: "irrelevant_response",
     label: "Irrelevant response",
-    value: "Reason for dislike: Irrelevant response",
+    value: "Irrelevant response",
   },
   {
     id: "facing_some_errors",
     label: "Facing some errors",
-    value: "Reason for dislike: Facing some errors",
+    value: "Facing some errors",
   },
   {
     id: "other",
     label: "Other",
-    value: "Reason for dislike: Other reasons",
+    value: "Other",
   },
 ];

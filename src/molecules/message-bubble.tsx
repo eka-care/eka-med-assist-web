@@ -78,7 +78,11 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   progressMessage?: string | null;
   feedback?: USER_FEEDBACK;
-  onUserFeedback: (messageId: string, feedback: USER_FEEDBACK) => void;
+  onUserFeedback: (
+    messageId: string,
+    feedback: USER_FEEDBACK,
+    feedbackReason?: string
+  ) => void;
   refreshSession: () => Promise<boolean>;
   verificationStatus: boolean;
   isLastMessage: boolean;
@@ -224,10 +228,7 @@ export function MessageBubble({
 
   const handleDislikeReasonSelect = (option: PillItem) => {
     console.log("Selected dislike reason:", option);
-
-    // onContentClick?.({
-    //   content: option.value,
-    // });
+    onUserFeedback(messageId, USER_FEEDBACK.DISLIKE, option.value);
   };
 
   return (
@@ -511,7 +512,7 @@ export function MessageBubble({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              className="h-6 w-6 pb-4 mt-3 hover:bg-[var(--color-muted)]"
               disabled={true}>
               <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
             </Button>
@@ -519,7 +520,7 @@ export function MessageBubble({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+              className="h-6 w-6 pb-4 mt-3 hover:bg-[var(--color-muted)]"
               disabled={true}>
               <ThumbsDown
                 className="h-3 w-3 text-primary"
