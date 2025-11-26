@@ -137,14 +137,6 @@ export function DoctorDetailsList({
     }
   };
 
-//   if (disabled) {
-//     return (
-//       <div className="flex items-center justify-center py-2">
-//         <p className="text-sm text-gray-500">Doctor Selected</p>
-//       </div>
-//     );
-//   }
-
   if (loading && doctors.length === 0) {
     return (
       <div className="flex items-center justify-center py-8">

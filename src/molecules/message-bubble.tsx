@@ -8,11 +8,16 @@ import { QuickActions } from "./quick-actions";
 import { useState, useEffect, useRef } from "react";
 import ReactMarkdown from "react-markdown";
 import DoctorDetailsList from "./doctor-details-list";
+import LabPackageList from "./lab-package-list";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
-import { DISLIKE_FEEDBACK_OPTIONS, TDoctor } from "@/types/widget";
+import {
+  DISLIKE_FEEDBACK_OPTIONS,
+  TDoctor,
+  TLabPackage,
+} from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { USER_FEEDBACK } from "@/configs/enums";
@@ -121,6 +126,7 @@ interface MessageBubbleProps {
       region_id?: string;
     }
   ) => Promise<{ success: boolean; data: any }>;
+  onLabPackageBook?: (pkg: TLabPackage) => void;
 }
 
 export function MessageBubble({
@@ -149,6 +155,7 @@ export function MessageBubble({
   feedback,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
+  onLabPackageBook,
 }: MessageBubbleProps) {
   const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
@@ -421,6 +428,15 @@ export function MessageBubble({
                   }
                 />
               )}
+              {commonContentData.type === ContentType.LAB_PACKAGE_CARD &&
+                commonContentData.data.lab_packages &&
+                commonContentData.data.lab_packages.length > 0 && (
+                  <LabPackageList
+                    packages={commonContentData.data.lab_packages}
+                    disabled={isResponded}
+                    onBook={(pkg) => onLabPackageBook?.(pkg)}
+                  />
+                )}
               {commonContentData.type === ContentType.MOBILE_VERIFICATION &&
                 commonContentData.data.uhids &&
                 commonContentData.data.uhids?.length && (

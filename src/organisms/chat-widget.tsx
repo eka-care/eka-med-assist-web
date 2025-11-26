@@ -10,6 +10,7 @@ import {
   MOBILE_VERIFICATION_ERROR_MESSAGES,
   RESPONSE_TIMEOUT,
   STREAMING_TIMEOUT,
+  TLabPackage,
 } from "@/types/widget";
 import { Card } from "@ui/index";
 import ApolloAssistIcon from "../components/ApollossistIcon";
@@ -1073,6 +1074,29 @@ export function ChatWidget({
     }
   };
 
+  const handleLabPackageBook = (pkg: TLabPackage) => {
+    if (!pkg?.link) return;
+    const newWindow = window.open(pkg.link, "_blank");
+    if (!newWindow) {
+      window.location.href = pkg.link;
+    }
+    setMessages((prev) => {
+      const updatedMessages = [...prev];
+      updatedMessages[updatedMessages.length - 1] = {
+        ...updatedMessages[updatedMessages.length - 1],
+        isResponded: true,
+        commonContentData: {
+          type: ContentType.LAB_PACKAGE_CARD,
+          tool_use_id: updatedMessages[updatedMessages.length - 1]?.commonContentData?.tool_use_id || "",
+          data: {
+            lab_packages: [pkg],
+          },
+        },
+      };
+      return updatedMessages;
+    });
+  };
+
   const handleMenuAction = (action: string) => {
     if (action === "clear") {
       setMessages([messages[0]]);
@@ -1297,7 +1321,12 @@ export function ChatWidget({
       return;
     }
     try {
-      await patchFeedbackMessage(sessionId, messageId, feedback, feedbackReason);
+      await patchFeedbackMessage(
+        sessionId,
+        messageId,
+        feedback,
+        feedbackReason
+      );
     } catch (error) {
       console.error("Failed to patch feedback:", error);
     } finally {
@@ -1408,6 +1437,7 @@ export function ChatWidget({
                     handleGetAvailableSlotsForAppointment
                   }
                   onUserFeedback={handleMessageFeedback}
+                  onLabPackageBook={handleLabPackageBook}
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
                   }

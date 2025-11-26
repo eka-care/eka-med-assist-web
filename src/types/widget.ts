@@ -107,6 +107,14 @@ export type TDoctorDetails = {
   availability?: TAvailability;
 };
 
+export type TLabPackage = {
+  package_name?: string;
+  hospital_name?: string;
+  city?: string;
+  link?: string;
+  description?: string;
+};
+
 export type TCallbacks = {
   tool_callback_availability_dates?: boolean;
   tool_callback_availability_slots?: boolean;

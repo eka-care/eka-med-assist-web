@@ -127,7 +127,9 @@ export function useWebSocket(
           (message.ct === ContentType.PILL ||
             message.ct === ContentType.MULTI ||
             message.ct === ContentType.DOCTOR_CARD ||
-            message.ct === ContentType.MOBILE_VERIFICATION) &&
+            message.ct === ContentType.MOBILE_VERIFICATION ||
+            message.ct === ContentType.LAB_PACKAGE_CARD) &&
+          message.data &&
           message.data.tool_use_id
         ) {
           // Call the common callback to handle all content types
@@ -138,6 +140,7 @@ export function useWebSocket(
               data: {
                 choices: message.data.choices,
                 doctor_details: message.data.doctor_details,
+                lab_packages: message.data.lab_packages,
                 callbacks: message.data.callbacks,
                 additional_option: message.data.additional_option,
                 url: message.data.url,
