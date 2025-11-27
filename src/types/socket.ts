@@ -1,5 +1,5 @@
 import { MULTI_SELECT_ADDITIONAL_OPTION } from "@/configs/enums";
-import { TCallbacks, TDoctorDetails } from "./widget";
+import { TCallbacks, TDoctorDetails, TLabPackage } from "./widget";
 import { TUhidDetails } from "./api";
 
 // WebSocket event types for chatbot
@@ -35,6 +35,7 @@ export enum ContentType {
   PILL = "pill",
   MULTI = "multi",
   DOCTOR_CARD = "doctor_card",
+  LAB_PACKAGE_CARD = "lab_package_card",
   TIPS = "tips",
   INLINE_TEXT = "inline_text",
   MOBILE_VERIFICATION = "mobile_verification",
@@ -113,7 +114,8 @@ export interface ChatResponseMessage extends BaseMessage {
     | typeof ContentType.DOCTOR_CARD
     | typeof ContentType.TEXT
     | typeof ContentType.INLINE_TEXT
-    | typeof ContentType.MOBILE_VERIFICATION;
+    | typeof ContentType.MOBILE_VERIFICATION
+    | typeof ContentType.LAB_PACKAGE_CARD;
   _id: string;
   data: {
     url?: string;
@@ -124,6 +126,7 @@ export interface ChatResponseMessage extends BaseMessage {
     choices?: string[];
     callbacks: TCallbacks;
     doctor_details?: TDoctorDetails;
+    lab_packages?: TLabPackage[];
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     mobile_number?: string;
   }; // S3 presigned URL
@@ -320,6 +323,7 @@ export interface CommonHandlerData {
     choices?: string[];
     callbacks?: TCallbacks;
     doctor_details?: TDoctorDetails;
+    lab_packages?: TLabPackage[];
     additional_option?: MULTI_SELECT_ADDITIONAL_OPTION;
     url?: string;
     mobile_number?: string;

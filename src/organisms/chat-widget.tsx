@@ -10,6 +10,7 @@ import {
   MOBILE_VERIFICATION_ERROR_MESSAGES,
   RESPONSE_TIMEOUT,
   STREAMING_TIMEOUT,
+  TLabPackage,
 } from "@/types/widget";
 import { Card } from "@ui/index";
 import ApolloAssistIcon from "../components/ApollossistIcon";
@@ -1073,6 +1074,14 @@ export function ChatWidget({
     }
   };
 
+  const handleLabPackageBook = (pkg: TLabPackage) => {
+    if (!pkg?.link) return;
+    const newWindow = window.open(pkg.link, "_blank");
+    if (!newWindow) {
+      window.location.href = pkg.link;
+    }
+  };
+
   const handleMenuAction = (action: string) => {
     if (action === "clear") {
       setMessages([messages[0]]);
@@ -1297,7 +1306,12 @@ export function ChatWidget({
       return;
     }
     try {
-      await patchFeedbackMessage(sessionId, messageId, feedback, feedbackReason);
+      await patchFeedbackMessage(
+        sessionId,
+        messageId,
+        feedback,
+        feedbackReason
+      );
     } catch (error) {
       console.error("Failed to patch feedback:", error);
     } finally {
@@ -1408,6 +1422,7 @@ export function ChatWidget({
                     handleGetAvailableSlotsForAppointment
                   }
                   onUserFeedback={handleMessageFeedback}
+                  onLabPackageBook={handleLabPackageBook}
                   tips={
                     message.isBot && index === messages.length - 1 ? tips : null
                   }

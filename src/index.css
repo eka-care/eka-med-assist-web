@@ -139,6 +139,42 @@
   font-style: italic;
 }
 
+.markdown-content table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1em 0;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.5em;
+  overflow: hidden;
+}
+
+.markdown-content th,
+.markdown-content td {
+  border: 1px solid #e5e7eb;
+  padding: 0.6em 0.8em;
+  text-align: left;
+  vertical-align: top;
+}
+
+.markdown-content th {
+  background-color: #f3f4f6;
+  font-weight: 600;
+  color: #111827;
+}
+
+.markdown-content tr:nth-child(even) td {
+  background-color: #f9fafb;
+}
+
+.markdown-content tr:hover td {
+  background-color: #eef2ff;
+}
+
+.markdown-content td:first-child {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .markdown-content a {
   color: #3b82f6;
   text-decoration: underline;

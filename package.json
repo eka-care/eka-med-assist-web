@@ -1,7 +1,7 @@
 {
     "name": "eka-med-assist-web",
     "private": true,
-    "version": "0.1.18",
+    "version": "0.1.19-dev.1",
     "type": "module",
     "scripts": {
         "dev": "vite",
@@ -23,6 +23,7 @@
         "react": "^19.1.0",
         "react-dom": "^19.1.0",
         "react-markdown": "^10.1.0",
+        "remark-gfm": "^4.0.1",
         "tailwind-merge": "^3.3.1",
         "uuid": "^13.0.0",
         "zustand": "^5.0.7"
