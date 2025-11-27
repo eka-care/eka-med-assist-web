@@ -13,15 +13,12 @@ import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
 import ApolloAssistIcon from "../components/ApollossistIcon";
 import useMedAssistStore from "@/stores/medAssistStore";
-import {
-  DISLIKE_FEEDBACK_OPTIONS,
-  TDoctor,
-  TLabPackage,
-} from "@/types/widget";
+import { DISLIKE_FEEDBACK_OPTIONS, TDoctor, TLabPackage } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { USER_FEEDBACK } from "@/configs/enums";
 import { FeedbackFollowUp } from "./feedback-followup";
+import remarkGfm from "remark-gfm";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
 interface MarqueeTextProps {
@@ -260,7 +257,7 @@ export function MessageBubble({
             {/* Only show message content if it's not empty or if it's a bot message */}
             {message && isBot && (
               <div className="markdown-content">
-                <ReactMarkdown>{message}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message}</ReactMarkdown>
               </div>
             )}
             {message && !isBot && (
