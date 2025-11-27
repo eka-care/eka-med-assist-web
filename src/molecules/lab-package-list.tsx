@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMemo, useState } from "react";
 import LabPackageCard from "./lab-package-card";
 import { TLabPackage } from "@/types/widget";
 import { Button } from "@/components/ui/button";
@@ -14,9 +14,9 @@ export function LabPackageList({
   disabled,
   onBook,
 }: LabPackageListProps) {
-  const [displayCount, setDisplayCount] = useState(3);
+  const [displayCount, setDisplayCount] = useState(2);
   const displayedPackages = packages.slice(0, displayCount);
-  const remainingCount = packages.length - displayCount;
+  const remainingCount = useMemo(() =>Math.min(packages.length - displayCount, 2), [packages.length, displayCount]);
 
   if (!packages.length) {
     return (
@@ -42,7 +42,7 @@ export function LabPackageList({
         <div className="flex justify-center">
           <Button
             variant="outline"
-            onClick={() => setDisplayCount(packages.length)}
+            onClick={() => setDisplayCount((p) => p + Math.min(packages.length - p, 2))}
             disabled={disabled}
             className="px-6 py-2">
             Show more ({remainingCount} more)

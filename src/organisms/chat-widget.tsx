@@ -1080,21 +1080,6 @@ export function ChatWidget({
     if (!newWindow) {
       window.location.href = pkg.link;
     }
-    setMessages((prev) => {
-      const updatedMessages = [...prev];
-      updatedMessages[updatedMessages.length - 1] = {
-        ...updatedMessages[updatedMessages.length - 1],
-        isResponded: true,
-        commonContentData: {
-          type: ContentType.LAB_PACKAGE_CARD,
-          tool_use_id: updatedMessages[updatedMessages.length - 1]?.commonContentData?.tool_use_id || "",
-          data: {
-            lab_packages: [pkg],
-          },
-        },
-      };
-      return updatedMessages;
-    });
   };
 
   const handleMenuAction = (action: string) => {
