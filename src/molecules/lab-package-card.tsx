@@ -90,7 +90,7 @@ export function LabPackageCard({
             disabled={disabled}
             onClick={handleBook}
             className="w-full h-11 rounded-lg border-2 border-blue-500 bg-white text-blue-600 hover:bg-blue-50 disabled:opacity-60">
-            Book this Package
+            View Details
           </Button>
         ) : null}
       </CardContent>
