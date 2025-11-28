@@ -84,6 +84,7 @@ export function ChatHeader({
           <Button
             variant="ghost"
             size="sm"
+            title={isExpanded ? "Minimize Chat" : "Maximize Chat"}
             className="h-6 w-6 p-0 text-[var(--color-background)] hover:bg-[var(--color-background-primary-default)] hover:text-[var(--color-primary-foreground)] cursor-pointer"
             onClick={onExpand}>
             {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
@@ -93,6 +94,7 @@ export function ChatHeader({
         <Button
           variant="ghost"
           size="sm"
+          title="Close Chat"
           className="h-6 w-6 p-0 text-[var(--color-background)] hover:bg-[var(--color-background-primary-default)] hover:text-[var(--color-primary-foreground)] cursor-pointer"
           onClick={onClose}>
           <X className="h-4 w-4" />

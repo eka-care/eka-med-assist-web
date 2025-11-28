@@ -433,7 +433,7 @@ export function AppointmentCard({
     <Card
       className="max-w-md rounded-xl border-slate-200 shadow-sm p-0"
       aria-label="Appointment card">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 bg-[var(--color-background-primary-subtle)] p-4">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 bg-[var(--color-background-primary-subtle)] rounded-t-xl p-4">
         <div className="flex items-center gap-3">
           {doctor.profile_pic && (
             <Avatar className="h-12 w-12">
