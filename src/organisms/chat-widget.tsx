@@ -130,7 +130,6 @@ export function ChatWidget({
       // For new sessions, we don't need validation
       setIsSessionValidated(true);
     } else if (sessionId && sessionToken) {
-
       // Check if session is still valid - AWAIT this before proceeding
       const validateSession = async () => {
         try {
@@ -354,7 +353,6 @@ export function ChatWidget({
         commonContentData.type === "mobile_verification" &&
         commonContentData?.data?.callbacks?.tool_callback_mobile_verification
       ) {
-
         if (commonContentData?.data?.mobile_number) {
           // Mobile number provided - disable input and send OTP automatically
           setMobVerificationStatus((p) => ({
@@ -1293,7 +1291,7 @@ export function ChatWidget({
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"
-    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 gap-1${className} `;
+    : `w-full max-w-sm min-w-[384px] bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
   const chatHeight = isMobile
     ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
@@ -1316,8 +1314,7 @@ export function ChatWidget({
 
       {/* Loading State */}
       {isLoading && (
-        <div
-          className={`${chatHeight} flex items-center justify-center py-8 px-4`}>
+        <div className={`${chatHeight} flex items-center justify-center p-4`}>
           <div className="text-center w-full">
             <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto mb-3"></div>
             <p className="text-sm text-[var(--color-muted-foreground)] break-words">
@@ -1408,11 +1405,13 @@ export function ChatWidget({
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
                       <img
-                        src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
+                        src={
+                          import.meta.env.BASE_URL + "assets/indian-doctor.png"
+                        }
                         alt="Apollo Icon"
                         className={`flex-shrink-0 w-6 h-6`}
                       />
-                        {/* <ApolloAssistIcon
+                      {/* <ApolloAssistIcon
                           size={32}
                           isAnimating={isBotIconAnimating}
                         /> */}
@@ -1429,7 +1428,13 @@ export function ChatWidget({
                 <div className="px-2 py-4">
                   <div className="flex gap-1 items-start justify-center">
                     <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
-                      <img src={import.meta.env.BASE_URL + "assets/indian-doctor.png"} alt="Apollo Icon" className={`flex-shrink-0 w-6 h-6`} />
+                      <img
+                        src={
+                          import.meta.env.BASE_URL + "assets/indian-doctor.png"
+                        }
+                        alt="Apollo Icon"
+                        className={`flex-shrink-0 w-6 h-6`}
+                      />
                       {/* <ApolloAssistIcon
                         size={32}
                         isAnimating={isBotIconAnimating}
