@@ -150,7 +150,7 @@ class EkaMedAssistWidgetElement extends HTMLElement {
       preloadLink.as = "style";
       preloadLink.href = cssUrl;
       this.shadowRootRef.appendChild(preloadLink);
-      
+
       // Use link tag in shadow DOM (recommended for external CSS)
       const link = document.createElement("link");
       link.rel = "stylesheet";
@@ -242,6 +242,8 @@ class EkaMedAssistWidgetElement extends HTMLElement {
             ThemeProvider as any,
             {
               defaultTheme: appConfig.theme as any,
+              primaryColor: appConfig.primaryColor,
+              node: this.shadowRootRef.host,
             },
             React.createElement(App as unknown as any, {
               config: appConfig,

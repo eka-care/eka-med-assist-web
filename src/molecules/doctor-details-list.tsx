@@ -51,7 +51,7 @@ export function DoctorDetailsList({
 
   // Load initial doctors (max 3)
   useEffect(() => {
-    if (doctorIds.length === 0 || !sessionId ) return;
+    if (doctorIds.length === 0 || !sessionId) return;
 
     const loadInitialDoctors = async () => {
       setLoading(true);
@@ -141,7 +141,7 @@ export function DoctorDetailsList({
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto mb-3"></div>
           <p className="text-sm text-gray-500">Loading doctor details...</p>
         </div>
       </div>
@@ -237,7 +237,7 @@ export function DoctorDetailsList({
             className="px-6 py-2">
             {loading ? (
               <>
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 mr-2"></div>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-[var(--color-primary)] mr-2"></div>
                 Loading more doctors...
               </>
             ) : (

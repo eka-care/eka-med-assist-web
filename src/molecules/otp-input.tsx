@@ -5,7 +5,15 @@ import { Button } from "@ui/index";
 
 interface OTPInputProps {
   mobileNumber: string;
-  onSendOTP: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
+  onSendOTP: ({
+    content,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    content: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => void;
   onEditMobile?: () => void;
   onResendOTP?: () => void;
   isLoading?: boolean;
@@ -28,19 +36,19 @@ export function OTPInput({
 
   // Common className for OTP slots to avoid repetition
   const otpSlotClassName =
-    "min-w-[2.5rem] w-full max-w-[4rem] h-10 sm:h-12 text-center text-base sm:text-lg font-semibold border-2 border-[var(--color-border)] rounded-lg data-[active=true]:border-blue-500 data-[active=true]:ring-2 data-[active=true]:ring-blue-500/20 flex-1";
+    "min-w-[2.5rem] w-full max-w-[4rem] h-10 sm:h-12 text-center text-base sm:text-lg font-semibold border-2 border-[var(--color-border)] rounded-lg data-[active=true]:border-[var(--color-primary)] data-[active=true]:ring-2 data-[active=true]:ring-[var(--color-primary)]/20 flex-1";
 
   const handleOTPChange = (value: string) => {
     setOtp(value);
     // Auto-submit when 6 digits are entered
     if (value.length === 6) {
-      onSendOTP({content: value});
+      onSendOTP({ content: value });
     }
   };
 
   const handleSendClick = () => {
     if (otp.length === 6) {
-      onSendOTP({content: otp});
+      onSendOTP({ content: otp });
     }
   };
 

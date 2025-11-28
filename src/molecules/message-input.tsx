@@ -762,7 +762,7 @@ export function MessageInput({
           <div className="flex items-center gap-2">
             <Button
               size="sm"
-              className="h-8 w-8 p-0 bg-blue-500 hover:bg-blue-600 flex-shrink-0 rounded-full"
+              className="h-8 w-8 p-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 flex-shrink-0 rounded-full"
               onClick={handleMicClick}
               disabled={isSending}>
               <Check className="h-4 w-4 white" />

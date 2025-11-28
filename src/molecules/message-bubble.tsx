@@ -11,8 +11,8 @@ import DoctorDetailsList from "./doctor-details-list";
 import LabPackageList from "./lab-package-list";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
-import ApolloAssistIcon from "../components/ApollossistIcon";
-import useMedAssistStore from "@/stores/medAssistStore";
+// import ApolloAssistIcon from "../components/ApollossistIcon";
+// import useMedAssistStore from "@/stores/medAssistStore";
 import { DISLIKE_FEEDBACK_OPTIONS, TDoctor, TLabPackage } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
 import { ThumbsDown, ThumbsUp } from "lucide-react";
@@ -154,7 +154,7 @@ export function MessageBubble({
   getAvailableSlotsForAppointment,
   onLabPackageBook,
 }: MessageBubbleProps) {
-  const { isBotIconAnimating } = useMedAssistStore();
+  // const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
   const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
     feedback || USER_FEEDBACK.NONE
@@ -238,33 +238,39 @@ export function MessageBubble({
   return (
     <div className="px-4 py-2">
       <div
-        className={`flex gap-1 items-start justify-center ${
-          !isBot ? "justify-end" : ""
+        className={`flex gap-2 ${
+          isBot ? "items-start" : "items-start justify-end"
         }`}>
         {isBot && (
-          <div className="flex-shrink-0">
-            <ApolloAssistIcon size={32} isAnimating={isBotIconAnimating} />
+          <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden mt-1">
+            <img
+              src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
+              alt="Apollo Icon"
+              className="w-full h-full object-cover"
+            />
           </div>
         )}
-
-        <div className={`${isBot ? "flex-1" : "max-w-[80%]"}`}>
+        <div className={`${isBot ? "flex-1 space-y-2" : "max-w-[80%]"}`}>
           <div
-            className={`text-sm leading-relaxed px-1 rounded-lg ${
-              isBot
-                ? "text-[var(--color-foreground)] bg-[var(--color-card)]"
-                : "text-[var(--color-black-800)] bg-blue-200"
-            }`}>
+            className={`text-sm leading-relaxed p-4 rounded-3xl
+               ${
+                 isBot
+                   ? "rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]"
+                   : "rounded-br-none text-[var(--color-black-800)] bg-[var(--color-background-primary-subtle)]"
+               }`}>
             {/* Only show message content if it's not empty or if it's a bot message */}
             {message && isBot && (
               <div className="markdown-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>{message}</ReactMarkdown>
+                <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                  {message}
+                </ReactMarkdown>
               </div>
             )}
             {message && !isBot && (
-              <div className="text-sm p-4 break-word">{message}</div>
+              <div className="text-sm break-word">{message}</div>
             )}
             {isBot && progressMessage && (
-              <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+              <div className="ml-2 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
                 <ReactMarkdown>{progressMessage}</ReactMarkdown>
               </div>
             )}
@@ -276,7 +282,7 @@ export function MessageBubble({
               <TipsDisplay tips={tips} onTipsExpire={onTipsExpire} />
             )}
             {isBot && isRegenerating && (
-              <span className="ml-2 text-blue-600 animate-pulse">
+              <span className="ml-2 text-[var(--color-primary)] animate-pulse">
                 🔄 Regenerating...
               </span>
             )}

@@ -319,11 +319,10 @@ export function AppointmentCard({
       });
 
       if (!result.success) {
-
-        if(result.data?.error?.msg){
+        if (result.data?.error?.msg) {
           setError(result.data?.error?.msg);
-        };
-        console.error("Failed to load availability dates via handler",result);
+        }
+        console.error("Failed to load availability dates via handler", result);
         return;
       }
       response = result.data;
@@ -434,7 +433,7 @@ export function AppointmentCard({
     <Card
       className="max-w-md rounded-xl border-slate-200 shadow-sm p-0"
       aria-label="Appointment card">
-      <CardHeader className="flex flex-row items-center justify-between gap-3 bg-blue-50 p-4">
+      <CardHeader className="flex flex-row items-center justify-between gap-3 bg-[var(--color-background-primary-subtle)] p-4">
         <div className="flex items-center gap-3">
           {doctor.profile_pic && (
             <Avatar className="h-12 w-12">
@@ -456,7 +455,7 @@ export function AppointmentCard({
                   href={doctor.profile_link}
                   target="_blank"
                   rel="noreferrer"
-                  className="text-xs font-semibold text-blue-600 hover:underline">
+                  className="text-xs font-semibold text-[var(--color-primary)] hover:underline">
                   View profile
                 </a>
               ) : null}
@@ -475,7 +474,7 @@ export function AppointmentCard({
           {doctor?.timings && (
             <div className="flex items-start gap-2 text-sm text-slate-900">
               <Clock
-                className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0"
+                className="h-4 w-4 text-[var(--color-primary)] mt-0.5 flex-shrink-0"
                 aria-hidden
               />
 
@@ -486,7 +485,7 @@ export function AppointmentCard({
                     {doctor?.timings?.time.split(",").map((timeSlot, index) => (
                       <span
                         key={index}
-                        className="inline-block bg-blue-50 text-blue-700 px-2 py-1 rounded-md text-xs font-medium">
+                        className="inline-block bg-[var(--color-background-primary-subtle)] text-[var(--color-primary)] px-2 py-1 rounded-md text-xs font-medium">
                         {timeSlot.trim()}
                       </span>
                     ))}
@@ -497,13 +496,19 @@ export function AppointmentCard({
 
           {doctor.languages ? (
             <div className="flex items-center gap-2 text-sm text-slate-900">
-              <Languages className="h-4 w-4 text-blue-600" aria-hidden />
+              <Languages
+                className="h-4 w-4 text-[var(--color-primary)]"
+                aria-hidden
+              />
               <span className="text-slate-500">{doctor.languages}</span>
             </div>
           ) : null}
 
           <div className="flex items-center gap-2 text-sm text-slate-900">
-            <Building2 className="h-4 w-4 text-blue-600" aria-hidden />
+            <Building2
+              className="h-4 w-4 text-[var(--color-primary)]"
+              aria-hidden
+            />
             <span className="font-semibold">{doctor.hospital}</span>
           </div>
         </div>
@@ -519,7 +524,7 @@ export function AppointmentCard({
             aria-controls="ap-slots"
             onClick={() => setOpen((o) => !o)}
             disabled={loadingDates}
-            className="mt-3 w-full border-blue-600 text-blue-600 hover:bg-blue-50 disabled:opacity-50">
+            className="mt-3 w-full border-[var(--color-primary)] text-[var(--color-primary)] hover:bg-[var(--color-background-primary-subtle)] disabled:opacity-50">
             {loadingDates ? (
               <>
                 <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -584,7 +589,7 @@ export function AppointmentCard({
                           className={[
                             "flex flex-col items-center justify-center h-12 rounded-lg border p-2 gap-0.5 min-w-0",
                             isSelected
-                              ? "border-blue-600 ring-2 ring-blue-100 bg-blue-50"
+                              ? "border-[var(--color-primary)] ring-2 ring-[var(--color-background-primary-subtle)] bg-[var(--color-background-primary-subtle)]"
                               : isDisabled
                               ? "border-slate-100 bg-slate-50 text-slate-300 cursor-not-allowed"
                               : "border-slate-200 bg-white hover:bg-slate-50",
@@ -593,7 +598,7 @@ export function AppointmentCard({
                             className={[
                               "text-[10px] tracking-wide truncate w-full text-center",
                               isSelected
-                                ? "text-blue-600"
+                                ? "text-[var(--color-primary)]"
                                 : isDisabled
                                 ? "text-slate-300"
                                 : "text-slate-500",
@@ -604,7 +609,7 @@ export function AppointmentCard({
                             className={[
                               "text-xs font-bold truncate w-full text-center",
                               isSelected
-                                ? "text-blue-600"
+                                ? "text-[var(--color-primary)]"
                                 : isDisabled
                                 ? "text-slate-300"
                                 : "text-slate-900",
@@ -632,7 +637,7 @@ export function AppointmentCard({
                 <div className="px-0.5 py-3">
                   {loadingSlots ? (
                     <div className="flex items-center justify-center py-4">
-                      <Loader2 className="h-4 w-4 animate-spin text-blue-600 mr-2" />
+                      <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary)] mr-2" />
                       <span className="text-sm text-slate-500">
                         Loading slots...
                       </span>
@@ -652,12 +657,14 @@ export function AppointmentCard({
                             className={[
                               "inline-flex h-9 items-center justify-center gap-2 rounded-lg px-3 text-xs font-semibold",
                               selected
-                                ? "border-blue-600 bg-blue-600 text-white"
+                                ? "border-[var(--color-primary)] bg-[var(--color-primary)] text-white"
                                 : "border-slate-200 bg-white text-slate-900 hover:bg-slate-50",
                             ].join(" ")}>
                             <Calendar
                               className={`h-3.5 w-3.5 flex-shrink-0${
-                                selected ? "text-white" : "text-blue-600"
+                                selected
+                                  ? "text-white"
+                                  : "text-[var(--color-primary)]"
                               }`}
                             />
                             <span className="truncate">{t}</span>
@@ -679,7 +686,7 @@ export function AppointmentCard({
                     onClick={handleBook}
                     disabled={!selectedSlot || disabled}
                     aria-disabled={!selectedSlot}
-                    className="w-full h-10 gap-2 bg-blue-600 text-white hover:bg-blue-700 disabled:opacity-60">
+                    className="w-full h-10 gap-2 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90 disabled:opacity-60">
                     Book appointment
                     <ArrowRight className="h-4 w-4" />
                   </Button>
@@ -688,7 +695,7 @@ export function AppointmentCard({
             ) : (
               <div className="px-1 pb-2 pt-1">
                 <p className="text-sm text-slate-500">
-                 {error ? error : "No availability provided."}
+                  {error ? error : "No availability provided."}
                 </p>
               </div>
             )}
@@ -696,7 +703,9 @@ export function AppointmentCard({
         )}
         {open && !currentAvailability?.slots_details?.length && (
           <div className="px-1 pb-2 pt-1">
-            <p className="text-sm text-slate-500">{error ? error : "No availability provided."}</p>
+            <p className="text-sm text-slate-500">
+              {error ? error : "No availability provided."}
+            </p>
           </div>
         )}
       </CardContent>

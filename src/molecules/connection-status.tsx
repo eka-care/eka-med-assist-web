@@ -85,7 +85,7 @@ export function ConnectionStatus({
                 onStartNewSession();
               }
             }}
-            className="p-2 bg-[#3B71F7] text-white text-xs font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
+            className="p-2 bg-primary text-white text-xs font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
             <svg
               className="w-4 h-4"
               fill="none"
@@ -144,7 +144,7 @@ export function ConnectionStatus({
                 onRetry();
               }
             }}
-            className="px-4 py-2 bg-[#3B71F7] text-white text-sm font-semibold rounded-lg hover:bg-[#2E5CD9] transition-colors flex items-center gap-2 flex-shrink-0">
+            className="px-4 py-2 bg-primary text-white text-sm font-semibold rounded-lg hover:bg-primary/80 transition-colors flex items-center gap-2 flex-shrink-0">
             <svg
               className="w-4 h-4"
               fill="none"

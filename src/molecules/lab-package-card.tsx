@@ -43,7 +43,7 @@ export function LabPackageCard({
         className
       )}
       aria-label="Lab package card">
-      <CardHeader className="bg-blue-50 p-4">
+      <CardHeader className="bg-[var(--color-background-primary-subtle)] p-4">
         {package_name ? (
           <h3 className="text-lg font-bold text-slate-900 leading-snug">
             {package_name}
@@ -63,7 +63,7 @@ export function LabPackageCard({
           {hospital_name ? (
             <div className="flex items-center gap-2 text-sm text-slate-900">
               <Building2
-                className="h-4 w-4 text-blue-700 flex-shrink-0"
+                className="h-4 w-4 text-[var(--color-primary)] flex-shrink-0"
                 aria-hidden
               />
               <span className="text-slate-700">{hospital_name}</span>
@@ -73,7 +73,7 @@ export function LabPackageCard({
           {city ? (
             <div className="flex items-center gap-2 text-sm text-slate-900">
               <MapPin
-                className="h-4 w-4 text-blue-700 flex-shrink-0"
+                className="h-4 w-4 text-[var(--color-primary)] flex-shrink-0"
                 aria-hidden
               />
               <span className="text-slate-700">{city}</span>
@@ -89,7 +89,7 @@ export function LabPackageCard({
             variant="outline"
             disabled={disabled}
             onClick={handleBook}
-            className="w-full h-11 rounded-lg border-2 border-blue-500 bg-white text-blue-600 hover:bg-blue-50 disabled:opacity-60">
+            className="w-full h-11 rounded-lg border-2 border-[var(--color-primary)] bg-white text-[var(--color-primary)] hover:bg-[var(--color-background-primary-subtle)] disabled:opacity-60">
             View Details
           </Button>
         ) : null}

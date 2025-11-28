@@ -13,7 +13,7 @@ import {
   TLabPackage,
 } from "@/types/widget";
 import { Card } from "@ui/index";
-import ApolloAssistIcon from "../components/ApollossistIcon";
+// import ApolloAssistIcon from "../components/ApollossistIcon";
 import { ChatHeader } from "../molecules/chat-header";
 import { ConnectionStatus } from "../molecules/connection-status";
 import { MessageBubble } from "../molecules/message-bubble";
@@ -119,33 +119,28 @@ export function ChatWidget({
     setStreamingTimeoutId,
     clearStreamingTimeout,
     setLastStreamingActivity,
-    isBotIconAnimating,
+    // isBotIconAnimating,
     setIsBotIconAnimating,
   } = useMedAssistStore();
 
   // Auto-start session when widget mounts if no session exists
   useEffect(() => {
     if (!sessionId && !sessionToken && onStartSession) {
-      console.log("No session found, starting new session...");
       onStartSession();
       // For new sessions, we don't need validation
       setIsSessionValidated(true);
     } else if (sessionId && sessionToken) {
-      console.log("Session already exists:");
 
       // Check if session is still valid - AWAIT this before proceeding
       const validateSession = async () => {
         try {
           const isValid = await getSessionDetails(sessionId);
-          console.log("isValid", isValid);
           if (!isValid.success && !isValid.retry) {
-            console.log("Session is invalid, starting new session");
             await clearSession();
             await onStartSession?.(true);
             //For new sessions, we don't need validation
             setIsSessionValidated(true);
           } else if (!isValid.success && isValid.retry) {
-            console.log("Session expired, refreshing session");
             const success = await refreshSession();
             if (success) {
               setIsSessionValidated(true);
@@ -156,7 +151,6 @@ export function ChatWidget({
               setIsSessionValidated(true);
             }
           } else {
-            console.log("Session is valid, allowing WebSocket connection");
             setIsSessionValidated(true);
           }
         } catch (error) {
@@ -178,13 +172,6 @@ export function ChatWidget({
 
   // Handle firstUserMessage from popup
   useMemo(() => {
-    // Auto-send the first user message
-    console.log("firstUserMessage", firstUserMessage);
-    console.log("isSessionValidated", isSessionValidated);
-    console.log("sessionId", sessionId);
-    console.log("connectionStatus", connectionStatus);
-    console.log("isLoading", isLoading);
-    console.log("isStreaming", isStreaming);
     //when u start a new session or refresh , it should not send the first user message
     if (
       firstUserMessage?.trim() &&
@@ -261,7 +248,6 @@ export function ChatWidget({
         auth: { token: sessionToken },
       };
     }
-    console.log("WebSocket config not created - session not validated yet");
     return null;
   }, [sessionId, sessionToken, isSessionValidated]);
 
@@ -329,7 +315,6 @@ export function ChatWidget({
       setProgressMessage(progressMsg);
     },
     (tips: string[]) => {
-      console.log("Tips message received:", tips);
       setIsWaitingForResponse(false);
       setTips(tips);
     },
@@ -338,16 +323,11 @@ export function ChatWidget({
       setIsWaitingForResponse(false);
 
       // Handle common content messages - merge with existing bot message
-      console.log("Common content message received:", commonContentData);
       setMessages((prev) => {
         //find message by id
         let messageIndex = -1;
         messageIndex = prev.findIndex((message) => message.id == messageId);
         if (messageIndex !== -1 && !prev[messageIndex].isResponded) {
-          console.log(
-            "Bot message found and not responded, updating with common content data",
-            commonContentData
-          );
           // Update the last bot message with common content data only if it hasn't been responded to
           const updatedMessages = [...prev];
           updatedMessages[messageIndex] = {
@@ -356,12 +336,6 @@ export function ChatWidget({
           };
           return updatedMessages;
         } else {
-          console.log(
-            messageIndex === -1
-              ? "No bot message found, creating a new one"
-              : "Last bot message already responded, creating a new one",
-            commonContentData
-          );
           // If no bot message found or the last bot message has been responded to, create a new one
           const newMessage: Message = {
             id: messageId || Date.now().toString(),
@@ -371,10 +345,6 @@ export function ChatWidget({
             isStored: true,
             feedback: USER_FEEDBACK.NONE,
           };
-          console.log(
-            "Adding common content message to session store",
-            newMessage
-          );
           addMessageToSession(sessionId, newMessage);
           return [...prev, newMessage];
         }
@@ -384,7 +354,6 @@ export function ChatWidget({
         commonContentData.type === "mobile_verification" &&
         commonContentData?.data?.callbacks?.tool_callback_mobile_verification
       ) {
-        console.log("Mobile verification message received:", commonContentData);
 
         if (commonContentData?.data?.mobile_number) {
           // Mobile number provided - disable input and send OTP automatically
@@ -573,9 +542,6 @@ export function ChatWidget({
           const timeSinceLastActivity =
             Date.now() - currentState.lastStreamingActivity;
           if (timeSinceLastActivity >= STREAMING_TIMEOUT) {
-            console.log(
-              "Streaming timeout: No streaming activity for 5 seconds"
-            );
             setIsWaitingForResponse(false);
           }
         }
@@ -626,7 +592,6 @@ export function ChatWidget({
   }) => {
     // Block sending if currently streaming
     if (isStreaming) {
-      console.log("Cannot send message while streaming");
       return;
     }
 
@@ -964,7 +929,6 @@ export function ChatWidget({
   const handleFileUpload = async (files: FileList, message?: string) => {
     // Block file upload if currently streaming
     if (isStreaming) {
-      console.log("Cannot upload file while streaming");
       return;
     }
 
@@ -1042,7 +1006,6 @@ export function ChatWidget({
   const handleQuickAction = async (actionId: string) => {
     // Block quick actions if currently streaming
     if (isStreaming) {
-      console.log("Cannot use quick action while streaming");
       return;
     }
 
@@ -1136,7 +1099,6 @@ export function ChatWidget({
 
     // Block regeneration if currently streaming
     if (isStreaming) {
-      console.log("Cannot regenerate while streaming");
       return;
     }
 
@@ -1145,9 +1107,6 @@ export function ChatWidget({
 
     // Clear progress message when regenerating
     setProgressMessage(null);
-
-    console.log("Regenerating response for message:", messageId);
-    console.log("Original user message:", userMessage.originalUserMessage);
 
     // Mark the current bot message as regenerating
     setMessages((prev) => {
@@ -1164,7 +1123,6 @@ export function ChatWidget({
       // Send regenerate request
       await regenerateResponse(userMessage.originalUserMessage);
       // For now, just clear the regenerating state since regenerateResponse is not available
-      console.log("Regenerate requested for:", userMessage.originalUserMessage);
       setMessages((prev) => {
         const updatedMessages = [...prev];
         updatedMessages[messageIndex] = {
@@ -1334,8 +1292,8 @@ export function ChatWidget({
   const containerStyles = isMobile
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
-    ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 pt-1 gap-1"
-    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 pt-1 gap-1${className} `;
+    ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"
+    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg py-0 gap-1${className} `;
   const chatHeight = isMobile
     ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
@@ -1361,7 +1319,7 @@ export function ChatWidget({
         <div
           className={`${chatHeight} flex items-center justify-center py-8 px-4`}>
           <div className="text-center w-full">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-3"></div>
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--color-primary)] mx-auto mb-3"></div>
             <p className="text-sm text-[var(--color-muted-foreground)] break-words">
               Starting session...
             </p>
@@ -1448,11 +1406,16 @@ export function ChatWidget({
               {isWaitingForResponse && !isStreaming && (
                 <div className="px-2 py-4">
                   <div className="flex gap-1 items-start justify-center">
-                    <div className="flex-shrink-0">
-                      <ApolloAssistIcon
-                        size={32}
-                        isAnimating={isBotIconAnimating}
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
+                      <img
+                        src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
+                        alt="Apollo Icon"
+                        className={`flex-shrink-0 w-6 h-6`}
                       />
+                        {/* <ApolloAssistIcon
+                          size={32}
+                          isAnimating={isBotIconAnimating}
+                        /> */}
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
@@ -1465,15 +1428,16 @@ export function ChatWidget({
               {progressMessage && !isStreaming && (
                 <div className="px-2 py-4">
                   <div className="flex gap-1 items-start justify-center">
-                    <div className="flex-shrink-0">
-                      <ApolloAssistIcon
+                    <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
+                      <img src={import.meta.env.BASE_URL + "assets/indian-doctor.png"} alt="Apollo Icon" className={`flex-shrink-0 w-6 h-6`} />
+                      {/* <ApolloAssistIcon
                         size={32}
                         isAnimating={isBotIconAnimating}
-                      />
+                      /> */}
                     </div>
                     <div className="flex-1">
                       <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
-                        <div className="ml-2 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 bg-clip-text text-transparent font-medium">
+                        <div className="ml-2 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
                           {progressMessage}
                         </div>
                       </div>

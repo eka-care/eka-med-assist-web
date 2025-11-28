@@ -3,10 +3,11 @@
 
   // Widget configuration
   var defaultConfig = {
-    theme: "doctor-light",
+    theme: "client",
     position: "bottom-right",
     scriptUrl: "https://cdn.ekacare.co/apollo/widget.js",
     cssUrl: "https://cdn.ekacare.co/apollo/assets/widget.css",
+    primaryColor: "#007C9E", // optional hex color (e.g., "#007C9E") to auto-generate primary color palette
   };
 
   // Widget state
@@ -810,6 +811,7 @@
 
     widgetState.instance = window.EkaMedAssistWidget.init({
       theme: config.theme,
+      primaryColor: config.primaryColor,
       onMinimize: function () {
         hideWidget();
         showButton();

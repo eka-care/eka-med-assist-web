@@ -4,7 +4,15 @@ import { Input } from "@ui/index";
 import { Button } from "@ui/index";
 
 interface MobileNumberInputProps {
-  onSendMobile: ({content, tool_use_id, tool_use_params}: {content: string, tool_use_id?: string, tool_use_params?: any}) => void;
+  onSendMobile: ({
+    content,
+    tool_use_id,
+    tool_use_params,
+  }: {
+    content: string;
+    tool_use_id?: string;
+    tool_use_params?: any;
+  }) => void;
   isLoading?: boolean;
   error?: string | null;
   disabled?: boolean;
@@ -36,7 +44,7 @@ export function MobileNumberInput({
 
   const handleSendClick = () => {
     if (mobileNumber.length === 10) {
-      onSendMobile({content: mobileNumber});
+      onSendMobile({ content: mobileNumber });
     }
   };
 
@@ -72,7 +80,7 @@ export function MobileNumberInput({
             onKeyPress={handleKeyPress}
             placeholder={isLoading ? "Sending OTP..." : placeholder}
             disabled={disabled || isLoading}
-            className="h-12 text-base border-[var(--color-border)] focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20"
+            className="h-12 text-base border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
             maxLength={10}
           />
         </div>
