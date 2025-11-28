@@ -45,11 +45,11 @@ export function ChatHeader({
           <span
             className={`absolute bottom-0 right-0 text-xs ${
               connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
-                ? "bg-green-500"
+                ? "bg-green-500 ring-2 ring-[var(--color-neutral-300)]"
                 : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
-                ? "bg-yellow-500"
-                : "bg-red-500"
-            } rounded-full p-1.5`}></span>
+                ? "bg-yellow-500 ring-2 ring-[var(--color-neutral-300)]"
+                : "bg-red-500 ring-2 ring-[var(--color-neutral-300)]"
+            } rounded-full p-1`}></span>
         </div>
 
         <div>
@@ -58,7 +58,7 @@ export function ChatHeader({
           </h2>
           <p className="text-sm text-[var(--color-background)]">
             {connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
-              ? "Connected"
+              ? "Here for You 24/7"
               : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline
               ? "Connecting"
               : "Not Connected"}
