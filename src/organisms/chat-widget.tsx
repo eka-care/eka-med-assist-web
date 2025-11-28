@@ -1417,8 +1417,18 @@ export function ChatWidget({
                         /> */}
                     </div>
                     <div className="flex-1">
-                      <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
-                        <span className="animate-pulse">...</span>
+                      <div className="inline-flex items-center text-sm leading-relaxed p-3 rounded-3xl rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]">
+                        <div
+                          className="flex items-center gap-1.5"
+                          aria-label="Bot is typing">
+                          {[0, 1, 2].map((index) => (
+                            <span
+                              key={index}
+                              className="w-2 h-2 rounded-full bg-slate-400 animate-pulse"
+                              style={{ animationDelay: `${index * 150}ms` }}
+                            />
+                          ))}
+                        </div>
                       </div>
                     </div>
                   </div>
