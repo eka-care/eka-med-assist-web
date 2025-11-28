@@ -255,7 +255,7 @@ export function MessageBubble({
             className={`text-sm leading-relaxed p-4 rounded-3xl
                ${
                  isBot
-                   ? "rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]"
+                   ? `rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]`
                    : "rounded-br-none text-[var(--color-black-800)] bg-[var(--color-background-primary-subtle)]"
                }`}>
             {/* Only show message content if it's not empty or if it's a bot message */}

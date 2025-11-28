@@ -655,7 +655,7 @@ export function MessageInput({
               setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
             }
             isPreview={true}
-            className={`w-full ${isSending ? "opacity-50" : ""}`}
+            className={`${isSending ? "opacity-50" : ""}`}
           />
         </div>
       )}

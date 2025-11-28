@@ -7,6 +7,7 @@
     position: "bottom-right",
     scriptUrl: "https://cdn.ekacare.co/apollo/widget.js",
     cssUrl: "https://cdn.ekacare.co/apollo/assets/widget.css",
+    mode: "widget", // 'widget' or 'full'
     primaryColor: "#007C9E", // optional hex color (e.g., "#007C9E") to auto-generate primary color palette
   };
 
@@ -802,6 +803,30 @@
     document.head.appendChild(script);
   }
 
+  function getMode() {
+    // Find the script tag that loaded this file
+    const scripts = document.querySelectorAll(
+      'script[src*="widget-loader.js"]'
+    );
+    let scriptSrc = null;
+    let mode = null;
+
+    // Try currentScript first (works for synchronous scripts)
+    if (document.currentScript && document.currentScript.src) {
+      scriptSrc = document.currentScript.src;
+    } else if (scripts.length > 0) {
+      // Fallback: find the script tag (use the last one if multiple)
+      scriptSrc = scripts[scripts.length - 1].src;
+    }
+
+    // Extract mode from query string
+    if (scriptSrc) {
+      const url = new URL(scriptSrc, window.location.href);
+      mode = url.searchParams.get("mode");
+    }
+    // Use mode from query string if available, otherwise use config.mode
+   return  mode ||  defaultConfig.mode;
+  }
   // Mount the React widget
   function mountWidget(config) {
     if (!window.EkaMedAssistWidget || !window.EkaMedAssistWidget.init) {
@@ -820,6 +845,7 @@
         hideWidget();
         showButton();
       },
+      mode: config.mode,
       firstUserMessage: widgetState?.firstUserMessage || "",
     });
 
@@ -898,25 +924,28 @@
   // Initialize widget
   function initWidget(config) {
     if (window.EkaMedAssist && window.EkaMedAssist._initialized) {
-      console.warn("Widget already initialized");
       return;
     }
 
     config = Object.assign({}, defaultConfig, config);
     createIsolatedCSS();
-
     // Initialize from cookie
     initializeFromCookie();
 
-    var button = createWidgetButton(config);
-    document.body.appendChild(button);
-
-    if (window.EkaMedAssist) {
-      window.EkaMedAssist._initialized = true;
-      window.EkaMedAssist._button = button;
+    var mode = getMode();
+    if (mode === "full") {
+      toggleWidget({ ...config, mode: "full" });
+      if (window.EkaMedAssist) {
+        window.EkaMedAssist._initialized = true;
+      }
+    } else {
+      var button = createWidgetButton(config);
+      document.body.appendChild(button);
+      if (window.EkaMedAssist) {
+        window.EkaMedAssist._initialized = true;
+        window.EkaMedAssist._button = button;
+      }
     }
-
-    console.log("Widget initialized");
   }
 
   // Initialize widget state from cookie

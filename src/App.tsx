@@ -10,6 +10,7 @@ interface AppProps {
     theme?: string;
     onMinimize?: () => void;
     onClose?: () => void;
+    mode?: 'widget' | 'full';
   };
 }
 
@@ -37,7 +38,7 @@ function App({ config }: AppProps = {}) {
           userAgent
         );
 
-      setIsMobile(isMobileDevice);
+      setIsMobile(config?.mode === 'full' || isMobileDevice);
     };
 
     checkMobile();

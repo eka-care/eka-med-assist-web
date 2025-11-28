@@ -3,10 +3,8 @@ import { config } from "@/configs/constants";
 export const getSessionDetails = async (
   sessionId: string
 ): Promise<{ success: boolean; retry: boolean }> => {
-  console.log("🔍 getSessionDetails called with sessionId:", sessionId);
   try {
     const url = `${config.BASE_API_URL}/med-assist/session/${sessionId}`;
-    console.log("🌐 Making API call to:", url);
 
     const response = await fetch(url, {
       method: "GET",
@@ -18,24 +16,18 @@ export const getSessionDetails = async (
     //   credentials: "include", // crucial line
     });
 
-    console.log("📡 API response status:", response.status, response.ok);
-
     if (!response.ok) {
       // Handle specific error codes
       const errorData = await response.json().catch(() => ({}));
 
       switch (response.status) {
         case 401: // Session expired
-          console.log("Session expired:", errorData);
           return { success: false, retry: true };
         case 404: // Session not found
-          console.log("Session not found:", errorData);
           return { success: false, retry: false };
         case 403: // Invalid agent/wid
-          console.log("Invalid agent:", errorData);
           return { success: false, retry: false };
         case 500: // Internal server error
-          console.log("Internal server error:", errorData);
           return { success: false, retry: false };
         default:
           console.error(`HTTP error! status: ${response.status}`, errorData);

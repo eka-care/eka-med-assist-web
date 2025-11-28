@@ -1347,7 +1347,7 @@ export function ChatWidget({
             <div className="space-y-1">
               {messages.map((message, index) => (
                 <MessageBubble
-                  key={message.id}
+                  key={index}
                   messageId={message.id}
                   message={message.content}
                   isBot={message.isBot}

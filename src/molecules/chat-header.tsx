@@ -32,8 +32,8 @@ export function ChatHeader({
 }: ChatHeaderProps) {
   return (
     <div
-      className={`relative flex items-center justify-between px-4 py-4 bg-[var(--color-primary-background-default)] rounded-t-lg ${
-        isExpanded || isMobile ? "sticky top-0 z-10" : ""
+      className={`relative flex items-center justify-between px-4 py-4 bg-[var(--color-primary-background-default)]  ${
+        isExpanded || isMobile ? "sticky top-0 z-10" : "rounded-t-lg"
       }`}>
       <div className="flex items-center gap-2">
         <div className="relative w-7 h-8">
@@ -77,7 +77,6 @@ export function ChatHeader({
             onClick={onStartSession}>
             <Plus className="h-4 w-4" />
           </Button>
-
         </div>
 
         {!isMobile && (
@@ -87,7 +86,11 @@ export function ChatHeader({
             title={isExpanded ? "Minimize Chat" : "Maximize Chat"}
             className="h-6 w-6 p-0 text-[var(--color-background)] hover:bg-[var(--color-background-primary-default)] hover:text-[var(--color-primary-foreground)] cursor-pointer"
             onClick={onExpand}>
-            {isExpanded ? <Minimize2 className="h-4 w-4" /> : <Maximize2 className="h-4 w-4" />}
+            {isExpanded ? (
+              <Minimize2 className="h-4 w-4" />
+            ) : (
+              <Maximize2 className="h-4 w-4" />
+            )}
           </Button>
         )}
 
