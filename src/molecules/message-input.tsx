@@ -695,7 +695,7 @@ export function MessageInput({
         )}
 
         {isListening || isRecording ? (
-          <div className="flex items-center justify-center px-3 py-2">
+          <div className="flex-1 flex items-center justify-center px-3 py-2">
             {isRecording && (
               <div className="relative">
                 <img
