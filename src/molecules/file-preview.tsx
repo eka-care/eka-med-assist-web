@@ -138,7 +138,7 @@ export function FilePreviewList({
   const nonImageFiles = files.filter((f) => !f.type?.startsWith("image/"));
 
   return (
-    <div className={`flex flex-wrap gap-2 max-w-full ${className}`}>
+    <div className={`flex flex-wrap justify-end gap-2 max-w-full ${className}`}>
       {/* Non-image files as inline cards */}
       {nonImageFiles.map((file) => {
         const originalIndex = files.indexOf(file);

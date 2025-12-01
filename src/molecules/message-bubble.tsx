@@ -337,7 +337,7 @@ export function MessageBubble({
               <FilePreviewList
                 files={files}
                 isPreview={false}
-                className="grid grid-cols-3 gap-2"
+                className=""
               />
             </div>
           )}
