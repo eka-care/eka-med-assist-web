@@ -126,7 +126,7 @@ function App({ config }: AppProps = {}) {
         {/* Overlay for expanded mode */}
         {(isExpanded || isMobile) && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 z-40"
+            className="fixed inset-0 bg-transparent bg-opacity-50 z-40"
             onClick={handleCloseWidget}
           />
         )}

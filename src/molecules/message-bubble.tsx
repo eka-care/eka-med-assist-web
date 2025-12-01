@@ -5,7 +5,7 @@ import {
   PillItem,
 } from "@ui/index";
 import { QuickActions } from "./quick-actions";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import ReactMarkdown from "react-markdown";
 import DoctorDetailsList from "./doctor-details-list";
 import LabPackageList from "./lab-package-list";
@@ -235,65 +235,94 @@ export function MessageBubble({
     onUserFeedback(messageId, USER_FEEDBACK.DISLIKE, option.value);
   };
 
+  const isTextEmpty = useMemo(() => {
+    return (
+      !message &&
+      !progressMessage &&
+      !isStreaming &&
+      !tips?.length &&
+      !isRegenerating &&
+      !verificationStatus
+    );
+  }, [
+    message,
+    progressMessage,
+    isStreaming,
+    tips,
+    isRegenerating,
+    verificationStatus,
+  ]);
+
+  // Don't render empty message bubble for bot messages
+  const shouldRenderBubble = !isBot || !isTextEmpty;
   return (
     <div className="px-4 py-2">
       <div
         className={`flex gap-2 ${
           isBot ? "items-start" : "items-start justify-end"
         }`}>
-        {isBot && (
-          <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden mt-1">
-            <img
-              src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
-              alt="Apollo Icon"
-              className="w-full h-full object-cover"
-            />
-          </div>
-        )}
         <div className={`${isBot ? "flex-1 space-y-2" : "max-w-[80%]"}`}>
-          <div
-            className={`text-sm leading-relaxed p-4 rounded-3xl
-               ${
-                 isBot
-                   ? `rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]`
-                   : "rounded-br-none text-[var(--color-black-800)] bg-[var(--color-background-primary-subtle)]"
-               }`}>
-            {/* Only show message content if it's not empty or if it's a bot message */}
-            {message && isBot && (
-              <div className="markdown-content">
-                <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                  {message}
-                </ReactMarkdown>
-              </div>
-            )}
-            {message && !isBot && (
-              <div className="text-sm break-word">{message}</div>
-            )}
-            {isBot && progressMessage && (
-              <div className="ml-2 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
-                <ReactMarkdown>{progressMessage}</ReactMarkdown>
-              </div>
-            )}
-            {isBot && isStreaming && !progressMessage && (
-              <span className="animate-pulse">...</span>
-            )}
-            {/* Show tips when available */}
-            {isBot && tips?.length && tips.length > 0 && (
-              <TipsDisplay tips={tips} onTipsExpire={onTipsExpire} />
-            )}
-            {isBot && isRegenerating && (
-              <span className="ml-2 text-[var(--color-primary)] animate-pulse">
-                🔄 Regenerating...
-              </span>
-            )}
-            {isBot && verificationStatus && (
+          {shouldRenderBubble && (
+            <div
+              className={`flex items-end gap-2 ${
+                isBot ? "justify-start" : "justify-end"
+              }`}>
+              {isBot && (
+                <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
+                  <img
+                    src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
+                    alt="Apollo Icon"
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+              )}
               <div
-                className="flex items-center gap-1 text-red-500 text-sm cursor-pointer hover:underline"
-                onClick={clearMobileVerification}>
-                Exit verification
+                className={`text-sm leading-relaxed rounded-3xl
+                 ${
+                   isBot
+                     ? `rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]`
+                     : "rounded-br-none text-[var(--color-black-800)] bg-[var(--color-background-primary-subtle)]"
+                 }`}>
+                {/* Only show message content if it's not empty or if it's a bot message */}
+                {message && isBot && (
+                  <div className="markdown-content p-4">
+                    <ReactMarkdown remarkPlugins={[remarkGfm]}>
+                      {message}
+                    </ReactMarkdown>
+                  </div>
+                )}
+                {message && !isBot && (
+                  <div className="text-sm break-word p-4">{message}</div>
+                )}
+                {isBot && progressMessage && (
+                  <div className="p-4 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
+                    <ReactMarkdown>{progressMessage}</ReactMarkdown>
+                  </div>
+                )}
+                {isBot && isStreaming && !progressMessage && (
+                  <span className="animate-pulse p-4 block">...</span>
+                )}
+                {/* Show tips when available */}
+                {isBot && tips?.length && tips.length > 0 && (
+                  <div className="px-4 pb-4">
+                    <TipsDisplay tips={tips} onTipsExpire={onTipsExpire} />
+                  </div>
+                )}
+                {isBot && isRegenerating && (
+                  <span className="p-4 text-[var(--color-primary)] animate-pulse block">
+                    🔄 Regenerating...
+                  </span>
+                )}
+                {isBot && verificationStatus && (
+                  <div
+                    className="flex items-center gap-1 p-4 text-red-500 text-sm cursor-pointer hover:underline"
+                    onClick={clearMobileVerification}>
+                    Exit verification
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           {/* Display audio data for user messages */}
           {/* {!isBot && audioData && (
@@ -314,7 +343,16 @@ export function MessageBubble({
           )}
           {/* Display common content for bot messages */}
           {isBot && commonContentData && (
-            <>
+            <div className="flex items-end gap-2">
+              <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
+                {isTextEmpty && (
+                  <img
+                    src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
+                    alt="Apollo Icon"
+                    className="w-full h-full object-cover"
+                  />
+                )}
+              </div>
               {commonContentData.type === ContentType.PILL &&
                 commonContentData.data.choices &&
                 commonContentData.data.choices.length > 0 && (
@@ -343,7 +381,7 @@ export function MessageBubble({
                           disabled={isQuickActionsDisabled || isResponded}>
                           <MarqueeText
                             text={choice}
-                            maxWidth="300px"
+                            maxWidth="250px"
                             className="text-left"
                           />
                         </Button>
@@ -483,15 +521,17 @@ export function MessageBubble({
                     </div>
                   </div>
                 )}
-            </>
+            </div>
           )}
 
           {showActions && (
-            <QuickActions
-              actions={quickActions}
-              onActionClick={handleQuickAction}
-              disabled={isQuickActionsDisabled}
-            />
+            <div className="flex justify-end">
+              <QuickActions
+                actions={quickActions}
+                onActionClick={handleQuickAction}
+                disabled={isQuickActionsDisabled}
+              />
+            </div>
           )}
 
           {isBot &&
@@ -499,7 +539,7 @@ export function MessageBubble({
           messageId !== "1" &&
           isLastMessage &&
           userFeedback === USER_FEEDBACK.NONE ? (
-            <div className="flex items-center gap-1 mt-3 pb-4">
+            <div className="flex items-center gap-1 mt-3 ml-10 pb-4">
               <Button
                 variant="ghost"
                 size="sm"
@@ -531,7 +571,7 @@ export function MessageBubble({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 pb-4 mt-3 hover:bg-[var(--color-muted)]"
+              className="h-6 w-6 pb-4 mt-3 ml-10 hover:bg-[var(--color-muted)]"
               disabled={true}>
               <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
             </Button>
@@ -539,7 +579,7 @@ export function MessageBubble({
             <Button
               variant="ghost"
               size="sm"
-              className="h-6 w-6 pb-4 mt-3 hover:bg-[var(--color-muted)]"
+              className="h-6 w-6 pb-4 mt-3 ml-10 hover:bg-[var(--color-muted)]"
               disabled={true}>
               <ThumbsDown
                 className="h-3 w-3 text-primary"

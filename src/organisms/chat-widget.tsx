@@ -1344,122 +1344,143 @@ export function ChatWidget({
             }}
             onTouchStart={(e) => isMobile && e.stopPropagation()}
             onTouchMove={(e) => isMobile && e.stopPropagation()}>
-            <div className="space-y-1">
-              {messages.map((message, index) => (
-                <MessageBubble
-                  key={index}
-                  messageId={message.id}
-                  message={message.content}
-                  isBot={message.isBot}
-                  showActions={messages.length === 1 && message.isBot}
-                  handleQuickAction={handleQuickAction}
-                  quickActions={quickActions}
-                  isQuickActionsDisabled={
-                    connectionStatus !== CONNECTION_STATUS.CONNECTED ||
-                    isStreaming ||
-                    !isOnline
-                  }
-                  isStreaming={
-                    message.isBot &&
-                    isStreaming &&
-                    index === messages.length - 1
-                  }
-                  refreshSession={triggerSessionRefresh}
-                  progressMessage={
-                    message.isBot && index === messages.length - 1
-                      ? progressMessage
-                      : null
-                  }
-                  getAvailabilityDatesForAppointment={
-                    handleGetAvailabilityDatesForAppointment
-                  }
-                  getAvailableSlotsForAppointment={
-                    handleGetAvailableSlotsForAppointment
-                  }
-                  onUserFeedback={handleMessageFeedback}
-                  onLabPackageBook={handleLabPackageBook}
-                  tips={
-                    message.isBot && index === messages.length - 1 ? tips : null
-                  }
-                  isLastMessage={index === messages.length - 1}
-                  verificationStatus={
-                    mobVerificationStatus.active &&
-                    index === messages.length - 1
-                  }
-                  clearMobileVerification={exitMobileVerification}
-                  onTipsExpire={() => setTips(null)}
-                  isRegenerating={message.isRegenerating}
-                  commonContentData={message.commonContentData}
-                  onContentClick={handleSendMessage}
-                  onRegenerate={handleRegenerate}
-                  audioData={message.audioData} // Pass audio data to MessageBubble
-                  isResponded={message.isResponded}
-                  files={message.files}
-                  feedback={message?.feedback || USER_FEEDBACK.NONE}
-                />
-              ))}
+            <div className={`min-h-full flex flex-col justify-end ${isMobile ? "pb-4" : "pb-4"}`}>
+              <div className="sticky top-0 z-10 bg-[var(--color-card)] py-1 px-4 flex items-center justify-center">
+                <div className="text-xs text-[var(--color-muted-foreground)] text-center">
+                  {(() => {
+                    const now = new Date();
+                    return now.toLocaleString("en-US", {
+                      weekday: "long",
+                      // month: "short",
+                      // day: "numeric",
+                      hour: "2-digit",
+                      minute: "2-digit",
+                      hour12: true,
+                    });
+                  })()}
+                </div>
+              </div>
+              <div className="space-y-1 pb-4">
+                {messages.map((message, index) => (
+                  <MessageBubble
+                    key={index}
+                    messageId={message.id}
+                    message={message.content}
+                    isBot={message.isBot}
+                    showActions={messages.length === 1 && message.isBot}
+                    handleQuickAction={handleQuickAction}
+                    quickActions={quickActions}
+                    isQuickActionsDisabled={
+                      connectionStatus !== CONNECTION_STATUS.CONNECTED ||
+                      isStreaming ||
+                      !isOnline
+                    }
+                    isStreaming={
+                      message.isBot &&
+                      isStreaming &&
+                      index === messages.length - 1
+                    }
+                    refreshSession={triggerSessionRefresh}
+                    progressMessage={
+                      message.isBot && index === messages.length - 1
+                        ? progressMessage
+                        : null
+                    }
+                    getAvailabilityDatesForAppointment={
+                      handleGetAvailabilityDatesForAppointment
+                    }
+                    getAvailableSlotsForAppointment={
+                      handleGetAvailableSlotsForAppointment
+                    }
+                    onUserFeedback={handleMessageFeedback}
+                    onLabPackageBook={handleLabPackageBook}
+                    tips={
+                      message.isBot && index === messages.length - 1
+                        ? tips
+                        : null
+                    }
+                    isLastMessage={index === messages.length - 1}
+                    verificationStatus={
+                      mobVerificationStatus.active &&
+                      index === messages.length - 1
+                    }
+                    clearMobileVerification={exitMobileVerification}
+                    onTipsExpire={() => setTips(null)}
+                    isRegenerating={message.isRegenerating}
+                    commonContentData={message.commonContentData}
+                    onContentClick={handleSendMessage}
+                    onRegenerate={handleRegenerate}
+                    audioData={message.audioData} // Pass audio data to MessageBubble
+                    isResponded={message.isResponded}
+                    files={message.files}
+                    feedback={message?.feedback || USER_FEEDBACK.NONE}
+                  />
+                ))}
 
-              {/* Show loading indicator when waiting for response */}
-              {isWaitingForResponse && !isStreaming && (
-                <div className="px-2 py-4">
-                  <div className="flex gap-1 items-start justify-center">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
-                      <img
-                        src={
-                          import.meta.env.BASE_URL + "assets/indian-doctor.png"
-                        }
-                        alt="Apollo Icon"
-                        className={`flex-shrink-0 w-6 h-6`}
-                      />
-                      {/* <ApolloAssistIcon
+                {/* Show loading indicator when waiting for response */}
+                {isWaitingForResponse && !isStreaming && (
+                  <div className="px-2 py-4">
+                    <div className="flex gap-1 items-start justify-center">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
+                        <img
+                          src={
+                            import.meta.env.BASE_URL +
+                            "assets/indian-doctor.png"
+                          }
+                          alt="Apollo Icon"
+                          className={`flex-shrink-0 w-6 h-6`}
+                        />
+                        {/* <ApolloAssistIcon
                           size={32}
                           isAnimating={isBotIconAnimating}
                         /> */}
-                    </div>
-                    <div className="flex-1">
-                      <div className="inline-flex items-center text-sm leading-relaxed p-3 rounded-3xl rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]">
-                        <div
-                          className="flex items-center gap-1.5"
-                          aria-label="Bot is typing">
-                          {[0, 1, 2].map((index) => (
-                            <span
-                              key={index}
-                              className="w-2 h-2 rounded-full bg-slate-400 animate-pulse"
-                              style={{ animationDelay: `${index * 150}ms` }}
-                            />
-                          ))}
+                      </div>
+                      <div className="flex-1">
+                        <div className="inline-flex items-center text-sm leading-relaxed p-3 rounded-3xl rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]">
+                          <div
+                            className="flex items-center gap-1.5"
+                            aria-label="Bot is typing">
+                            {[0, 1, 2].map((index) => (
+                              <span
+                                key={index}
+                                className="w-2 h-2 rounded-full bg-slate-400 animate-pulse"
+                                style={{ animationDelay: `${index * 150}ms` }}
+                              />
+                            ))}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
-              {progressMessage && !isStreaming && (
-                <div className="px-2 py-4">
-                  <div className="flex gap-1 items-start justify-center">
-                    <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
-                      <img
-                        src={
-                          import.meta.env.BASE_URL + "assets/indian-doctor.png"
-                        }
-                        alt="Apollo Icon"
-                        className={`flex-shrink-0 w-6 h-6`}
-                      />
-                      {/* <ApolloAssistIcon
+                )}
+                {progressMessage && !isStreaming && (
+                  <div className="px-2 py-4">
+                    <div className="flex gap-1 items-start justify-center">
+                      <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
+                        <img
+                          src={
+                            import.meta.env.BASE_URL +
+                            "assets/indian-doctor.png"
+                          }
+                          alt="Apollo Icon"
+                          className={`flex-shrink-0 w-6 h-6`}
+                        />
+                        {/* <ApolloAssistIcon
                         size={32}
                         isAnimating={isBotIconAnimating}
                       /> */}
-                    </div>
-                    <div className="flex-1">
-                      <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
-                        <div className="ml-2 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
-                          {progressMessage}
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm leading-relaxed px-3 rounded-lg text-[var(--color-foreground)] bg-[var(--color-card)]">
+                          <div className="ml-2 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
+                            {progressMessage}
+                          </div>
                         </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              )}
+                )}
+              </div>
             </div>
           </div>
 

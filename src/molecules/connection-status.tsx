@@ -54,10 +54,10 @@ export function ConnectionStatus({
   if (startNewConnection) {
     return (
       <div
-        className={`mx-4 mb-3 px-2 py-1 bg-[#FFFBEB] border border-[#FEE39B] rounded-lg ${className}`}>
+        className={`mx-4 mb-3 px-2 py-1 bg-[var(--color-background-primary-subtle)] border border-[var(--color-primary)] rounded-lg hover:bg-[var(--color-primary-hover)] ${className}`}>
         <div className="flex items-center gap-3">
           {/* Warning Icon */}
-          <div className="w-4 h-4 bg-[#F7B500] rounded-full flex items-center justify-center flex-shrink-0">
+          <div className="w-4 h-4 bg-[#F7B500]  rounded-full flex items-center justify-center flex-shrink-0">
             <span className="text-white text-sm font-bold">!</span>
           </div>
           {/* Error Message */}

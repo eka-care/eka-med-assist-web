@@ -25,7 +25,7 @@ export function QuickActions({
   disabled = false,
 }: QuickActionsProps) {
   return (
-    <div className="flex flex-col gap-2 px-4">
+    <div className="flex flex-col items-end gap-2 px-4">
       {actions.map((action) => (
         <Button
           key={action.id}
