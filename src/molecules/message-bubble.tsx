@@ -272,7 +272,7 @@ export function MessageBubble({
                   <img
                     src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
                     alt="Apollo Icon"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover scale-125"
                   />
                 </div>
               )}
@@ -334,11 +334,7 @@ export function MessageBubble({
           )} */}
           {files && files.length > 0 && (
             <div className="mt-2">
-              <FilePreviewList
-                files={files}
-                isPreview={false}
-                className=""
-              />
+              <FilePreviewList files={files} isPreview={false} className="" />
             </div>
           )}
           {/* Display common content for bot messages */}
@@ -349,7 +345,7 @@ export function MessageBubble({
                   <img
                     src={import.meta.env.BASE_URL + "assets/indian-doctor.png"}
                     alt="Apollo Icon"
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-cover scale-125"
                   />
                 )}
               </div>
