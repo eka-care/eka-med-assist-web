@@ -54,6 +54,7 @@ interface ChatWidgetProps {
   isMobile?: boolean;
   isLoading?: boolean;
   isOnline?: boolean;
+  isFullMode?: boolean;
 }
 
 export function ChatWidget({
@@ -67,6 +68,7 @@ export function ChatWidget({
   isMobile = false,
   isLoading = false,
   isOnline = true,
+  isFullMode = false,
 }: ChatWidgetProps) {
   const [messages, setMessages] = useState<Message[]>([
     {
@@ -676,6 +678,20 @@ export function ChatWidget({
               active: true,
               isSending: false,
             }));
+          } else if (
+            !response.success &&
+            response?.data?.error?.code ===
+              MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.code
+          ) {
+            await sendHiddenChatMessage({
+              message:
+                response?.data?.error?.msg ||
+                MOBILE_VERIFICATION_ERROR_MESSAGES.TOOL_ERROR.msg,
+              tool_use_id: tool_use_id,
+              tool_use_params: {
+                mobile_number: mobVerificationStatusRef.current.mobile_number,
+              },
+            });
           } else if (response?.success && response?.data?.uhids?.length) {
             setMobVerificationStatus((prev) => ({
               ...prev,
@@ -1310,6 +1326,7 @@ export function ChatWidget({
         onStartSession={handleStartNewSession}
         connectionStatus={connectionStatus}
         isOnline={isOnline}
+        isFullMode={isFullMode}
       />
 
       {/* Loading State */}
@@ -1344,7 +1361,10 @@ export function ChatWidget({
             }}
             onTouchStart={(e) => isMobile && e.stopPropagation()}
             onTouchMove={(e) => isMobile && e.stopPropagation()}>
-            <div className={`min-h-full flex flex-col justify-end ${isMobile ? "pb-4" : "pb-4"}`}>
+            <div
+              className={`min-h-full flex flex-col justify-end ${
+                isMobile ? "pb-4" : "pb-4"
+              }`}>
               <div className="sticky top-0 z-10 bg-[var(--color-card)] py-1 px-4 flex items-center justify-center">
                 <div className="text-xs text-[var(--color-muted-foreground)] text-center">
                   {(() => {

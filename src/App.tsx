@@ -19,6 +19,7 @@ function App({ config }: AppProps = {}) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [isFullMode, setIsFullMode] = useState(false);
   const { isOnline } = useNetworkStatus();
   const setSessionId = useSessionStore((state) => state.setSessionId);
   const setSessionToken = useSessionStore((state) => state.setSessionToken);
@@ -39,6 +40,7 @@ function App({ config }: AppProps = {}) {
         );
 
       setIsMobile(config?.mode === 'full' || isMobileDevice);
+      setIsFullMode(config?.mode === 'full');
     };
 
     checkMobile();
@@ -152,6 +154,7 @@ function App({ config }: AppProps = {}) {
               onStartSession={handleOpenWidget}
               isLoading={isLoading}
               isOnline={isOnline}
+              isFullMode={isFullMode}
             />
           )}
         </div>

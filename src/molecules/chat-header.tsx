@@ -2,6 +2,7 @@ import { Button } from "@ui/index";
 import { Maximize2, X, Plus, Minimize2 } from "lucide-react";
 import { Separator } from "@ui/index";
 import { CONNECTION_STATUS } from "@/types/widget";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface ChatHeaderProps {
   title: string;
@@ -15,6 +16,7 @@ interface ChatHeaderProps {
   isConnected?: boolean;
   connectionStatus: CONNECTION_STATUS;
   isOnline: boolean;
+  isFullMode?: boolean;
 }
 
 export function ChatHeader({
@@ -29,7 +31,52 @@ export function ChatHeader({
   // isConnected = false,
   connectionStatus,
   isOnline,
+  isFullMode = false,
 }: ChatHeaderProps) {
+  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: Event) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
+        setIsDropdownOpen(false);
+      }
+    }
+    // In Shadow DOM, we need to listen on the shadow root or document
+    const shadowRoot = dropdownRef.current?.getRootNode() as ShadowRoot;
+    const eventTarget =
+      shadowRoot instanceof ShadowRoot ? shadowRoot : document;
+    eventTarget.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      eventTarget.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
+
+  const handleDropdownToggle = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDropdownOpen((prev) => !prev);
+    },
+    [isDropdownOpen]
+  );
+
+  const handleStartSession = useCallback(
+    (e: React.MouseEvent) => {
+      e.preventDefault();
+      e.stopPropagation();
+      setIsDropdownOpen(false);
+      // Add a small delay to ensure state update completes
+      setTimeout(() => {
+        onStartSession();
+      }, 0);
+    },
+    [onStartSession]
+  );
   return (
     <div
       className={`relative flex items-center justify-between px-4 py-4 bg-[var(--color-primary-background-default)]  ${
@@ -67,16 +114,33 @@ export function ChatHeader({
       </div>
       <div className="flex items-center gap-1">
         {/* Custom dropdown to avoid aria-hidden conflicts */}
-        <div className="relative">
+
+        {/* Custom dropdown to avoid aria-hidden conflicts */}
+        <div className="relative" ref={dropdownRef}>
           <Button
             variant="ghost"
             size="sm"
-            aria-label="Start New Chat"
-            title="Start New Chat"
-            className="h-8 w-8 p-0 text-[var(--color-background)] hover:bg-[var(--color-background-primary-default)] hover:text-[var(--color-primary-foreground)] cursor-pointer"
-            onClick={onStartSession}>
-            <Plus className="h-4 w-4" />
+            className="h-8 w-8 p-0 hover:bg-white/10 rounded-full"
+            onClick={handleDropdownToggle}>
+            <Plus className="h-full w-full text-white" />
           </Button>
+          {/* Dropdown content */}
+          {isDropdownOpen && (
+            <div
+              className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[9999]"
+              onMouseDown={(e) => {
+                // Prevent the outside click handler from firing
+                e.stopPropagation();
+              }}>
+              <div className="py-1">
+                <button
+                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[var(--color-card)] focus:bg-[var(--color-card)] focus:outline-none"
+                  onClick={handleStartSession}>
+                  Start New Chat
+                </button>
+              </div>
+            </div>
+          )}
         </div>
 
         {!isMobile && (
@@ -94,14 +158,16 @@ export function ChatHeader({
           </Button>
         )}
 
-        <Button
-          variant="ghost"
-          size="sm"
-          title="Close Chat"
-          className="h-6 w-6 p-0 text-[var(--color-background)] hover:bg-[var(--color-background-primary-default)] hover:text-[var(--color-primary-foreground)] cursor-pointer"
-          onClick={onClose}>
-          <X className="h-4 w-4" />
-        </Button>
+        {!isFullMode && (
+          <Button
+            variant="ghost"
+            size="sm"
+            title="Close Chat"
+            className="h-6 w-6 p-0 text-[var(--color-background)] hover:bg-[var(--color-background-primary-default)] hover:text-[var(--color-primary-foreground)] cursor-pointer"
+            onClick={onClose}>
+            <X className="h-4 w-4" />
+          </Button>
+        )}
       </div>
 
       {/* Subtle separator line */}
