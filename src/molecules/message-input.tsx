@@ -1,5 +1,5 @@
 import { useState, useRef, useMemo, useEffect, useCallback } from "react";
-import { Mic, Send, Plus, Trash2, Check, Loader2 } from "lucide-react";
+import { Mic, Send, Plus, Trash2, Check, Loader2, StopCircle } from "lucide-react";
 import { Button, Textarea, voiceListeningGif } from "@ui/index";
 import { useAudioService } from "@/custom-hooks/useAudioService";
 import formatTime from "@/utils/formatTime";
@@ -42,6 +42,7 @@ interface MessageInputProps {
     tool_use_id?: string;
     tool_use_params?: any;
   }) => void;
+  onStopStreaming: () => void;
   onFinalAudioStream: (audioData: AudioData) => void;
   onFileUpload: (files: FileList, message?: string) => void;
   onInputChange?: (value: string) => void;
@@ -58,6 +59,7 @@ export function MessageInput({
   onSendMessage,
   onFinalAudioStream,
   onFileUpload,
+  onStopStreaming,
   onInputChange,
   inlineText,
   placeholder = "Message Apollo Assist...",
@@ -519,6 +521,10 @@ export function MessageInput({
     }
   };
 
+  const handleStopStreaming = async () => {
+    await onStopStreaming();
+  };
+
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
@@ -683,7 +689,7 @@ export function MessageInput({
             disabled={isSending}>
             <Trash2 className="h-4 w-4" />
           </Button>
-        ) : (
+        ) :(
           <Button
             variant="ghost"
             size="sm"
@@ -781,6 +787,15 @@ export function MessageInput({
                 ) : (
                   <Send className="h-4 w-4 text-[var(--color-primary-foreground)]" />
                 )}
+              </Button>
+            ) : isStreaming ? (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 w-8 p-0 hover:bg-[var(--color-accent)] flex-shrink-0"
+                onClick={handleStopStreaming}
+                disabled={isSending}>
+                <StopCircle className="h-4 w-4 text-red-600" />
               </Button>
             ) : (
               <Button

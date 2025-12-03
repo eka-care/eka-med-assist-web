@@ -29,6 +29,7 @@ import getAvailabiltyDates from "@/utils/getAvailabiltyDates";
 import getAvailabilitySlots from "@/utils/getAvailabilitySlots";
 import { USER_FEEDBACK } from "@/configs/enums";
 import patchFeedbackMessage from "@/api/patch-feedback-message";
+import { postStopStreaming } from "@/api/post-stop-streaming";
 
 export enum MOBILE_VERIFICATION_STAGE {
   MOBILE_NUMBER = "mobile",
@@ -887,6 +888,10 @@ export function ChatWidget({
     }
   };
 
+  const handleStopStreaming = async () => {
+    await postStopStreaming(sessionId);
+  };
+  
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
     if (!isOnline) {
@@ -1527,6 +1532,7 @@ export function ChatWidget({
                 onFinalAudioStream={handleFinalAudioStream}
                 inlineText={inlineText || ""}
                 onFileUpload={handleFileUpload}
+                onStopStreaming={handleStopStreaming}
                 disabled={
                   isWaitingForResponse ||
                   !!progressMessage?.length ||
