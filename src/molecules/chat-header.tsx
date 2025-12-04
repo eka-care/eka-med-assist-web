@@ -120,21 +120,22 @@ export function ChatHeader({
           <Button
             variant="ghost"
             size="sm"
-            className="h-8 w-8 p-0 hover:bg-white/10 rounded-full"
+            title="Start New Chat"
+            className="h-8 w-8 p-0 hover:bg-white/10 rounded-full cursor-pointer"
             onClick={handleDropdownToggle}>
             <Plus className="h-full w-full text-white" />
           </Button>
           {/* Dropdown content */}
           {isDropdownOpen && (
             <div
-              className="absolute right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[9999]"
+              className="absolute z-50 right-0 top-full mt-2 w-48 bg-white border border-gray-200 rounded-md shadow-lg z-[9999]"
               onMouseDown={(e) => {
                 // Prevent the outside click handler from firing
                 e.stopPropagation();
               }}>
               <div className="py-1">
                 <button
-                  className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-[var(--color-card)] focus:bg-[var(--color-card)] focus:outline-none"
+                  className="block w-full text-center p-2 text-sm text-gray-700 hover:bg-[var(--color-card)] focus:bg-[var(--color-card)] focus:outline-none cursor-pointer"
                   onClick={handleStartSession}>
                   Start New Chat
                 </button>

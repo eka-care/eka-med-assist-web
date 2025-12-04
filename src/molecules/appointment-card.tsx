@@ -447,7 +447,7 @@ export function AppointmentCard({
           )}
           <div className="min-w-0">
             <div className="flex flex-wrap items-baseline gap-2">
-              <h3 className="truncate text-base font-bold text-slate-900">
+              <h3 className=" text-base font-bold text-slate-900">
                 {doctor.name}
               </h3>
               {doctor.profile_link ? (
@@ -596,7 +596,7 @@ export function AppointmentCard({
                           ].join(" ")}>
                           <span
                             className={[
-                              "text-[10px] tracking-wide truncate w-full text-center",
+                              "text-[10px] tracking-wide w-full text-center",
                               isSelected
                                 ? "text-[var(--color-primary)]"
                                 : isDisabled
@@ -607,7 +607,7 @@ export function AppointmentCard({
                           </span>
                           <span
                             className={[
-                              "text-xs font-bold truncate w-full text-center",
+                              "text-xs font-bold  w-full text-center",
                               isSelected
                                 ? "text-[var(--color-primary)]"
                                 : isDisabled
