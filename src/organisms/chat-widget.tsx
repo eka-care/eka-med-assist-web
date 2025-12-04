@@ -1440,7 +1440,7 @@ export function ChatWidget({
                 {/* Show loading indicator when waiting for response */}
                 {isWaitingForResponse && !isStreaming && (
                   <div className="px-2 py-4">
-                    <div className="flex gap-1 items-start justify-center">
+                    <div className="flex gap-2 items-start justify-center">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
                         <img
                           src={
@@ -1448,7 +1448,7 @@ export function ChatWidget({
                             "assets/indian-doctor.png"
                           }
                           alt="Apollo Icon"
-                          className={`flex-shrink-0 w-full h-full`}
+                          className={`flex-shrink-0 w-full h-full object-cover scale-125`}
                         />
                         {/* <ApolloAssistIcon
                           size={32}
