@@ -1307,12 +1307,12 @@ export function ChatWidget({
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"
-    : `w-full max-w-sm min-w-[384px] bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
+    : `w-[460px] bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
   const chatHeight = isMobile
     ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
     ? "flex-1 min-h-0"
-    : "h-[500px]";
+    : "h-[644px]";
 
   return (
     <Card className={containerStyles}>
