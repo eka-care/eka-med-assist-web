@@ -1365,7 +1365,7 @@ export function ChatWidget({
               className={`min-h-full flex flex-col justify-end ${
                 isMobile ? "pb-4" : "pb-4"
               }`}>
-              <div className="sticky top-0 z-10 bg-[var(--color-card)] py-1 px-4 flex items-center justify-center">
+              <div className="sticky top-0 py-1 px-4 flex items-center justify-center">
                 <div className="text-xs text-[var(--color-muted-foreground)] text-center">
                   {(() => {
                     const now = new Date();
@@ -1380,7 +1380,7 @@ export function ChatWidget({
                   })()}
                 </div>
               </div>
-              <div className="space-y-1 pb-4">
+              <div className="space-y-1">
                 {messages.map((message, index) => (
                   <MessageBubble
                     key={index}
@@ -1441,14 +1441,14 @@ export function ChatWidget({
                 {isWaitingForResponse && !isStreaming && (
                   <div className="px-2 py-4">
                     <div className="flex gap-1 items-start justify-center">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
                         <img
                           src={
                             import.meta.env.BASE_URL +
                             "assets/indian-doctor.png"
                           }
                           alt="Apollo Icon"
-                          className={`flex-shrink-0 w-6 h-6`}
+                          className={`flex-shrink-0 w-full h-full`}
                         />
                         {/* <ApolloAssistIcon
                           size={32}
