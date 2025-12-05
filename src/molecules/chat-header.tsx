@@ -79,7 +79,7 @@ export function ChatHeader({
   );
   return (
     <div
-      className={`relative flex items-center justify-between px-4 py-4 bg-[var(--color-primary-background-default)]  ${
+      className={`relative flex items-center justify-between px-4 py-6 bg-[var(--color-primary-background-default)]  ${
         isExpanded || isMobile ? "sticky top-0 z-10" : "rounded-t-lg"
       }`}>
       <div className="flex items-center gap-2">

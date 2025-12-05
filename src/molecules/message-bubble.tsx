@@ -3,6 +3,8 @@ import {
   MultiSelectGroup,
   MULTI_SELECT_ADDITIONAL_OPTION,
   PillItem,
+  ThumbsUpIcon,
+  ThumbsDownIcon,
 } from "@ui/index";
 import { QuickActions } from "./quick-actions";
 import { useState, useEffect, useRef, useMemo } from "react";
@@ -15,7 +17,6 @@ import { TipsDisplay } from "./tips-display";
 // import useMedAssistStore from "@/stores/medAssistStore";
 import { DISLIKE_FEEDBACK_OPTIONS, TDoctor, TLabPackage } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
-import { ThumbsDown, ThumbsUp } from "lucide-react";
 import { USER_FEEDBACK } from "@/configs/enums";
 import { FeedbackFollowUp } from "./feedback-followup";
 import remarkGfm from "remark-gfm";
@@ -541,14 +542,14 @@ export function MessageBubble({
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
                 onClick={() => handleToggleFeedback(USER_FEEDBACK.LIKE)}>
-                <ThumbsUp className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+                <ThumbsUpIcon className="h-3 w-3 text-[var(--color-muted-foreground)]" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
                 onClick={() => handleToggleFeedback(USER_FEEDBACK.DISLIKE)}>
-                <ThumbsDown className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+                <ThumbsDownIcon className="h-3 w-3 text-[var(--color-muted-foreground)]" />
               </Button>
               {/* <Button
         variant="ghost"
@@ -569,7 +570,7 @@ export function MessageBubble({
               size="sm"
               className="h-6 w-6 pb-4 mt-3 ml-10 hover:bg-[var(--color-muted)]"
               disabled={true}>
-              <ThumbsUp className="h-3 w-3 text-primary" fill="currentColor" />
+              <ThumbsUpIcon className="h-3 w-3 text-primary" />
             </Button>
           ) : userFeedback === USER_FEEDBACK.DISLIKE ? (
             <Button
@@ -577,10 +578,7 @@ export function MessageBubble({
               size="sm"
               className="h-6 w-6 pb-4 mt-3 ml-10 hover:bg-[var(--color-muted)]"
               disabled={true}>
-              <ThumbsDown
-                className="h-3 w-3 text-primary"
-                fill="currentColor"
-              />
+              <ThumbsDownIcon className="h-3 w-3 text-primary" />
             </Button>
           ) : null}
 
