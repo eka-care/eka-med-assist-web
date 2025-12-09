@@ -534,6 +534,7 @@ export function MessageBubble({
           {isBot &&
           !isStreaming &&
           messageId !== "1" &&
+          !verificationStatus &&
           isLastMessage &&
           userFeedback === USER_FEEDBACK.NONE ? (
             <div className="flex items-center gap-1 mt-3 ml-10 pb-4">
@@ -542,14 +543,14 @@ export function MessageBubble({
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
                 onClick={() => handleToggleFeedback(USER_FEEDBACK.LIKE)}>
-                <ThumbsUpIcon className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+                <ThumbsUpIcon className="h-3 w-3 text-black/50" />
               </Button>
               <Button
                 variant="ghost"
                 size="sm"
                 className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
                 onClick={() => handleToggleFeedback(USER_FEEDBACK.DISLIKE)}>
-                <ThumbsDownIcon className="h-3 w-3 text-[var(--color-muted-foreground)]" />
+                <ThumbsDownIcon className="h-3 w-3 text-black/50" />
               </Button>
               {/* <Button
         variant="ghost"
