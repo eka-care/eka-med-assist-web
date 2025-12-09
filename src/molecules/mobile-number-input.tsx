@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Send, Loader2, ChevronDown } from "lucide-react";
+import { Send, Loader2 } from "lucide-react";
 import { Input } from "@ui/index";
 import { Button } from "@ui/index";
 
@@ -64,10 +64,14 @@ export function MobileNumberInput({
         <Button
           variant="outline"
           size="sm"
-          className="h-12 px-3 flex items-center gap-2 border-[var(--color-border)] hover:bg-[var(--color-accent)]"
+          className="h-12 px-3 flex items-center gap-2 border-[var(--color-border)] hover:bg-[var(--color-accent)] rounded-xl"
           disabled={disabled}>
+          <img
+            src={import.meta.env.BASE_URL + "assets/indian-flag.svg"}
+            alt="Indian flag"
+            className="w-4 h-4 rounded-full"
+          />
           <span className="text-sm font-medium">+91</span>
-          <ChevronDown className="h-4 w-4 text-[var(--color-muted-foreground)]" />
         </Button>
 
         {/* Mobile Number Input */}
@@ -80,7 +84,7 @@ export function MobileNumberInput({
             onKeyPress={handleKeyPress}
             placeholder={isLoading ? "Sending OTP..." : placeholder}
             disabled={disabled || isLoading}
-            className="h-12 text-base border-[var(--color-border)] focus:border-[var(--color-primary)] focus:ring-2 focus:ring-[var(--color-primary)]/20"
+            className="h-12 rounded-xl text-base border-[var(--color-muted-foreground)] focus:border-[var(--color-primary-primary)] focus:ring-2 focus:ring-[var(--color-primary-primary)]/20 bg-[var(--color-input)]"
             maxLength={10}
           />
         </div>
@@ -90,7 +94,7 @@ export function MobileNumberInput({
           onClick={handleSendClick}
           disabled={!isValidMobile || disabled || isLoading}
           size="sm"
-          className="h-12 w-12 p-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 rounded-full">
+          className="h-12 w-12 p-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 rounded-lg">
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-foreground)]" />
           ) : (

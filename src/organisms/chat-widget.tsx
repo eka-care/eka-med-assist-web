@@ -1307,12 +1307,12 @@ export function ChatWidget({
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"
-    : `w-full max-w-sm min-w-[384px] bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
+    : `w-[460px] bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
   const chatHeight = isMobile
     ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
     ? "flex-1 min-h-0"
-    : "h-[500px]";
+    : "h-[644px]";
 
   return (
     <Card className={containerStyles}>
@@ -1365,7 +1365,7 @@ export function ChatWidget({
               className={`min-h-full flex flex-col justify-end ${
                 isMobile ? "pb-4" : "pb-4"
               }`}>
-              <div className="sticky top-0 z-10 bg-[var(--color-card)] py-1 px-4 flex items-center justify-center">
+              <div className="sticky top-0 py-1 px-4 flex items-center justify-center">
                 <div className="text-xs text-[var(--color-muted-foreground)] text-center">
                   {(() => {
                     const now = new Date();
@@ -1380,7 +1380,7 @@ export function ChatWidget({
                   })()}
                 </div>
               </div>
-              <div className="space-y-1 pb-4">
+              <div className="space-y-1">
                 {messages.map((message, index) => (
                   <MessageBubble
                     key={index}
@@ -1440,15 +1440,15 @@ export function ChatWidget({
                 {/* Show loading indicator when waiting for response */}
                 {isWaitingForResponse && !isStreaming && (
                   <div className="px-2 py-4">
-                    <div className="flex gap-1 items-start justify-center">
-                      <div className="flex-shrink-0 w-6 h-6 rounded-full overflow-hidden">
+                    <div className="flex gap-2 items-start justify-center">
+                      <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
                         <img
                           src={
                             import.meta.env.BASE_URL +
                             "assets/indian-doctor.png"
                           }
                           alt="Apollo Icon"
-                          className={`flex-shrink-0 w-6 h-6`}
+                          className={`flex-shrink-0 w-full h-full object-cover scale-125`}
                         />
                         {/* <ApolloAssistIcon
                           size={32}

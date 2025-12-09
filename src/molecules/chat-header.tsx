@@ -79,7 +79,7 @@ export function ChatHeader({
   );
   return (
     <div
-      className={`relative flex items-center justify-between px-4 py-4 bg-[var(--color-primary-background-default)]  ${
+      className={`relative flex items-center justify-between px-6 py-4 bg-[var(--color-primary-background-default)]  ${
         isExpanded || isMobile ? "sticky top-0 z-10" : "rounded-t-lg"
       }`}>
       <div className="flex items-center gap-2">
@@ -103,7 +103,7 @@ export function ChatHeader({
           <h2 className="font-semibold text-[var(--color-background)] text-lg">
             {title}
           </h2>
-          <p className="text-sm text-[var(--color-background)]">
+          <p className="text-xs text-[var(--color-background)]/80">
             {connectionStatus === CONNECTION_STATUS.CONNECTED && isOnline
               ? "Here for You 24/7"
               : connectionStatus === CONNECTION_STATUS.CONNECTING && isOnline

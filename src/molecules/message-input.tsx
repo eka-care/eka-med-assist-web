@@ -740,7 +740,7 @@ export function MessageInput({
                   : placeholder
               }
               disabled={isInputDisabled}
-              className="border-0 shadow-none px-0 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm resize-none break-word overflow-hidden"
+              className="border-0 shadow-none px-0 py-2 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm resize-none break-word overflow-hidden"
               rows={1}
               style={{
                 minHeight: "40px",
