@@ -69,7 +69,7 @@ export function MobileNumberInput({
           <img
             src={import.meta.env.BASE_URL + "assets/indian-flag.svg"}
             alt="Indian flag"
-            className="w-4 h-4"
+            className="w-4 h-4 rounded-full"
           />
           <span className="text-sm font-medium">+91</span>
         </Button>
@@ -94,7 +94,7 @@ export function MobileNumberInput({
           onClick={handleSendClick}
           disabled={!isValidMobile || disabled || isLoading}
           size="sm"
-          className="h-12 w-12 p-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 rounded-full">
+          className="h-12 w-12 p-0 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 rounded-lg">
           {isLoading ? (
             <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-foreground)]" />
           ) : (
