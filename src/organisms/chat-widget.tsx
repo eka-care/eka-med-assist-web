@@ -1364,7 +1364,7 @@ export function ChatWidget({
               className={`min-h-full flex flex-col justify-end ${
                 isMobile ? "pb-4" : "pb-4"
               }`}>
-              <div className="sticky top-0 py-1 px-4 flex items-center justify-center">
+              <div className="py-1 px-4 flex items-center justify-center">
                 <div className="text-xs text-[var(--color-muted-foreground)] text-center">
                   {(() => {
                     const now = new Date();
@@ -1438,7 +1438,7 @@ export function ChatWidget({
 
                 {/* Show loading indicator when waiting for response */}
                 {isWaitingForResponse && !isStreaming && (
-                  <div className="px-2 py-4">
+                  <div className="px-4 py-4">
                     <div className="flex gap-2 items-start justify-center">
                       <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
                         <img
