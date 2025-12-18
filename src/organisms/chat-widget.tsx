@@ -1303,7 +1303,7 @@ export function ChatWidget({
     }
   };
 
-    const containerStyles = isMobile
+  const containerStyles = isMobile
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
     ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"

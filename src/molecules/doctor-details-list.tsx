@@ -7,10 +7,15 @@ import AppointmentCard from "./appointment-card";
 import useMedAssistStore from "@/stores/medAssistStore";
 import getDoctorDetails from "@/utils/getDoctorDetails";
 
+export type BookInfo = {
+  date: string;
+  time: string;
+  doctorData: { doctor: TDoctor; hospital_id: string; region_id: string };
+};
 type Props = {
   doctorDetails: TDoctorDetails;
   callbacks?: TCallbacks;
-  onBook?: (info: { date: string; time: string; doctor: TDoctor }) => void;
+  onBook?: (info: BookInfo) => void;
   disabled?: boolean;
   refreshSession: () => Promise<boolean>;
   getAvailabilityDatesForAppointment: (doctorData: {
@@ -128,12 +133,9 @@ export function DoctorDetailsList({
     }
   };
 
-  const handleBook = (
-    info: { date: string; time: string },
-    doctor: TDoctor
-  ) => {
+  const handleBook = (bookInfo: BookInfo) => {
     if (onBook) {
-      onBook({ ...info, doctor });
+      onBook(bookInfo);
     }
   };
 
@@ -214,7 +216,7 @@ export function DoctorDetailsList({
                 doctor={doctor}
                 availability={doctorDetails.availability}
                 callbacks={callbacks}
-                onBook={(info) => handleBook(info, doctor)}
+                onBook={handleBook}
                 disabled={disabled}
                 getAvailabilityDatesForAppointment={
                   getAvailabilityDatesForAppointment

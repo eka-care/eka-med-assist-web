@@ -15,14 +15,16 @@ import {
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { TAvailability, TCallbacks, TDoctor } from "@/types/widget";
+import { TAvailability, TCallbacks, TDoctor, THospital } from "@/types/widget";
 import useSessionStore from "@/stores/medAssistStore";
+import { CustomSelect, } from "@ui/eka-ui/molecules/custom-select";
+import { BookInfo } from "./doctor-details-list";
 
 type Props = {
   doctor: TDoctor;
   availability?: TAvailability;
   callbacks: TCallbacks | undefined;
-  onBook?: (info: { date: string; time: string }) => void;
+  onBook?: (info: BookInfo) => void;
   disabled?: boolean;
   getAvailabilityDatesForAppointment: (doctorData: {
     doctor_id: string;
@@ -52,7 +54,9 @@ export function AppointmentCard({
   const [activeIndex, setActiveIndex] = useState(0);
   const [selectedSlot, setSelectedSlot] = useState<string | null>(null);
   const [calendarOffset, setCalendarOffset] = useState(0);
-
+  const [selectedHospital, setSelectedHospital] = useState<THospital | null>(
+    doctor.hospitals[0] || null
+  );
   // New state for callback-based availability
   const [loadingDates, setLoadingDates] = useState(true);
   const [loadingSlots, setLoadingSlots] = useState(false);
@@ -137,8 +141,8 @@ export function AppointmentCard({
         (!selectedSlot?.slots || selectedSlot.slots.length === 0) &&
         callbacks?.tool_callback_availability_slots &&
         doctor.doctor_id &&
-        doctor.hospital_id &&
-        doctor.region_id &&
+        selectedHospital?.hospital_id &&
+        selectedHospital?.region_id &&
         sessionId &&
         !loadingDates // Only load if we're not currently loading dates
       ) {
@@ -271,8 +275,8 @@ export function AppointmentCard({
       callbacks?.tool_callback_availability_slots &&
       (!selectedDateData?.slots || selectedDateData.slots.length === 0) &&
       doctor.doctor_id &&
-      doctor.hospital_id &&
-      doctor.region_id &&
+      selectedHospital?.hospital_id &&
+      selectedHospital?.region_id &&
       sessionId
     ) {
       loadSlotsForDate(dateString);
@@ -293,7 +297,15 @@ export function AppointmentCard({
 
   function handleBook() {
     if (onBook && activeDay && selectedSlot) {
-      onBook({ date: activeDay.date, time: selectedSlot });
+      onBook({
+        date: activeDay.date,
+        time: selectedSlot,
+        doctorData: {
+          doctor,
+          hospital_id: selectedHospital?.hospital_id || "",
+          region_id: selectedHospital?.region_id || "",
+        },
+      });
     }
   }
 
@@ -314,8 +326,8 @@ export function AppointmentCard({
 
       const result = await getAvailabilityDatesForAppointment({
         doctor_id: doctor.doctor_id,
-        hospital_id: doctor?.hospital_id || "",
-        region_id: doctor?.region_id || "",
+        hospital_id: selectedHospital?.hospital_id || "",
+        region_id: selectedHospital?.region_id || "",
       });
 
       if (!result.success) {
@@ -371,8 +383,8 @@ export function AppointmentCard({
   const loadSlotsForDate = async (date: string) => {
     if (
       !doctor.doctor_id ||
-      !doctor.hospital_id ||
-      !doctor.region_id ||
+      !selectedHospital?.hospital_id ||
+      !selectedHospital?.region_id ||
       !sessionId
     ) {
       console.warn("Missing required parameters for loading slots");
@@ -387,8 +399,8 @@ export function AppointmentCard({
 
       const result = await getAvailableSlotsForAppointment(date, {
         doctor_id: doctor.doctor_id,
-        hospital_id: doctor?.hospital_id || "",
-        region_id: doctor?.region_id || "",
+        hospital_id: selectedHospital?.hospital_id || "",
+        region_id: selectedHospital?.region_id || "",
       });
 
       if (!result.success) {
@@ -429,6 +441,14 @@ export function AppointmentCard({
     }
   };
 
+  const handleHospitalChange = (hospitalId: string) => {
+    const hospital = doctor.hospitals.find((h) => h.hospital_id === hospitalId);
+    console.log("hospitalId", hospitalId,hospital);
+    if (hospital) {
+      console.log("hospital selected", hospital);
+      setSelectedHospital(hospital);
+    }
+  };
   return (
     <Card
       className="max-w-md rounded-xl border-slate-200 shadow-sm p-0"
@@ -504,13 +524,37 @@ export function AppointmentCard({
             </div>
           ) : null}
 
-          <div className="flex items-center gap-2 text-sm text-slate-900">
-            <Building2
-              className="h-4 w-4 text-[var(--color-primary)]"
-              aria-hidden
-            />
-            <span className="font-semibold">{doctor.hospital}</span>
-          </div>
+          {doctor?.hospitals && doctor.hospitals?.length > 1
+            ? selectedHospital &&
+              selectedHospital.name && (
+                <div className="flex items-center gap-2 text-sm text-slate-900">
+                  <Building2
+                    className="h-4 w-4 text-[var(--color-primary)]"
+                    aria-hidden
+                  />
+                  {/* <span className="font-semibold">{doctor.hospital}</span> */}
+                  <CustomSelect
+                    options={doctor.hospitals.map((hospital) => ({
+                      value: hospital.hospital_id,
+                      label: hospital.name,
+                    }))}
+                    placeholder="Select Hospital"
+                    disabled={disabled}
+                    onValueChange={handleHospitalChange}
+                    value={selectedHospital?.hospital_id || ""}
+                  />
+                </div>
+              )
+            : selectedHospital &&
+              selectedHospital.name && (
+                <div className="flex items-center gap-2 text-sm text-slate-900">
+                  <Building2
+                    className="h-4 w-4 text-[var(--color-primary)]"
+                    aria-hidden
+                  />
+                  {selectedHospital.name}
+                </div>
+              )}
         </div>
 
         {/* Conditional buttons */}

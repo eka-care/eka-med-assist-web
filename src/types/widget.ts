@@ -78,7 +78,7 @@ export interface Message {
 export type TDoctor = {
   name: string;
   specialty: string;
-  hospital: string;
+  hospitals: THospital[];
   timings?: string;
   experience?: string; // optional
   profile_link?: string; // optional
@@ -86,8 +86,14 @@ export type TDoctor = {
   languages?: string; //optional
   // Additional fields for API callbacks
   doctor_id: string;
-  hospital_id?: string; // optional - for availability API calls
-  region_id?: string; // optional - for availability API calls
+};
+
+export type THospital = {
+  name: string;
+  city: string;
+  state: string;
+  hospital_id: string;
+  region_id: string;
 };
 
 export type TAvailability = {
@@ -156,7 +162,6 @@ export const MOBILE_VERIFICATION_ERROR_MESSAGES = {
     msg: "Uhid is invalid, please try again",
   },
 };
-
 
 export const DISLIKE_FEEDBACK_OPTIONS: PillItem[] = [
   {

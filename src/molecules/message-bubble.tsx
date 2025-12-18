@@ -441,19 +441,23 @@ export function MessageBubble({
                   onBook={(info: {
                     date: string;
                     time: string;
-                    doctor: TDoctor;
+                    doctorData: {
+                      doctor: TDoctor;
+                      hospital_id?: string;
+                      region_id?: string;
+                    };
                   }) => {
                     onContentClick?.({
                       content: `I want to book an appointment for ${
-                        info.doctor?.name || "the doctor"
+                        info.doctorData?.doctor?.name || "the doctor"
                       } on ${info.date} for ${info.time}`,
                       tool_use_id: commonContentData.tool_use_id,
                       tool_use_params: {
                         selected_date: info.date,
                         selected_slot: info.time,
-                        doctor_id: info.doctor?.doctor_id,
-                        hospital_id: info.doctor?.hospital_id,
-                        region_id: info.doctor?.region_id,
+                        doctor_id: info?.doctorData?.doctor?.doctor_id,
+                        hospital_id: info?.doctorData?.hospital_id,
+                        region_id: info?.doctorData?.region_id,
                       },
                     });
                   }}
