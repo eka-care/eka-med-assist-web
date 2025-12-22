@@ -97,8 +97,10 @@ export type THospital = {
 };
 
 export type TAvailability = {
-  selected_date?: string; // optional
-  slots_details?: TSlotDetail[];
+  [hospital_id: string]: {
+    selected_date?: string; // optional
+    slots_details?: TSlotDetail[];
+  };
 };
 
 export type TSlotDetail = {
