@@ -536,13 +536,30 @@ export class WebSocketService {
    * Set files for upload when presigned URL is received
    */
   public setFilesForUpload(files: File[], message?: string): void {
-    this.pendingFileData.files = files;
-    this.pendingFileData.format = files.length > 1 ? "zip" : files[0].type?.split?.("/")?.[1] || undefined;
+    const validFormats = [
+      "application/pdf",
+      "image/jpeg",
+      "image/png",
+      "image/jpg",
+      "image/tiff",
+      "text/plain",
+      "text/markdown",
+      "image/heif",
+      "image/heic",
+      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    ];
+    const validFiles =
+      files.filter((file) => validFormats.includes(file.type)) || [];
+    this.pendingFileData.files = validFiles;
+    this.pendingFileData.format =
+      validFiles.length > 1
+        ? "zip"
+        : validFiles[0].type?.split?.("/")?.[1] || undefined;
     if (message?.trim()) {
       this.pendingFileData.message = message;
     }
 
-    console.log(`Set ${files.length} files for upload`);
+    console.log(`Set ${validFiles.length} files for upload`);
   }
 
   /**
