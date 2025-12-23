@@ -584,16 +584,57 @@ export function MessageInput({
     if (e.target.files && e.target.files.length > 0) {
       const files = Array.from(e.target.files);
 
-      // Validate file types - only allow images and PDFs
+      // Helper function to validate file type using MIME type primarily
+      const isValidFileType = (file: File): boolean => {
+        const mimeType = file.type.toLowerCase();
+        const fileName = file.name.toLowerCase();
+        const fileExtension = fileName.split('.').pop() || '';
+
+        // Allowed MIME types
+        const allowedMimeTypes = [
+          // PDF
+          'application/pdf',
+          // Images
+          'image/jpeg',
+          'image/jpg',
+          'image/png',
+          'image/heic',
+          'image/heif',
+          // Documents
+          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
+          'image/tiff',
+          // Text files
+          'text/plain',
+          'text/markdown',
+        ];
+
+        // Primary check: Validate using MIME type
+        if (mimeType && allowedMimeTypes.some(allowedType => mimeType.includes(allowedType))) {
+          return true;
+        }
+
+        // Fallback: If MIME type is empty or not recognized, check file extension
+        // This handles cases where browsers don't set MIME types correctly
+        if (!mimeType || mimeType === '') {
+          const allowedExtensions = [
+            'pdf',
+            'jpg', 'jpeg', 'png', 'heic',
+            'docx', 'tiff',
+            'txt', 'md'
+          ];
+          return allowedExtensions.includes(fileExtension);
+        }
+
+        return false;
+      };
+
+      // Validate file types
       const validFiles = files.filter((file) => {
         console.log("file", file);
-        const isValidImage = file?.type?.startsWith("image/");
-        const isValidPDF = file.type === "application/pdf";
-
-        if (!isValidImage && !isValidPDF) {
+        if (!isValidFileType(file)) {
           setError({
             title: `File type not supported: ${file.name}`,
-            description: "Only images and PDF files are allowed.",
+            description: "Only PDF, images (JPG, JPEG, PNG, HEIC), documents (DOCX, TIFF), and text files (TXT, MD) are allowed.",
           });
           return false;
         }
@@ -668,7 +709,7 @@ export function MessageInput({
           ref={fileInputRef}
           type="file"
           multiple
-          accept="image/*,.pdf"
+          accept=".pdf,.jpg,.jpeg,.png,.heic,.docx,.tiff,.txt,.md,application/pdf,image/jpeg,image/png,image/heic,image/heif,image/tiff,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
           onChange={handleFileChange}
           className="hidden"
           data-max-size={MAX_FILE_SIZE.toString()}
