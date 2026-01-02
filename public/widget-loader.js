@@ -24,6 +24,11 @@
     isClosed: false,
   };
 
+  var Tags = [
+    "Ask Apollo AI to book an appointment",
+    "Ask Apollo AI to find a doctor",
+    "Ask Apollo AI about a disease",
+  ];
   // Cookie utilities for medassist-preferences
   function getCookie(name) {
     const value = "; " + document.cookie;
@@ -90,7 +95,7 @@
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
 
-      /* Stage 2: Oval with text */
+      /* Stage 2: Oval with text (Desktop) / Subtract Component (Mobile) */
       .eka-widget-button.stage-2 {
         width: 280px;
         height: 60px;
@@ -107,7 +112,7 @@
         transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
-      .eka-widget-button.stage-2:hover {
+      .eka-widget-button.stage-2:hover:not(.is-mobile) {
         transform: translateY(-2px);
         box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2);
       }
@@ -155,6 +160,149 @@
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+
+      /* Subtract Component for Mobile Stage 2 */
+      .eka-widget-button.stage-2.is-mobile {
+        width: fit-content;
+        height: fit-content;
+        min-width: 0;
+        min-height: 0;
+        border-radius: 0;
+        background: transparent;
+        box-shadow: none;
+        padding: 0;
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        left: auto;
+        transform: none;
+      }
+
+      .eka-widget-button.stage-2.is-mobile:hover {
+        transform: none;
+        box-shadow: none;
+      }
+
+      @media (max-width: 768px) {
+        .eka-widget-button.stage-2.is-mobile {
+          width: calc(100vw - 32px);
+          max-width: 358px;
+          height: fit-content;
+          left: 50%;
+          right: auto;
+          transform: translateX(-50%);
+        }
+
+        .eka-widget-button.stage-2.is-mobile:hover {
+          transform: translateX(-50%);
+          box-shadow: none;
+        }
+
+        .eka-subtract-container {
+          width: 100%;
+        }
+      }
+
+      .eka-subtract-container {
+        position: relative;
+        width: fit-content;
+        height: fit-content;
+        min-width: 0;
+        min-height: 0;
+        cursor: pointer;
+        display: inline-block;
+      }
+
+      .eka-subtract-svg {
+        display: block;
+        width: 358px;
+        height: 90.8554px;
+        position: relative;
+        z-index: 1;
+      }
+
+      @media (max-width: 768px) {
+        .eka-subtract-svg {
+          width: calc(100vw - 32px);
+          max-width: 358px;
+          height: auto;
+          aspect-ratio: 358 / 90.8554;
+        }
+      }
+
+      .eka-subtract-content {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        align-items: center;
+        justify-content: flex-start;
+        padding: 12px 16px;
+        pointer-events: none;
+        z-index: 2;
+      }
+
+      .eka-subtract-text {
+        flex: 1;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        justify-content: space-between;
+        pointer-events: auto;
+        cursor: pointer;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .eka-subtract-text span {
+        display: inline-block;
+        background: linear-gradient(90deg, #017594 0%, #00B3E2 50%, #017594 100%);
+        -webkit-background-clip: text;
+        background-clip: text;
+        -webkit-text-fill-color: transparent;
+        color: transparent;
+        font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      }
+
+      .eka-subtract-search-icon {
+        width: 24px;
+        height: 24px;
+        position: relative;
+        pointer-events: none;
+        flex-shrink: 0;
+      }
+
+      .eka-subtract-close {
+        position: absolute;
+        bottom: 8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 20px;
+        height: 20px;
+        border: none;
+        background: transparent;
+        color:rgb(19, 19, 19);
+        font-size: 22px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+        pointer-events: auto;
+        line-height: 1;
+        padding: 0;
+        border-radius: 50%;
+      }
+
+      .eka-subtract-close:hover {
+        opacity: 0.7;
+        background: rgba(0, 0, 0, 0.05);
       }
 
       /* Stage 3: Full overlay with floating elements */
@@ -372,11 +520,32 @@
           height: 50px;
         }
 
-        .eka-widget-button.stage-2 {
-          width: auto;
-          height: 55px;
-          border-radius: 27.5px;
-          // padding: 2px 15px;
+        .eka-widget-button.stage-2:not(.is-mobile) {
+          width: 280px;
+          height: 60px;
+        }
+
+        .eka-widget-button.stage-2:not(.is-mobile) {
+          width: 280px;
+          height: 60px;
+        }
+
+        .eka-subtract-container {
+          width: 100%;
+          height: 100%;
+        }
+
+        .eka-subtract-text {
+          font-size: 16px;
+        }
+
+        .eka-subtract-text span {
+          font-size: 16px;
+        }
+
+        .eka-subtract-content {
+          padding: 2px 20px;
+          padding-bottom: 32px;
         }
 
         .eka-stage-2-icon {
@@ -557,21 +726,105 @@
       loadApolloIcon(iconContainer, isMobile ? 32 : 40);
       button.appendChild(iconContainer);
     } else if (widgetState.stage === 2) {
-      // Stage 2: Oval with text
-      button.className = "eka-widget-button stage-2";
-      button.innerHTML = `
-        <div class="eka-stage-2-content" data-action="open">
-         <button class="eka-chat-close" data-action="close">×</button>
-          <div class="eka-stage-2-text">
-            <p class="eka-stage-2-title">Hi, Need some help?</p>
-            <p class="eka-stage-2-subtitle">I'm happy to assist.</p>
+      // Stage 2: Oval with text (Desktop) / Subtract Component (Mobile)
+      button.className = isMobile
+        ? "eka-widget-button stage-2 is-mobile"
+        : "eka-widget-button stage-2";
+
+      if (isMobile) {
+        // Mobile: Subtract Component (Speech Bubble)
+        button.innerHTML = `
+          <div class="eka-subtract-container" data-name="Subtract">
+            <svg class="eka-subtract-svg" fill="none" preserveAspectRatio="none" viewBox="0 0 358 90.8554">
+              <path 
+                d="M18.3955 1.5H339.602C348.91 1.5 356.456 9.046 356.456 18.3545V43.1338H356.485C356.489 43.9301 356.494 44.9076 356.499 46.0967L356.5 46.1025C356.561 54.1548 350.654 59.9883 342.561 59.9883H226.614L226.446 60.0273L225.696 60.2021L225.687 60.2041C217.645 62.1237 211.87 64.9641 207.409 68.1748C202.958 71.3784 199.869 74.9141 197.192 78.1123C194.478 81.3553 192.281 84.1198 189.493 86.1338C186.786 88.0894 183.477 89.3555 178.54 89.3555C169.9 89.3555 165.871 84.2425 159.843 77.5752C153.84 70.936 146.228 63.3276 130.605 60.0205L130.451 59.9883H15.4375C7.3457 59.9881 1.44543 54.1528 1.5 46.0977C1.52031 43.1065 1.54102 40.7509 1.54102 40.3799V18.3545C1.54109 9.04609 9.08712 1.50014 18.3955 1.5Z" 
+                fill="white" 
+                stroke="url(#paint0_linear_1_9)" 
+                stroke-width="3" 
+              />
+              <defs>
+                <linearGradient 
+                  gradientUnits="userSpaceOnUse" 
+                  id="paint0_linear_1_9" 
+                  x1="0" 
+                  x2="358" 
+                  y1="45.4277" 
+                  y2="45.4277"
+                >
+                  <stop stop-color="#017594" />
+                  <stop offset="0.5" stop-color="#00B3E2" />
+                  <stop offset="1" stop-color="#017594" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="eka-subtract-content">
+              <div class="eka-subtract-text" data-action="tag">
+                <span id="eka-subtract-text-span">Ask Apollo AI to book an appointment</span>
+                <svg class="eka-subtract-search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <g clip-path="url(#clip0_subtract)">
+                    <mask id="mask0_subtract" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+                      <path d="M24 0H0V24H24V0Z" fill="white"/>
+                    </mask>
+                    <g mask="url(#mask0_subtract)">
+                      <mask id="mask1_subtract" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
+                        <path d="M24 0H0V24H24V0Z" fill="white"/>
+                      </mask>
+                      <g mask="url(#mask1_subtract)">
+                        <mask id="mask2_subtract" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="-4" y="-2" width="32" height="32">
+                          <path d="M-3.09692 -1.09668H27.6231V29.6233H-3.09692V-1.09668Z" fill="white"/>
+                        </mask>
+                        <g mask="url(#mask2_subtract)">
+                          <path d="M15.0222 10.5255C15.3305 13.8204 12.9127 16.7373 9.61774 17.0455C6.32277 17.3538 3.40594 14.936 3.09765 11.6411C2.78941 8.34617 5.20721 5.4293 8.50214 5.12109" stroke="url(#paint0_linear_1_9)" stroke-width="2.04" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M20.0773 22.1462L14.0977 16.4482" stroke="url(#paint0_linear_1_9)" stroke-width="2.04" stroke-linecap="round" stroke-linejoin="round"/>
+                          <path d="M13.4411 3.39452L12.8396 4.59686C12.7797 4.71678 12.6824 4.81407 12.5624 4.87409L11.3348 5.48816C10.8778 5.71678 10.8778 6.36892 11.3348 6.59754L12.5624 7.21161C12.6824 7.27163 12.7797 7.36892 12.8396 7.48884L13.4537 8.71641C13.6823 9.17341 14.3345 9.17341 14.5632 8.71641L15.1772 7.48884C15.2372 7.36892 15.3345 7.27163 15.4545 7.21161L16.6486 6.6143C17.1116 6.38269 17.1038 5.71914 16.6354 5.49853L15.4428 4.9367C15.3135 4.87582 15.2092 4.77208 15.1476 4.64317L14.5554 3.40448C14.3328 2.93884 13.672 2.93291 13.4411 3.39452Z" fill="url(#paint0_linear_subtract)"/>
+                          <path d="M10.1953 1.52609L9.8634 2.18964C9.83028 2.25582 9.7766 2.3095 9.71041 2.34262L9.03292 2.68148C8.78069 2.80769 8.78069 3.16763 9.03292 3.29377L9.71041 3.63263C9.7766 3.66575 9.83028 3.71944 9.8634 3.78568L10.2023 4.46311C10.3285 4.71534 10.6884 4.71534 10.8145 4.46311L11.1535 3.78568C11.1866 3.71944 11.2403 3.66575 11.3065 3.63263L11.9655 3.30299C12.221 3.17517 12.2167 2.80901 11.9582 2.68724L11.3001 2.37718C11.2287 2.34355 11.1711 2.28635 11.1371 2.21516L10.8103 1.53156C10.6874 1.2746 10.3228 1.27132 10.1953 1.52609Z" fill="url(#paint1_linear_subtract)"/>
+                          <path d="M11.4904 8.46726L11.3147 8.81841C11.2972 8.85344 11.2688 8.88183 11.2338 8.89938L10.8753 9.07869C10.7418 9.14547 10.7418 9.33593 10.8753 9.40271L11.2338 9.58202C11.2688 9.59957 11.2972 9.62796 11.3147 9.66299L11.494 10.0215C11.5608 10.1549 11.7513 10.1549 11.8181 10.0215L11.9974 9.66299C12.0149 9.62796 12.0433 9.59957 12.0783 9.58202L12.4271 9.40759C12.5623 9.33992 12.56 9.14617 12.4232 9.08173L12.0749 8.91769C12.0372 8.89989 12.0067 8.8696 11.9888 8.8319L11.8158 8.47018C11.7508 8.33421 11.5578 8.3325 11.4904 8.46726Z" fill="url(#paint2_linear_subtract)"/>
+                        </g>
+                      </g>
+                    </g>
+                  </g>
+                  <defs>
+                    <linearGradient id="paint0_linear_subtract" x1="13.9575" y1="9.11138" x2="14.0277" y2="3.12265" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#017594"/>
+                      <stop offset="0.5" stop-color="#00B3E2"/>
+                      <stop offset="1" stop-color="#017594"/>
+                    </linearGradient>
+                    <linearGradient id="paint1_linear_subtract" x1="10.4953" y1="4.60705" x2="10.4727" y2="1.38514" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#017594"/>
+                      <stop offset="0.5" stop-color="#00B3E2"/>
+                      <stop offset="1" stop-color="#017594"/>
+                    </linearGradient>
+                    <linearGradient id="paint2_linear_subtract" x1="11.6757" y1="10.1233" x2="11.6703" y2="8.33953" gradientUnits="userSpaceOnUse">
+                      <stop stop-color="#017594"/>
+                      <stop offset="0.5" stop-color="#00B3E2"/>
+                      <stop offset="1" stop-color="#017594"/>
+                    </linearGradient>
+                    <clipPath id="clip0_subtract">
+                      <rect width="24" height="24" fill="white"/>
+                    </clipPath>
+                  </defs>
+                </svg>
+              </div>
+            </div>
+            <button class="eka-subtract-close" data-action="close">×</button>
           </div>
-          <div class="eka-stage-2-icon"></div>
-        </div>
-      `;
-      var iconEl = button.querySelector(".eka-stage-2-icon");
-      if (iconEl) {
-        loadApolloIcon(iconEl, isMobile ? 28 : 36);
+        `;
+      } else {
+        // Desktop: Original Oval with text
+        button.innerHTML = `
+          <div class="eka-stage-2-content" data-action="open">
+           <button class="eka-chat-close" data-action="close">×</button>
+            <div class="eka-stage-2-text">
+              <p class="eka-stage-2-title">Hi, Need some help?</p>
+              <p class="eka-stage-2-subtitle">I'm happy to assist.</p>
+            </div>
+            <div class="eka-stage-2-icon"></div>
+          </div>
+        `;
+        var iconEl = button.querySelector(".eka-stage-2-icon");
+        if (iconEl) {
+          loadApolloIcon(iconEl, 36);
+        }
       }
     } else if (widgetState.stage === 3) {
       // Stage 3: Full overlay with floating elements
@@ -647,7 +900,13 @@
         !widgetState.isClosed
       ) {
         setStage(2);
+        let currentTagIndex = 0;
+        const display = document.getElementById("eka-subtract-text-span");
 
+        setInterval(() => {
+          display.textContent = Tags[currentTagIndex];
+          currentTagIndex = (currentTagIndex + 1) % Tags.length;
+        }, 3000);
         // After 3 more seconds, go to stage 3
         // widgetState.stage2Timer = setTimeout(function () {
         //   if (
@@ -723,6 +982,13 @@
     toggleWidget(config);
   }
 
+  function handleTagClick(tag, config) {
+    console.log("tag clicked", tag);
+    window._first_user_message = tag;
+    widgetState.firstUserMessage = tag;
+    //load Widget
+    toggleWidget(config);
+  }
   // Create widget button
   function createWidgetButton(config) {
     var button = document.createElement("button");
@@ -753,6 +1019,8 @@
           action === "emergency"
         ) {
           handlePillClick(action, config);
+        } else if (action === "tag") {
+          handleTagClick(target.textContent, config);
         }
       } else {
         // Main button click
@@ -825,7 +1093,7 @@
       mode = url.searchParams.get("mode");
     }
     // Use mode from query string if available, otherwise use config.mode
-   return  mode ||  defaultConfig.mode;
+    return mode || defaultConfig.mode;
   }
   // Mount the React widget
   function mountWidget(config) {
