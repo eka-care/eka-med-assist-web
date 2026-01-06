@@ -363,7 +363,7 @@
       /* Desktop Stage 3 - New Design */
       .eka-stage-3-desktop {
         display: flex;
-        // width: 295px;
+        width: 295px;
         height: 296px;
         flex-direction: column;
         justify-content: space-between;
@@ -473,7 +473,7 @@
         display: flex;
         align-items: center;
         gap: 8px;
-        padding: 12px 16px;
+        padding: 8px;
         border-radius: 24px;
         border: 2px solid transparent;
         background: linear-gradient(#FFF, #FFF) padding-box,
