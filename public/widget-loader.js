@@ -278,6 +278,17 @@
         flex-shrink: 0;
       }
 
+      .eka-lottie-search-container {
+        width: 24px;
+        height: 24px;
+        position: relative;
+        pointer-events: none;
+        flex-shrink: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+      }
+
       .eka-subtract-close {
         position: absolute;
         bottom: 8px;
@@ -643,6 +654,666 @@
     document.head.appendChild(style);
   }
 
+  // Load Lottie Player (simple web component, no npm install needed)
+  function loadLottiePlayer(callback) {
+    if (customElements.get("lottie-player")) {
+      callback();
+      return;
+    }
+
+    var script = document.createElement("script");
+    script.src =
+      "https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js";
+    script.onload = callback;
+    script.onerror = function () {
+      console.error("Failed to load Lottie Player");
+    };
+    document.head.appendChild(script);
+  }
+
+  // Initialize Lottie search animation (simple approach)
+  function initLottieSearch(container) {
+    var lottieData = {
+      nm: "Main Scene",
+      ddd: 0,
+      h: 24,
+      w: 24,
+      meta: { g: "@lottiefiles/creator 1.68.0" },
+      layers: [
+        {
+          ty: 0,
+          nm: "1",
+          sr: 1,
+          st: 0,
+          op: 1801.802,
+          ip: 0,
+          hd: false,
+          ln: "104",
+          ddd: 0,
+          bm: 0,
+          hasMask: false,
+          ao: 0,
+          ks: {
+            a: { a: 0, k: [256, 256] },
+            s: { a: 0, k: [6, 6, 95.238] },
+            sk: { a: 0, k: 0 },
+            p: { a: 0, k: [12.263, 14.263, 0] },
+            r: { a: 0, k: 0 },
+            sa: { a: 0, k: 0 },
+            o: { a: 0, k: 100 },
+          },
+          w: 512,
+          h: 512,
+          refId: "1_copy_1332077a-b3b1-446f-8cce-3ebd58c1b5c7",
+          ind: 1,
+        },
+      ],
+      v: "5.7.0",
+      fr: 60,
+      op: 181,
+      ip: 0,
+      assets: [
+        {
+          nm: "1",
+          id: "1_copy_1332077a-b3b1-446f-8cce-3ebd58c1b5c7",
+          fr: 29.97,
+          layers: [
+            {
+              ty: 4,
+              nm: "Star ",
+              sr: 1,
+              st: 0,
+              op: 182.182,
+              ip: 0,
+              hd: false,
+              ln: "91",
+              ddd: 0,
+              bm: 0,
+              hasMask: false,
+              ao: 0,
+              ks: {
+                a: { a: 0, k: [412.243, 184.965, 0] },
+                s: { a: 0, k: [96, 96, 98.969] },
+                sk: { a: 0, k: 0 },
+                p: { a: 0, k: [306.426, 140.556, 0] },
+                r: { a: 0, k: 0 },
+                sa: { a: 0, k: 0 },
+                o: { a: 0, k: 100 },
+              },
+              shapes: [
+                {
+                  ty: "gr",
+                  bm: 0,
+                  hd: false,
+                  nm: "Small Shine 2",
+                  it: [
+                    {
+                      ty: "sh",
+                      bm: 0,
+                      hd: false,
+                      nm: "Path 1",
+                      d: 1,
+                      ks: {
+                        a: 0,
+                        k: {
+                          c: true,
+                          i: [
+                            [1.065, -2.127],
+                            [0, 0],
+                            [0.553, -0.277],
+                            [0, 0],
+                            [-2.106, -1.054],
+                            [0, 0],
+                            [-0.276, -0.553],
+                            [0, 0],
+                            [-1.054, 2.106],
+                            [0, 0],
+                            [-0.553, 0.277],
+                            [0, 0],
+                            [2.159, 1.017],
+                            [0, 0],
+                            [0.284, 0.595],
+                            [0, 0],
+                          ],
+                          o: [
+                            [0, 0],
+                            [-0.276, 0.553],
+                            [0, 0],
+                            [-2.106, 1.054],
+                            [0, 0],
+                            [0.553, 0.277],
+                            [0, 0],
+                            [1.054, 2.106],
+                            [0, 0],
+                            [0.277, -0.553],
+                            [0, 0],
+                            [2.134, -1.068],
+                            [0, 0],
+                            [-0.596, -0.281],
+                            [0, 0],
+                            [-1.026, -2.146],
+                          ],
+                          v: [
+                            [-2.538, -12.265],
+                            [-5.31, -6.723],
+                            [-6.588, -5.445],
+                            [-12.246, -2.615],
+                            [-12.246, 2.499],
+                            [-6.588, 5.329],
+                            [-5.31, 6.607],
+                            [-2.48, 12.265],
+                            [2.634, 12.265],
+                            [5.464, 6.607],
+                            [6.742, 5.329],
+                            [12.246, 2.576],
+                            [12.185, -2.567],
+                            [6.688, -5.156],
+                            [5.328, -6.51],
+                            [2.598, -12.219],
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      ty: "gf",
+                      bm: 0,
+                      hd: false,
+                      nm: "Gradient Fill 1",
+                      e: { a: 0, k: [0.302, -14.281] },
+                      g: {
+                        p: 5,
+                        k: {
+                          a: 0,
+                          k: [
+                            0, 0, 0.48627450980392156, 0.6196078431372549,
+                            0.275, 0.03529411764705882, 0.6431372549019608,
+                            0.8117647058823529, 0.551, 0.07058823529411765, 0.8,
+                            1, 0.775, 0.03529411764705882, 0.6431372549019608,
+                            0.8117647058823529, 1, 0, 0.48627450980392156,
+                            0.6196078431372549,
+                          ],
+                        },
+                      },
+                      t: 1,
+                      a: { a: 0, k: 0 },
+                      h: { a: 0, k: 0 },
+                      s: { a: 0, k: [0.387, 13.872] },
+                      r: 1,
+                      o: { a: 0, k: 100 },
+                    },
+                    {
+                      ty: "tr",
+                      a: { a: 0, k: [0, 0] },
+                      s: {
+                        a: 1,
+                        k: [
+                          {
+                            o: { x: 0.333, y: 0 },
+                            i: { x: 0.833, y: 3.394 },
+                            s: [110, 110],
+                            t: 19.199,
+                          },
+                          {
+                            o: { x: 0.333, y: 0.465 },
+                            i: { x: 0.667, y: 1 },
+                            s: [120, 120],
+                            t: 33.601,
+                          },
+                          {
+                            o: { x: 0.333, y: 0 },
+                            i: { x: 0.667, y: 1 },
+                            s: [0, 0],
+                            t: 50.4,
+                          },
+                          { s: [110, 110], t: 64.799 },
+                        ],
+                      },
+                      sk: { a: 0, k: 0 },
+                      p: { a: 0, k: [349.092, 218.086] },
+                      r: { a: 0, k: 360 },
+                      sa: { a: 0, k: 0 },
+                      o: { a: 0, k: 100 },
+                    },
+                  ],
+                },
+                {
+                  ty: "gr",
+                  bm: 0,
+                  hd: false,
+                  nm: "Small Shine",
+                  it: [
+                    {
+                      ty: "sh",
+                      bm: 0,
+                      hd: false,
+                      nm: "Path 1",
+                      d: 1,
+                      ks: {
+                        a: 0,
+                        k: {
+                          c: true,
+                          i: [
+                            [2.212, -4.423],
+                            [0, 0],
+                            [1.149, -0.575],
+                            [0, 0],
+                            [-4.379, -2.19],
+                            [0, 0],
+                            [-0.575, -1.15],
+                            [0, 0],
+                            [-2.19, 4.379],
+                            [0, 0],
+                            [-1.149, 0.575],
+                            [0, 0],
+                            [4.488, 2.114],
+                            [0, 0],
+                            [0.59, 1.236],
+                            [0, 0],
+                          ],
+                          o: [
+                            [0, 0],
+                            [-0.575, 1.149],
+                            [0, 0],
+                            [-4.379, 2.191],
+                            [0, 0],
+                            [1.149, 0.575],
+                            [0, 0],
+                            [2.19, 4.379],
+                            [0, 0],
+                            [0.575, -1.15],
+                            [0, 0],
+                            [4.437, -2.219],
+                            [0, 0],
+                            [-1.239, -0.584],
+                            [0, 0],
+                            [-2.133, -4.461],
+                          ],
+                          v: [
+                            [-5.275, -25.495],
+                            [-11.038, -13.975],
+                            [-13.694, -11.319],
+                            [-25.456, -5.436],
+                            [-25.456, 5.194],
+                            [-13.694, 11.077],
+                            [-11.038, 13.734],
+                            [-5.154, 25.495],
+                            [5.475, 25.495],
+                            [11.359, 13.734],
+                            [14.015, 11.077],
+                            [25.456, 5.354],
+                            [25.33, -5.336],
+                            [13.904, -10.719],
+                            [11.075, -13.532],
+                            [5.401, -25.4],
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      ty: "gf",
+                      bm: 0,
+                      hd: false,
+                      nm: "Gradient Fill 1",
+                      e: { a: 0, k: [-0.46, -27.942] },
+                      g: {
+                        p: 5,
+                        k: {
+                          a: 0,
+                          k: [
+                            0, 0, 0.48627450980392156, 0.6196078431372549,
+                            0.276, 0.03529411764705882, 0.6431372549019608,
+                            0.8117647058823529, 0.551, 0.07058823529411765, 0.8,
+                            1, 0.776, 0.03529411764705882, 0.6431372549019608,
+                            0.8117647058823529, 1, 0, 0.48627450980392156,
+                            0.6196078431372549,
+                          ],
+                        },
+                      },
+                      t: 1,
+                      a: { a: 0, k: 0 },
+                      h: { a: 0, k: 0 },
+                      s: { a: 0, k: [-0.067, 27.994] },
+                      r: 1,
+                      o: { a: 0, k: 100 },
+                    },
+                    {
+                      ty: "tr",
+                      a: { a: 0, k: [0, 0] },
+                      s: {
+                        a: 1,
+                        k: [
+                          {
+                            o: { x: 0.333, y: 0 },
+                            i: { x: 0.667, y: 5.332 },
+                            s: [100, 100],
+                            t: 14.399,
+                          },
+                          {
+                            o: { x: 0.333, y: 0.525 },
+                            i: { x: 0.667, y: 1 },
+                            s: [110, 110],
+                            t: 28.113,
+                          },
+                          {
+                            o: { x: 0.333, y: 0 },
+                            i: { x: 0.667, y: 1 },
+                            s: [0, 0],
+                            t: 46.398,
+                          },
+                          { s: [100, 100], t: 62.399 },
+                        ],
+                      },
+                      sk: { a: 0, k: 0 },
+                      p: { a: 0, k: [329.094, 109.576] },
+                      r: { a: 0, k: 360 },
+                      sa: { a: 0, k: 0 },
+                      o: { a: 0, k: 100 },
+                    },
+                  ],
+                },
+                {
+                  ty: "gr",
+                  bm: 0,
+                  hd: false,
+                  nm: "Big Shine",
+                  it: [
+                    {
+                      ty: "sh",
+                      bm: 0,
+                      hd: false,
+                      nm: "Path 1",
+                      d: 1,
+                      ks: {
+                        a: 0,
+                        k: {
+                          c: true,
+                          i: [
+                            [4.009, -8.014],
+                            [0, 0],
+                            [2.083, -1.042],
+                            [0, 0],
+                            [-7.934, -3.969],
+                            [0, 0],
+                            [-1.041, -2.082],
+                            [0, 0],
+                            [-3.969, 7.934],
+                            [0, 0],
+                            [-2.083, 1.042],
+                            [0, 0],
+                            [8.132, 3.83],
+                            [0, 0],
+                            [1.07, 2.238],
+                            [0, 0],
+                          ],
+                          o: [
+                            [0, 0],
+                            [-1.041, 2.082],
+                            [0, 0],
+                            [-7.934, 3.969],
+                            [0, 0],
+                            [2.083, 1.042],
+                            [0, 0],
+                            [3.969, 7.934],
+                            [0, 0],
+                            [1.042, -2.082],
+                            [0, 0],
+                            [8.039, -4.021],
+                            [0, 0],
+                            [-2.245, -1.057],
+                            [0, 0],
+                            [-3.864, -8.084],
+                          ],
+                          v: [
+                            [-9.559, -46.197],
+                            [-20.001, -25.323],
+                            [-24.814, -20.51],
+                            [-46.126, -9.849],
+                            [-46.126, 9.411],
+                            [-24.814, 20.072],
+                            [-20.001, 24.885],
+                            [-9.34, 46.197],
+                            [9.921, 46.197],
+                            [20.582, 24.885],
+                            [25.395, 20.072],
+                            [46.126, 9.702],
+                            [45.897, -9.669],
+                            [25.193, -19.423],
+                            [20.067, -24.519],
+                            [9.786, -46.024],
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      ty: "gf",
+                      bm: 0,
+                      hd: false,
+                      nm: "Gradient Fill 1",
+                      e: { a: 0, k: [0.625, -50.917] },
+                      g: {
+                        p: 5,
+                        k: {
+                          a: 0,
+                          k: [
+                            0, 0, 0.48627450980392156, 0.6196078431372549,
+                            0.228, 0.03529411764705882, 0.6431372549019608,
+                            0.8117647058823529, 0.455, 0.07058823529411765, 0.8,
+                            1, 0.728, 0.03529411764705882, 0.6431372549019608,
+                            0.8117647058823529, 1, 0, 0.48627450980392156,
+                            0.6196078431372549,
+                          ],
+                        },
+                      },
+                      t: 1,
+                      a: { a: 0, k: 0 },
+                      h: { a: 0, k: 0 },
+                      s: { a: 0, k: [-0.594, 53.054] },
+                      r: 1,
+                      o: { a: 0, k: 100 },
+                    },
+                    {
+                      ty: "tr",
+                      a: { a: 0, k: [0, 0] },
+                      s: {
+                        a: 1,
+                        k: [
+                          {
+                            o: { x: 0.333, y: 0 },
+                            i: { x: 0.667, y: 5.332 },
+                            s: [100, 100],
+                            t: 4.8,
+                          },
+                          {
+                            o: { x: 0.333, y: 0.525 },
+                            i: { x: 0.667, y: 1 },
+                            s: [110, 110],
+                            t: 18.513,
+                          },
+                          {
+                            o: { x: 0.333, y: 0 },
+                            i: { x: 0.667, y: 1 },
+                            s: [0, 0],
+                            t: 36.799,
+                          },
+                          { s: [100, 100], t: 52.8 },
+                        ],
+                      },
+                      sk: { a: 0, k: 0 },
+                      p: { a: 0, k: [389.728, 162.723] },
+                      r: { a: 0, k: 360 },
+                      sa: { a: 0, k: 0 },
+                      o: { a: 0, k: 100 },
+                    },
+                  ],
+                },
+              ],
+              ind: 1,
+            },
+            {
+              ty: 4,
+              nm: "Search_new Outlines",
+              sr: 1,
+              st: 0,
+              op: 1801.802,
+              ip: 0,
+              hd: false,
+              ln: "16",
+              ddd: 0,
+              bm: 0,
+              hasMask: false,
+              ao: 0,
+              ks: {
+                a: { a: 0, k: [400, 400, 0] },
+                s: { a: 0, k: [68, 68, 68] },
+                sk: { a: 0, k: 0 },
+                p: { a: 0, k: [256, 256] },
+                r: { a: 0, k: 0 },
+                sa: { a: 0, k: 0 },
+                o: { a: 0, k: 100 },
+              },
+              shapes: [
+                {
+                  ty: "gr",
+                  bm: 0,
+                  hd: false,
+                  nm: "Group 3",
+                  it: [
+                    {
+                      ty: "sh",
+                      bm: 0,
+                      hd: false,
+                      nm: "Path 1",
+                      d: 1,
+                      ks: {
+                        a: 0,
+                        k: {
+                          c: false,
+                          i: [
+                            [0, 0],
+                            [0, 0],
+                          ],
+                          o: [
+                            [0, 0],
+                            [0, 0],
+                          ],
+                          v: [
+                            [30.625, 29.183],
+                            [-115.934, -110.474],
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      ty: "st",
+                      bm: 0,
+                      hd: false,
+                      nm: "Stroke 1",
+                      lc: 2,
+                      lj: 2,
+                      ml: 4,
+                      o: { a: 0, k: 100 },
+                      w: { a: 0, k: 50 },
+                      c: { a: 0, k: [0, 0.4863, 0.6196] },
+                    },
+                    {
+                      ty: "tr",
+                      a: { a: 0, k: [0, 0] },
+                      s: { a: 0, k: [100, 100] },
+                      sk: { a: 0, k: 0 },
+                      p: { a: 0, k: [560.898, 564.003] },
+                      r: { a: 0, k: 0 },
+                      sa: { a: 0, k: 0 },
+                      o: { a: 0, k: 100 },
+                    },
+                  ],
+                },
+                {
+                  ty: "gr",
+                  bm: 0,
+                  hd: false,
+                  nm: "Group 4",
+                  it: [
+                    {
+                      ty: "sh",
+                      bm: 0,
+                      hd: false,
+                      nm: "Path 1",
+                      d: 1,
+                      ks: {
+                        a: 0,
+                        k: {
+                          c: false,
+                          i: [
+                            [0, 0],
+                            [80.758, -7.555],
+                            [7.556, 80.758],
+                            [-80.758, 7.554],
+                          ],
+                          o: [
+                            [7.555, 80.758],
+                            [-80.759, 7.556],
+                            [-7.555, -80.758],
+                            [0, 0],
+                          ],
+                          v: [
+                            [146.134, -17.45],
+                            [13.672, 142.355],
+                            [-146.134, 9.893],
+                            [-13.671, -149.911],
+                          ],
+                        },
+                      },
+                    },
+                    {
+                      ty: "st",
+                      bm: 0,
+                      hd: false,
+                      nm: "Stroke 1",
+                      lc: 2,
+                      lj: 2,
+                      ml: 4,
+                      o: { a: 0, k: 100 },
+                      w: { a: 0, k: 50 },
+                      c: { a: 0, k: [0, 0.4863, 0.6196] },
+                    },
+                    {
+                      ty: "tr",
+                      a: { a: 0, k: [0, 0] },
+                      s: { a: 0, k: [100, 100] },
+                      sk: { a: 0, k: 0 },
+                      p: { a: 0, k: [321.491, 325.825] },
+                      r: { a: 0, k: 0 },
+                      sa: { a: 0, k: 0 },
+                      o: { a: 0, k: 100 },
+                    },
+                  ],
+                },
+              ],
+              ind: 2,
+            },
+          ],
+        },
+      ],
+    };
+
+    loadLottiePlayer(function () {
+      if (container) {
+        // Create lottie-player element (simple web component)
+        var player = document.createElement("lottie-player");
+        player.setAttribute(
+          "src",
+          "data:application/json;base64," + btoa(JSON.stringify(lottieData))
+        );
+        player.setAttribute("background", "transparent");
+        player.setAttribute("speed", "1");
+        player.setAttribute("style", "width: 24px; height: 24px;");
+        player.setAttribute("loop", "");
+        player.setAttribute("autoplay", "");
+        container.appendChild(player);
+      }
+    });
+  }
+
   // Load Apollo icon
   function loadApolloIcon(container, size) {
     var scale = size / 200;
@@ -760,55 +1431,20 @@
             <div class="eka-subtract-content">
               <div class="eka-subtract-text" data-action="tag">
                 <span id="eka-subtract-text-span">Ask Apollo AI to book an appointment</span>
-                <svg class="eka-subtract-search-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                  <g clip-path="url(#clip0_subtract)">
-                    <mask id="mask0_subtract" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-                      <path d="M24 0H0V24H24V0Z" fill="white"/>
-                    </mask>
-                    <g mask="url(#mask0_subtract)">
-                      <mask id="mask1_subtract" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="0" y="0" width="24" height="24">
-                        <path d="M24 0H0V24H24V0Z" fill="white"/>
-                      </mask>
-                      <g mask="url(#mask1_subtract)">
-                        <mask id="mask2_subtract" style="mask-type:luminance" maskUnits="userSpaceOnUse" x="-4" y="-2" width="32" height="32">
-                          <path d="M-3.09692 -1.09668H27.6231V29.6233H-3.09692V-1.09668Z" fill="white"/>
-                        </mask>
-                        <g mask="url(#mask2_subtract)">
-                          <path d="M15.0222 10.5255C15.3305 13.8204 12.9127 16.7373 9.61774 17.0455C6.32277 17.3538 3.40594 14.936 3.09765 11.6411C2.78941 8.34617 5.20721 5.4293 8.50214 5.12109" stroke="url(#paint0_linear_1_9)" stroke-width="2.04" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M20.0773 22.1462L14.0977 16.4482" stroke="url(#paint0_linear_1_9)" stroke-width="2.04" stroke-linecap="round" stroke-linejoin="round"/>
-                          <path d="M13.4411 3.39452L12.8396 4.59686C12.7797 4.71678 12.6824 4.81407 12.5624 4.87409L11.3348 5.48816C10.8778 5.71678 10.8778 6.36892 11.3348 6.59754L12.5624 7.21161C12.6824 7.27163 12.7797 7.36892 12.8396 7.48884L13.4537 8.71641C13.6823 9.17341 14.3345 9.17341 14.5632 8.71641L15.1772 7.48884C15.2372 7.36892 15.3345 7.27163 15.4545 7.21161L16.6486 6.6143C17.1116 6.38269 17.1038 5.71914 16.6354 5.49853L15.4428 4.9367C15.3135 4.87582 15.2092 4.77208 15.1476 4.64317L14.5554 3.40448C14.3328 2.93884 13.672 2.93291 13.4411 3.39452Z" fill="url(#paint0_linear_subtract)"/>
-                          <path d="M10.1953 1.52609L9.8634 2.18964C9.83028 2.25582 9.7766 2.3095 9.71041 2.34262L9.03292 2.68148C8.78069 2.80769 8.78069 3.16763 9.03292 3.29377L9.71041 3.63263C9.7766 3.66575 9.83028 3.71944 9.8634 3.78568L10.2023 4.46311C10.3285 4.71534 10.6884 4.71534 10.8145 4.46311L11.1535 3.78568C11.1866 3.71944 11.2403 3.66575 11.3065 3.63263L11.9655 3.30299C12.221 3.17517 12.2167 2.80901 11.9582 2.68724L11.3001 2.37718C11.2287 2.34355 11.1711 2.28635 11.1371 2.21516L10.8103 1.53156C10.6874 1.2746 10.3228 1.27132 10.1953 1.52609Z" fill="url(#paint1_linear_subtract)"/>
-                          <path d="M11.4904 8.46726L11.3147 8.81841C11.2972 8.85344 11.2688 8.88183 11.2338 8.89938L10.8753 9.07869C10.7418 9.14547 10.7418 9.33593 10.8753 9.40271L11.2338 9.58202C11.2688 9.59957 11.2972 9.62796 11.3147 9.66299L11.494 10.0215C11.5608 10.1549 11.7513 10.1549 11.8181 10.0215L11.9974 9.66299C12.0149 9.62796 12.0433 9.59957 12.0783 9.58202L12.4271 9.40759C12.5623 9.33992 12.56 9.14617 12.4232 9.08173L12.0749 8.91769C12.0372 8.89989 12.0067 8.8696 11.9888 8.8319L11.8158 8.47018C11.7508 8.33421 11.5578 8.3325 11.4904 8.46726Z" fill="url(#paint2_linear_subtract)"/>
-                        </g>
-                      </g>
-                    </g>
-                  </g>
-                  <defs>
-                    <linearGradient id="paint0_linear_subtract" x1="13.9575" y1="9.11138" x2="14.0277" y2="3.12265" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#017594"/>
-                      <stop offset="0.5" stop-color="#00B3E2"/>
-                      <stop offset="1" stop-color="#017594"/>
-                    </linearGradient>
-                    <linearGradient id="paint1_linear_subtract" x1="10.4953" y1="4.60705" x2="10.4727" y2="1.38514" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#017594"/>
-                      <stop offset="0.5" stop-color="#00B3E2"/>
-                      <stop offset="1" stop-color="#017594"/>
-                    </linearGradient>
-                    <linearGradient id="paint2_linear_subtract" x1="11.6757" y1="10.1233" x2="11.6703" y2="8.33953" gradientUnits="userSpaceOnUse">
-                      <stop stop-color="#017594"/>
-                      <stop offset="0.5" stop-color="#00B3E2"/>
-                      <stop offset="1" stop-color="#017594"/>
-                    </linearGradient>
-                    <clipPath id="clip0_subtract">
-                      <rect width="24" height="24" fill="white"/>
-                    </clipPath>
-                  </defs>
-                </svg>
+                <div class="eka-lottie-search-container"></div>
               </div>
             </div>
             <button class="eka-subtract-close" data-action="close">×</button>
           </div>
         `;
+
+        // Initialize Lottie animation for search icon
+        var lottieContainer = button.querySelector(
+          ".eka-lottie-search-container"
+        );
+        if (lottieContainer) {
+          initLottieSearch(lottieContainer);
+        }
       } else {
         // Desktop: Original Oval with text
         button.innerHTML = `
