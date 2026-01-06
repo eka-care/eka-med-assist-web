@@ -29,6 +29,12 @@
     "Ask Apollo AI to find a doctor",
     "Ask Apollo AI about a disease",
   ];
+
+  var smallTags = [
+    "To Book an Appointment",
+    "To Find a Doctor",
+    "About a Disease",
+  ];
   // Cookie utilities for medassist-preferences
   function getCookie(name) {
     const value = "; " + document.cookie;
@@ -97,18 +103,19 @@
 
       /* Stage 2: Oval with text (Desktop) / Subtract Component (Mobile) */
       .eka-widget-button.stage-2 {
-        width: 280px;
-        height: 60px;
-        border-radius: 30px;
+        width: 252px;
+        border-radius: 24px;
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: #FDE047;
-        box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
-        padding: 8px 8px 8px 24px;
+        background: #fff;
+        border: 4px solid rgba(211, 211, 211, 0.5);
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        padding: 14px 16px;
         display: flex;
+        flex-direction: column;
         align-items: center;
-        justify-content: space-between;
+        gap: 99px;
         transition: transform 0.2s ease, box-shadow 0.2s ease;
       }
 
@@ -123,8 +130,8 @@
         align-items: center;
         justify-content: space-between;
         width: 100%;
-        gap: 16px;
-        padding: 8px 24px 8px 8px;
+        gap: 12px;
+        padding: 0;
       }
 
       .eka-stage-2-text {
@@ -132,22 +139,22 @@
         display: flex;
         flex-direction: column;
         align-items: flex-start;
-        gap: 2px;
+        gap: 4px;
       }
 
       .eka-stage-2-title {
-        font-size: 16px;
-        font-weight: 600;
-        color: #000000;
+        font-size: 18px;
+        font-weight: 700;
+        color: #0f172a;
         line-height: 1.2;
         margin: 0;
       }
 
       .eka-stage-2-subtitle {
-        font-size: 12px;
-        font-weight: 400;
-        color: #000000;
-        line-height: 1.2;
+        font-size: 14px;
+        font-weight: 500;
+        color: #1f2937;
+        line-height: 1.3;
         margin: 0;
       }
 
@@ -155,7 +162,7 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: #ffffff;
+        background: transparent;
         flex-shrink: 0;
         display: flex;
         align-items: center;
@@ -287,6 +294,11 @@
         display: flex;
         align-items: center;
         justify-content: center;
+      }
+
+      .eka-lottie-search-container.desktop {
+        width: 32px;
+        height: 32px;
       }
 
       .eka-subtract-close {
@@ -661,7 +673,15 @@
       return;
     }
 
+    if (document.getElementById("eka-lottie-player-loader")) {
+      document
+        .getElementById("eka-lottie-player-loader")
+        .addEventListener("load", callback, { once: true });
+      return;
+    }
+
     var script = document.createElement("script");
+    script.id = "eka-lottie-player-loader";
     script.src =
       "https://unpkg.com/@lottiefiles/lottie-player@latest/dist/lottie-player.js";
     script.onload = callback;
@@ -1306,7 +1326,14 @@
         );
         player.setAttribute("background", "transparent");
         player.setAttribute("speed", "1");
-        player.setAttribute("style", "width: 24px; height: 24px;");
+        // Check if it's desktop (not mobile) for larger icon
+        var isMobile = window.innerWidth <= 768;
+        var isDesktop = !isMobile;
+        var iconSize = isDesktop ? "32px" : "24px";
+        player.setAttribute(
+          "style",
+          "width: " + iconSize + "; height: " + iconSize + ";"
+        );
         player.setAttribute("loop", "");
         player.setAttribute("autoplay", "");
         container.appendChild(player);
@@ -1434,7 +1461,7 @@
                 <div class="eka-lottie-search-container"></div>
               </div>
             </div>
-            <button class="eka-subtract-close" data-action="close">×</button>
+             <button class="eka-subtract-close" data-action="close">×</button>
           </div>
         `;
 
@@ -1449,18 +1476,38 @@
         // Desktop: Original Oval with text
         button.innerHTML = `
           <div class="eka-stage-2-content" data-action="open">
-           <button class="eka-chat-close" data-action="close">×</button>
             <div class="eka-stage-2-text">
-              <p class="eka-stage-2-title">Hi, Need some help?</p>
-              <p class="eka-stage-2-subtitle">I'm happy to assist.</p>
+              <p class="eka-stage-2-title">Ask Apollo AI</p>
+              <p class="eka-stage-2-subtitle" id="eka-desktop-subtitle-span">To Book an Appointment</p>
             </div>
-            <div class="eka-stage-2-icon"></div>
+            <div class="eka-stage-2-icon">
+              <div class="eka-lottie-search-container desktop"></div>
+            </div>
           </div>
         `;
-        var iconEl = button.querySelector(".eka-stage-2-icon");
-        if (iconEl) {
-          loadApolloIcon(iconEl, 36);
+        // Initialize Lottie animation for desktop search icon
+        var desktopLottie = button.querySelector(
+          ".eka-lottie-search-container.desktop"
+        );
+        if (desktopLottie) {
+          initLottieSearch(desktopLottie);
         }
+
+        // Rotate small tags for desktop (similar to mobile)
+        var currentDesktopTagIndex = 0;
+        var desktopTagInterval = setInterval(function () {
+          var desktopSubtitle = button.querySelector(
+            "#eka-desktop-subtitle-span"
+          );
+          if (desktopSubtitle) {
+            desktopSubtitle.textContent = smallTags[currentDesktopTagIndex];
+            currentDesktopTagIndex =
+              (currentDesktopTagIndex + 1) % smallTags.length;
+          } else {
+            // Element no longer exists, clear the interval
+            clearInterval(desktopTagInterval);
+          }
+        }, 3000);
       }
     } else if (widgetState.stage === 3) {
       // Stage 3: Full overlay with floating elements
@@ -1537,11 +1584,16 @@
       ) {
         setStage(2);
         let currentTagIndex = 0;
-        const display = document.getElementById("eka-subtract-text-span");
-
-        setInterval(() => {
-          display.textContent = Tags[currentTagIndex];
-          currentTagIndex = (currentTagIndex + 1) % Tags.length;
+        
+        var mobileTagInterval = setInterval(function() {
+          const display = document.getElementById("eka-subtract-text-span");
+          if (display) {
+            display.textContent = Tags[currentTagIndex];
+            currentTagIndex = (currentTagIndex + 1) % Tags.length;
+          } else {
+            // Element no longer exists, clear the interval
+            clearInterval(mobileTagInterval);
+          }
         }, 3000);
         // After 3 more seconds, go to stage 3
         // widgetState.stage2Timer = setTimeout(function () {
