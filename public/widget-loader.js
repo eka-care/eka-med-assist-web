@@ -162,7 +162,7 @@
         width: 40px;
         height: 40px;
         border-radius: 50%;
-        background: transparent;
+        background: transparent !important;
         flex-shrink: 0;
         display: flex;
         align-items: center;
@@ -320,7 +320,7 @@
 
       .eka-subtract-close {
         position: absolute;
-        bottom: 8px;
+        bottom: 16px;
         left: 50%;
         transform: translateX(-50%);
         width: 20px;
