@@ -211,6 +211,12 @@
 
         .eka-subtract-container {
           width: 100%;
+          height: auto;
+          white-space: normal;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px;
         }
       }
 
@@ -270,6 +276,14 @@
         text-overflow: ellipsis;
       }
 
+      @media (max-width: 768px) {
+        .eka-subtract-text {
+          flex-grow: 1;
+          margin-right: 8px;
+          white-space: normal;
+        }
+      }
+
       .eka-subtract-text span {
         display: inline-block;
         background: linear-gradient(90deg, #017594 0%, #00B3E2 50%, #017594 100%);
@@ -324,6 +338,7 @@
         line-height: 1;
         padding: 0;
         border-radius: 50%;
+        flex-shrink: 0;
       }
 
       .eka-subtract-close:hover {
@@ -715,7 +730,12 @@
 
         .eka-subtract-container {
           width: 100%;
-          height: 100%;
+          height: auto;
+          white-space: normal;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 8px;
         }
 
         .eka-subtract-text {
