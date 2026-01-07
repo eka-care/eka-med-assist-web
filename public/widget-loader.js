@@ -181,10 +181,11 @@
         border: none;
         padding: 0;
         position: fixed;
-        bottom: 20px;
+        bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
         right: 20px;
         left: auto;
         transform: none;
+        z-index: 2147483647;
       }
 
       .eka-widget-button.stage-2.is-mobile:hover {
@@ -200,6 +201,7 @@
           left: 50%;
           right: auto;
           transform: translateX(-50%);
+          bottom: calc(env(safe-area-inset-bottom, 0px) + 20px);
         }
 
         .eka-widget-button.stage-2.is-mobile:hover {
@@ -1735,7 +1737,7 @@
               </div>
             </div>
             <div class="eka-stage-3-desktop-input" data-action="open">
-              <span class="eka-stage-3-desktop-input-text">Ask AI to book an appointment</span>
+              <span class="eka-stage-3-desktop-input-text" id="eka-stage-3-input-text-span">Ask Apollo AI to book an appointment</span>
               <div class="eka-stage-3-desktop-input-icon">
                 <div class="eka-lottie-search-container desktop"></div>
               </div>
@@ -1756,6 +1758,26 @@
               player.setAttribute("style", "width: 16px; height: 16px;");
             }
           }, 100);
+        }
+
+        // Rotate Tags for Stage 3 desktop input (using Tags array, not smallTags)
+        var stage3InputText = button.querySelector(
+          "#eka-stage-3-input-text-span"
+        );
+        if (stage3InputText) {
+          var currentStage3TagIndex = 0;
+          var stage3TagInterval = setInterval(function () {
+            var inputTextElement = button.querySelector(
+              "#eka-stage-3-input-text-span"
+            );
+            if (inputTextElement) {
+              inputTextElement.textContent = Tags[currentStage3TagIndex];
+              currentStage3TagIndex = (currentStage3TagIndex + 1) % Tags.length;
+            } else {
+              // Element no longer exists, clear the interval
+              clearInterval(stage3TagInterval);
+            }
+          }, 3000);
         }
       }
       // else {
