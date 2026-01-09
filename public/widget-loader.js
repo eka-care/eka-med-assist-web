@@ -108,7 +108,7 @@
         position: fixed;
         bottom: 20px;
         right: 20px;
-        background: #fff;
+        background: linear-gradient(180deg, #D6EAF0 0%, #FFFFFF 100%);
         border: 4px solid rgba(211, 211, 211, 0.5);
         box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
         padding: 14px 16px;
@@ -2000,37 +2000,9 @@
           setCookie("medassist-preferences", "close");
         } else if (action === "open") {
           // Common logic for input field clicks (Stage 2 and Stage 3)
-          var inputText = "";
+          // var inputText = "";
 
-          // Try to find Stage 2 mobile text
-          var stage2Text = target.querySelector("#eka-subtract-text-span");
-          if (stage2Text) {
-            inputText = stage2Text.textContent || stage2Text.innerText;
-          } else {
-            // Try to find Stage 3 desktop input text
-            var stage3Text = target.querySelector(
-              ".eka-stage-3-desktop-input-text"
-            );
-            if (stage3Text) {
-              inputText = stage3Text.textContent || stage3Text.innerText;
-            } else {
-              // Try to find Stage 2 desktop subtitle
-              var stage2Subtitle = target.querySelector(
-                "#eka-desktop-subtitle-span"
-              );
-              if (stage2Subtitle) {
-                inputText =
-                  stage2Subtitle.textContent || stage2Subtitle.innerText;
-              } else {
-                // Fallback: use the target's text content
-                inputText = target.textContent || target.innerText;
-              }
-            }
-          }
-
-          if (inputText) {
-            handleInputClick(inputText.trim(), config);
-          }
+          toggleWidget(config)
         } else if (
           action === "appointment" ||
           action === "doctor" ||
