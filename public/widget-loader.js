@@ -1695,7 +1695,7 @@
             <div class="eka-stage-3-desktop-header">
               <div>
                 <h3 class="eka-stage-3-desktop-title">Ask Apollo AI</h3>
-                <p class="eka-stage-3-desktop-subtitle">Your Personal health assistant</p>
+                <p class="eka-stage-3-desktop-subtitle">Your personal health assistant</p>
               </div>
             </div>
             <div class="eka-stage-3-desktop-content">
