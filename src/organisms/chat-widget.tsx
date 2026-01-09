@@ -629,6 +629,10 @@ export function ChatWidget({
           MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER
         ) {
           // User is entering mobile number
+          setMobVerificationStatus((prev) => ({
+            ...prev,
+            isSending: true,
+          }));
           const mobileNumber =
             mobVerificationStatusRef.current.mobile_number || content;
           response = await handleMobileVerification(
@@ -1544,6 +1548,7 @@ export function ChatWidget({
               <MobileNumberInput
                 onSendMobile={handleSendMessage}
                 isLoading={mobVerificationStatus.isSending}
+                disabled={mobVerificationStatus.isSending || isWaitingForResponse || !!progressMessage?.length || connectionStatus !== CONNECTION_STATUS.CONNECTED || !isOnline}
               />
             ) : mobVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.OTP &&
               mobVerificationStatus.mobile_number ? (
