@@ -1,7 +1,7 @@
 {
     "name": "eka-med-assist-web",
     "private": true,
-    "version": "0.1.27-dev.8",
+    "version": "0.1.27",
     "type": "module",
     "scripts": {
         "dev": "vite",
