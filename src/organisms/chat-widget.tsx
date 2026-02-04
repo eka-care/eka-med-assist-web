@@ -456,6 +456,7 @@ export function ChatWidget({
   const [quickActions] = useState([
     { id: "doctor", label: "Help me find a doctor" },
     { id: "appointment", label: "I want to book appointment" },
+    { id: "health_check", label: "I want to book health check" },
     { id: "emergency", label: "I have an emergency" },
   ]);
 
