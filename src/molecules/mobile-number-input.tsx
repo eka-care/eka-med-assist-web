@@ -43,6 +43,7 @@ export function MobileNumberInput({
   };
 
   const handleSendClick = () => {
+    if(disabled || isLoading) return;
     if (mobileNumber.length === 10) {
       onSendMobile({ content: mobileNumber });
     }
