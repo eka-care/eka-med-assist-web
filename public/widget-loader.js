@@ -548,7 +548,7 @@
     button.innerHTML = "";
     console.log("update button apperance called");
     
-    if (widgetState.stage === 1 || isMobile) {
+    if (widgetState.stage === 1) {
       // Stage 1: Icon only
       button.className = "eka-widget-button stage-1";
       // button.setAttribute("data-action", "open");
@@ -645,8 +645,8 @@
       if (
         !widgetState.isVisible &&
         widgetState.stage === 1 &&
-        !widgetState.isClosed &&
-        window.innerWidth > 768
+        !widgetState.isClosed
+        // window.innerWidth > 768
       ) {
         setStage(2);
 
