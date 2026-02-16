@@ -13,20 +13,12 @@ import DoctorDetailsList from "./doctor-details-list";
 import LabPackageList from "./lab-package-list";
 import { ContentType, type CommonHandlerData } from "@/types/socket";
 import { TipsDisplay } from "./tips-display";
-import {
-  DISLIKE_FEEDBACK_OPTIONS,
-  TLabPackage,
-  type ExtendedToolEscalationData,
-} from "@/types/widget";
+import { DISLIKE_FEEDBACK_OPTIONS, TLabPackage, type ExtendedToolEscalationData } from "@/types/widget";
 import { FilePreviewList } from "./file-preview";
 import { USER_FEEDBACK } from "@/configs/enums";
 import { FeedbackFollowUp } from "./feedback-followup";
 import remarkGfm from "remark-gfm";
-import {
-  SYNAPSE_COMPONENTS,
-  type SendMessageOptions,
-  type ToolCallResponse,
-} from "@eka-care/medassist-core";
+import { SYNAPSE_COMPONENTS, type ToolCallResponse } from "@eka-care/medassist-core";
 import type { BookInfo } from "./doctor-details-list";
 
 // MarqueeText component for handling text overflow with hover-triggered marquee
@@ -82,7 +74,6 @@ function MarqueeText({
 
 interface MessageBubbleProps {
   message: string;
-  messageId: string;
   isBot?: boolean;
   showActions: boolean;
   quickActions: { id: string; label: string }[];
@@ -90,6 +81,10 @@ interface MessageBubbleProps {
   isStreaming?: boolean;
   progressMessage?: string | null;
   feedback?: USER_FEEDBACK;
+  onUserFeedback: (
+    feedback: USER_FEEDBACK,
+    feedbackReason?: string
+  ) => void;
   verificationStatus: boolean;
   isLastMessage: boolean;
   clearMobileVerification: () => void;
@@ -97,8 +92,9 @@ interface MessageBubbleProps {
   handleQuickAction: (action: string) => void;
   showRetry?: boolean;
   onRetry?: () => void;
-  isRegenerating?: boolean;
-  commonContentData?: CommonHandlerData;
+  messageId: string; // Add messageId prop
+  isRegenerating?: boolean; // Add isRegenerating prop
+  commonContentData?: CommonHandlerData; // Add common content data prop
   onContentClick?: ({
     content,
     tool_use_id,
@@ -107,18 +103,18 @@ interface MessageBubbleProps {
     content: string;
     tool_use_id?: string;
     tool_use_params?: any;
-  }) => void;
-  audioData?: any;
-  isResponded?: boolean;
-  files?: File[];
+  }) => void; // Add common content click handler
+  audioData?: any; // Add audio data support
+  isResponded?: boolean; // Track if this bot message has been responded to
+  files?: File[]; // Add files prop for file previews
   tips?: string[] | null;
   onTipsExpire?: () => void;
   onLabPackageBook?: (pkg: TLabPackage) => void;
-  // Synapse SDK props (matches ChatMessage pattern)
+  // Synapse SDK tool escalation props
   toolEscalationData?: ExtendedToolEscalationData;
-  toolCallStatus?: string | null;
-  onSendMessage: (options: SendMessageOptions) => Promise<void>;
-  onToggleFeedback: (feedback: USER_FEEDBACK, reason?: string) => void;
+  onPillClick?: (choice: string) => void;
+  onMultiConfirm?: (selectedValues: string[]) => void;
+  onDoctorBook?: (info: BookInfo) => void;
   callTool?: <R extends ToolCallResponse = ToolCallResponse>(
     toolName: string,
     toolParams?: Record<string, unknown>
@@ -129,6 +125,8 @@ export function MessageBubble({
   messageId,
   message,
   isBot = false,
+  onUserFeedback,
+  // onRegenerate,
   isLastMessage,
   quickActions,
   showActions,
@@ -147,25 +145,25 @@ export function MessageBubble({
   files,
   feedback,
   onLabPackageBook,
-  // Synapse SDK props
+  // Synapse SDK tool escalation props
   toolEscalationData,
-  toolCallStatus,
-  onSendMessage,
-  onToggleFeedback,
+  onPillClick,
+  onMultiConfirm,
+  onDoctorBook,
   callTool,
 }: MessageBubbleProps) {
+  // const { isBotIconAnimating } = useMedAssistStore();
   const [selectedMultiValues, setSelectedMultiValues] = useState<string[]>([]);
   const [userFeedback, setUserFeedback] = useState<USER_FEEDBACK>(
     feedback || USER_FEEDBACK.NONE
   );
   const [showFeedbackFollowUp, setShowFeedbackFollowUp] =
     useState<boolean>(false);
-
   // Reset selected values when new commonContentData or toolEscalationData comes in
   useEffect(() => {
     if (
       (commonContentData && commonContentData.type === ContentType.MULTI) ||
-      toolEscalationData?.details?.component === SYNAPSE_COMPONENTS.MULTI
+      (toolEscalationData?.details?.component === SYNAPSE_COMPONENTS.MULTI)
     ) {
       setSelectedMultiValues([]);
     }
@@ -179,38 +177,6 @@ export function MessageBubble({
     }
   }, [feedback, isLastMessage]);
 
-  // --- Internal handlers for SDK tool interactions (like synapse ChatMessage) ---
-
-  const handlePillClick = async (choice: string) => {
-    await onSendMessage({
-      message: choice,
-      messageId: Date.now().toString(),
-      toolCalled: true,
-    });
-  };
-
-  const handleMultiConfirm = async () => {
-    if (selectedMultiValues.length > 0) {
-      const mergedMessage = selectedMultiValues.join(", ");
-      await onSendMessage({
-        message: mergedMessage,
-        messageId: Date.now().toString(),
-        toolCalled: true,
-      });
-    }
-  };
-
-  const handleDoctorBook = async (info: BookInfo) => {
-    await onSendMessage({
-      message: `I want to book an appointment for ${
-        info.doctorData?.doctor?.name || "the doctor"
-      } on ${info.date} for ${info.time}`,
-      toolCalled: true,
-    });
-  };
-
-  // --- Old commonContentData handlers (mobile verification flow) ---
-
   const handleMultiSelect = (values: string[]) => {
     setSelectedMultiValues(values);
   };
@@ -221,12 +187,14 @@ export function MessageBubble({
       commonContentData?.tool_use_id &&
       commonContentData.type === ContentType.MULTI
     ) {
+      // Handle additional options logic
       let finalValues = [...selectedMultiValues];
 
       if (
         commonContentData.data.additional_option ===
         MULTI_SELECT_ADDITIONAL_OPTION.NOTA
       ) {
+        // If "none of the above" is selected, only send that
         const notaValue = selectedMultiValues.find(
           (value) => value === MULTI_SELECT_ADDITIONAL_OPTION.NOTA
         );
@@ -237,6 +205,7 @@ export function MessageBubble({
         commonContentData.data.additional_option ===
         MULTI_SELECT_ADDITIONAL_OPTION.AOTA
       ) {
+        // If "all of the above" is selected, send all choices
         const aotaValue = selectedMultiValues.find(
           (value) => value === MULTI_SELECT_ADDITIONAL_OPTION.AOTA
         );
@@ -245,6 +214,7 @@ export function MessageBubble({
         }
       }
 
+      // Send the selected values as comma-separated text
       onContentClick({
         content: finalValues.join(", "),
         tool_use_id: commonContentData.tool_use_id,
@@ -252,11 +222,9 @@ export function MessageBubble({
     }
   };
 
-  // --- Feedback handlers ---
-
-  const handleToggleFeedback = (fb: USER_FEEDBACK) => {
-    setUserFeedback(fb);
-    onToggleFeedback(fb);
+  const handleToggleFeedback = (feedback: USER_FEEDBACK) => {
+    onUserFeedback(feedback);
+    setUserFeedback(feedback);
   };
 
   const handleCloseFeedbackPrompt = () => {
@@ -264,57 +232,9 @@ export function MessageBubble({
   };
 
   const handleDislikeReasonSelect = (option: PillItem) => {
-    onToggleFeedback(USER_FEEDBACK.DISLIKE, option.value);
+    console.log("Selected dislike reason:", option);
+    onUserFeedback( USER_FEEDBACK.DISLIKE, option.value);
   };
-
-  // --- Helper for SDK multi-select options ---
-
-  const getMultiSelectOptions = () => {
-    const options = toolEscalationData?.details?.input?.options;
-    if (!options) return [];
-    if (Array.isArray(options)) {
-      return options.map((choice, index) => ({
-        id: `option-${index}`,
-        label: choice.label,
-        value: choice.value,
-      }));
-    }
-    return Object.keys(options).map((key, index) => ({
-      id: `option-${index}`,
-      label: key,
-      value: key,
-    }));
-  };
-
-  const getAdditionalOption = ():
-    | MULTI_SELECT_ADDITIONAL_OPTION
-    | undefined => {
-    if (!toolEscalationData?.details?.input?.additional_option) return undefined;
-
-    const option = toolEscalationData.details?.input?.additional_option as any;
-
-    if (typeof option === "string") {
-      if (
-        option === MULTI_SELECT_ADDITIONAL_OPTION.NOTA ||
-        option === MULTI_SELECT_ADDITIONAL_OPTION.AOTA
-      ) {
-        return option;
-      }
-    }
-
-    if (typeof option === "object" && option !== null) {
-      if (option.NOTA === MULTI_SELECT_ADDITIONAL_OPTION.NOTA) {
-        return MULTI_SELECT_ADDITIONAL_OPTION.NOTA;
-      }
-      if (option.AOTA === MULTI_SELECT_ADDITIONAL_OPTION.AOTA) {
-        return MULTI_SELECT_ADDITIONAL_OPTION.AOTA;
-      }
-    }
-
-    return undefined;
-  };
-
-  // --- Render logic ---
 
   const isTextEmpty = useMemo(() => {
     return (
@@ -336,7 +256,6 @@ export function MessageBubble({
 
   // Don't render empty message bubble for bot messages
   const shouldRenderBubble = !isBot || !isTextEmpty;
-
   return (
     <div className="px-4 py-2">
       <div
@@ -365,32 +284,23 @@ export function MessageBubble({
                      ? `rounded-bl-none text-[var(--color-foreground)] bg-[var(--color-background-primary-default)]`
                      : "rounded-br-none text-[var(--color-black-800)] bg-[var(--color-background-primary-subtle)]"
                  }`}>
-                {/* Display tool call status at the top, like ChatGPT */}
-                {isBot && toolCallStatus && (
-                  <div className="text-xs text-slate-500 px-4 pt-3 pb-1 border-b border-slate-200/50">
-                    {toolCallStatus}
-                  </div>
-                )}
-
-                {/* Fallback to progressMessage if toolCallStatus is not available */}
-                {isBot && !toolCallStatus && progressMessage && isLastMessage && (
-                  <div className="p-4 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
-                    <ReactMarkdown>{progressMessage}</ReactMarkdown>
-                  </div>
-                )}
-
-                {/* Only show message content if it's not empty */}
+                {/* Only show message content if it's not empty or if it's a bot message */}
                 {message && isBot && (
                   <div className="markdown-content p-4">
                     <ReactMarkdown remarkPlugins={[remarkGfm]}>
-                      {`${message}${isStreaming && isLastMessage ? " ..." : ""}`}
+                      {message}
                     </ReactMarkdown>
                   </div>
                 )}
                 {message && !isBot && (
                   <div className="text-sm break-word p-4">{message}</div>
                 )}
-                {isBot && isStreaming && !message && !progressMessage && (
+                {isBot && progressMessage && (
+                  <div className="p-4 bg-gradient-to-r from-[var(--color-primary)] via-[var(--color-primary-400)] to-[var(--color-primary-600)] bg-clip-text text-transparent font-medium">
+                    <ReactMarkdown>{progressMessage}</ReactMarkdown>
+                  </div>
+                )}
+                {isBot && isStreaming && !progressMessage && (
                   <span className="animate-pulse p-4 block">...</span>
                 )}
                 {/* Show tips when available */}
@@ -415,14 +325,20 @@ export function MessageBubble({
             </div>
           )}
 
-          {/* File previews */}
+          {/* Display audio data for user messages */}
+          {/* {!isBot && audioData && (
+            <div className="mt-2 p-2 bg-[var(--color-accent)] rounded-md">
+              <div className="text-sm text-[var(--color-primary)]">
+                🎤 Voice message sent
+              </div>
+            </div>
+          )} */}
           {files && files.length > 0 && (
             <div className="mt-2">
               <FilePreviewList files={files} isPreview={false} className="" />
             </div>
           )}
-
-          {/* Display old commonContentData for bot messages (mobile verification, old pills/multi, lab packages) */}
+          {/* Display common content for bot messages */}
           {isBot && commonContentData && (
             <div className="flex items-end gap-2">
               <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
@@ -534,40 +450,45 @@ export function MessageBubble({
                       {isResponded ? "UHID selected:" : "Select a UHID:"}
                     </div>
                     <div className="flex flex-row gap-2 flex-wrap">
-                      {commonContentData.data.uhids.map((uhid, index) => (
-                        <Button
-                          key={`${commonContentData.tool_use_id}-${index}`}
-                          variant="outline"
-                          size="sm"
-                          className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
-                            isResponded
-                              ? "bg-gray-100 text-gray-500 cursor-not-allowed"
-                              : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
-                          }`}
-                          onClick={() =>
-                            !isResponded &&
-                            onContentClick?.({
-                              content: uhid.uhid,
-                              tool_use_id: commonContentData.tool_use_id,
-                            })
-                          }
-                          disabled={isQuickActionsDisabled || isResponded}>
-                          <MarqueeText
-                            text={`${uhid.fn || ""} ${uhid.ln || ""} ${
-                              uhid.age || ""
-                            } (${uhid.uhid})`}
-                            maxWidth="300px"
-                            className="text-left"
-                          />
-                        </Button>
-                      ))}
+                      {commonContentData.data.uhids.map(
+                        (
+                          uhid,
+                          index //TODO: change it to choices with value and label
+                        ) => (
+                          <Button
+                            key={`${commonContentData.tool_use_id}-${index}`}
+                            variant="outline"
+                            size="sm"
+                            className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
+                              isResponded
+                                ? "bg-gray-100 text-gray-500 cursor-not-allowed"
+                                : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
+                            }`}
+                            onClick={() =>
+                              !isResponded &&
+                              onContentClick?.({
+                                content: uhid.uhid,
+                                tool_use_id: commonContentData.tool_use_id,
+                              })
+                            }
+                            disabled={isQuickActionsDisabled || isResponded}>
+                            <MarqueeText
+                              text={`${uhid.fn || ""} ${uhid.ln || ""} ${
+                                uhid.age || ""
+                              } (${uhid.uhid})`}
+                              maxWidth="300px"
+                              className="text-left"
+                            />
+                          </Button>
+                        )
+                      )}
                     </div>
                   </div>
                 )}
             </div>
           )}
 
-          {/* SDK Tool Escalation Data (Pills, Multi, Doctor Cards) - handled internally like synapse ChatMessage */}
+          {/* NEW: Synapse SDK Tool Escalation Data Rendering (Pills, Multi, Doctor Cards) */}
           {isBot && toolEscalationData && !commonContentData && (
             <div className="flex items-end gap-2">
               <div className="flex-shrink-0 w-8 h-8 rounded-full overflow-hidden">
@@ -581,14 +502,11 @@ export function MessageBubble({
               </div>
 
               {/* Pills from SDK */}
-              {toolEscalationData.details?.component ===
-                SYNAPSE_COMPONENTS.PILL &&
+              {toolEscalationData.details?.component === SYNAPSE_COMPONENTS.PILL &&
                 toolEscalationData.details?.input?.options && (
                   <div>
                     <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
-                      {toolEscalationData.isResponded
-                        ? "Option selected:"
-                        : "Select an option:"}
+                      {isResponded ? "Option selected:" : "Select an option:"}
                     </div>
                     <div className="flex flex-row gap-2 flex-wrap">
                       {toolEscalationData.details.input.options.map(
@@ -598,18 +516,14 @@ export function MessageBubble({
                             variant="outline"
                             size="sm"
                             className={`justify-start text-sm font-normal border-[var(--color-primary)] h-9 rounded-lg w-fit min-w-0 ${
-                              toolEscalationData.isResponded
+                              isResponded
                                 ? "bg-gray-100 text-gray-500 cursor-not-allowed"
                                 : "hover:bg-[var(--color-accent)] text-[var(--color-primary)]"
                             }`}
                             onClick={() =>
-                              !toolEscalationData.isResponded &&
-                              handlePillClick(choice.value || "")
+                              !isResponded && onPillClick?.(choice.value || "")
                             }
-                            disabled={
-                              isQuickActionsDisabled ||
-                              toolEscalationData.isResponded
-                            }>
+                            disabled={isQuickActionsDisabled || isResponded}>
                             <MarqueeText
                               text={choice.label || choice.value || ""}
                               maxWidth="250px"
@@ -623,31 +537,41 @@ export function MessageBubble({
                 )}
 
               {/* Multi-select from SDK */}
-              {toolEscalationData.details?.component ===
-                SYNAPSE_COMPONENTS.MULTI &&
+              {toolEscalationData.details?.component === SYNAPSE_COMPONENTS.MULTI &&
                 toolEscalationData.details?.input?.options && (
                   <div className="mt-3">
                     <div className="text-xs text-[var(--color-muted-foreground)] mb-2 font-medium">
-                      {toolEscalationData.isResponded
+                      {isResponded
                         ? "Options selected:"
                         : "Select multiple options:"}
                     </div>
                     <MultiSelectGroup
-                      options={getMultiSelectOptions()}
+                      options={toolEscalationData.details.input.options.map(
+                        (choice, index) => ({
+                          id: `multi-${toolEscalationData.tool_id}-${index}`,
+                          label: choice.label,
+                          value: choice.value,
+                        })
+                      )}
                       selectedValues={selectedMultiValues}
                       onSelectionChange={
-                        toolEscalationData.isResponded
-                          ? () => {}
+                        isResponded
+                          ? () => {
+                              console.log("already responded");
+                            }
                           : handleMultiSelect
                       }
-                      additionalOption={getAdditionalOption()}
+                      additionalOption={
+                        toolEscalationData.details.input.additional_option as any
+                      }
+                      required={false}
                     />
-                    {!toolEscalationData.isResponded && (
+                    {!isResponded && (
                       <Button
                         variant="outline"
                         size="sm"
                         className="mt-2 text-sm font-normal border-[var(--color-primary)] hover:bg-[var(--color-accent)] text-[var(--color-primary)] h-8 rounded-lg"
-                        onClick={handleMultiConfirm}
+                        onClick={() => onMultiConfirm?.(selectedMultiValues)}
                         disabled={
                           isQuickActionsDisabled ||
                           selectedMultiValues.length === 0
@@ -659,23 +583,20 @@ export function MessageBubble({
                 )}
 
               {/* Doctor Cards from SDK */}
-              {toolEscalationData.details?.component ===
-                SYNAPSE_COMPONENTS.DOCTOR_CARD &&
+              {toolEscalationData.details?.component === SYNAPSE_COMPONENTS.DOCTOR_CARD &&
                 toolEscalationData.details?.input?.doctors &&
                 callTool && (
                   <DoctorDetailsList
-                    doctorAvailabilities={
-                      toolEscalationData.details.input.doctors
-                    }
-                    doctorDetails={
-                      toolEscalationData.details.input.doctor_details
-                    }
+                    doctorAvailabilities={toolEscalationData.details.input.doctors}
+                    doctorDetails={toolEscalationData.details.input.doctor_details}
                     callbacks={
                       toolEscalationData.details._meta?.callbacks as any
                     }
                     callTool={callTool}
-                    onBook={handleDoctorBook}
-                    disabled={toolEscalationData.isResponded}
+                    onBook={(info: BookInfo) => {
+                      onDoctorBook?.(info);
+                    }}
+                    disabled={isResponded}
                   />
                 )}
             </div>
@@ -691,7 +612,6 @@ export function MessageBubble({
             </div>
           )}
 
-          {/* Feedback buttons (like synapse ChatMessage) */}
           {isBot &&
           !isStreaming &&
           messageId !== "1" &&
@@ -713,6 +633,18 @@ export function MessageBubble({
                 onClick={() => handleToggleFeedback(USER_FEEDBACK.DISLIKE)}>
                 <ThumbsDownIcon className="h-3 w-3 text-black/50" />
               </Button>
+              {/* <Button
+        variant="ghost"
+        size="sm"
+        className="h-6 w-6 p-0 hover:bg-[var(--color-muted)]"
+        onClick={() => onRegenerate?.(messageId)}
+        disabled={isRegenerating || isStreaming}>
+        <RotateCcw
+          className={`h-3 w-3 text-[var(--color-muted-foreground)] ${
+            isRegenerating || isStreaming ? "opacity-50" : ""
+          }`}
+        />
+      </Button> */}
             </div>
           ) : userFeedback === USER_FEEDBACK.LIKE ? (
             <Button
@@ -732,7 +664,7 @@ export function MessageBubble({
             </Button>
           ) : null}
 
-          {/* Feedback follow-up */}
+          {/* Connection Status */}
           {showFeedbackFollowUp && (
             <FeedbackFollowUp
               title="Tell us what went wrong"
@@ -746,3 +678,4 @@ export function MessageBubble({
     </div>
   );
 }
+//***********************Add this after proper implementation of feedback */

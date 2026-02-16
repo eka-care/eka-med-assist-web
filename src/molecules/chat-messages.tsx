@@ -1,11 +1,8 @@
 import type { SendMessageOptions, ToolCallResponse } from "@eka-care/medassist-core";
 import type { Message } from "@/types/widget";
-import type { TLabPackage } from "@/types/widget";
-import { MessageBubble } from "./message-bubble";
-import { MessageSender, CONNECTION_STATUS } from "@/types/widget";
 import useMedAssistStore from "@/stores/medAssistStore";
-import { USER_FEEDBACK } from "@/configs/enums";
-import type { TMobileVerificationStatus } from "@/organisms/chat-widget";
+import { USER_FEEDBACK } from "@eka-care/medassist-core";
+import ChatMessage from "./chat-message";
 
 interface ChatMessagesProps {
   messages: Message[];
@@ -18,95 +15,37 @@ interface ChatMessagesProps {
     feedback: USER_FEEDBACK,
     messageId: string,
     reason?: string
-  ) => void;
+  ) => Promise<void>;
   // Apollo-specific props
-  quickActions: { id: string; label: string }[];
-  handleQuickAction: (action: string) => void;
-  mobVerificationStatus: TMobileVerificationStatus;
-  clearMobileVerification: () => void;
-  onContentClick: (params: {
-    content: string;
-    tool_use_id?: string;
-    tool_use_params?: any;
-  }) => void;
-  onLabPackageBook?: (pkg: TLabPackage) => void;
-  isOnline: boolean;
 }
 
 export function ChatMessages({
   messages,
-  onSendMessage,
   callTool,
   onToggleFeedback,
-  quickActions,
-  handleQuickAction,
-  mobVerificationStatus,
-  clearMobileVerification,
-  onContentClick,
-  isOnline,
+onSendMessage,
 }: ChatMessagesProps) {
   const isWaitingForResponse = useMedAssistStore(
     (state) => state.isWaitingForResponse
   );
   const progressMessage = useMedAssistStore((state) => state.progressMessage);
   const isStreaming = useMedAssistStore((state) => state.isStreaming);
-  const connectionStatus = useMedAssistStore((state) => state.connectionStatus);
+//   const connectionStatus = useMedAssistStore((state) => state.connectionStatus);
 
   return (
     <>
       {/* Message list */}
       {messages.map((message, index) => (
-        <MessageBubble
-          key={message.id || index}
-          messageId={message.id}
-          message={message.content}
-          isBot={message.isBot || message.role === MessageSender.ASSISTANT}
-          showActions={
-            messages.length === 1 &&
-            (message.isBot || message.role === MessageSender.ASSISTANT)
-          }
-          handleQuickAction={handleQuickAction}
-          quickActions={quickActions}
-          isQuickActionsDisabled={
-            connectionStatus !== CONNECTION_STATUS.CONNECTED ||
-            isStreaming ||
-            !isOnline
-          }
-          isStreaming={
-            (message.isBot || message.role === MessageSender.ASSISTANT) &&
-            isStreaming &&
-            index === messages.length - 1
-          }
-          progressMessage={
-            (message.isBot || message.role === MessageSender.ASSISTANT) &&
-            index === messages.length - 1
-              ? progressMessage
-              : null
-          }
-          onToggleFeedback={(fb, reason) =>
-            onToggleFeedback(fb, message.id, reason)
-          }
-          tips={null}
-          isLastMessage={index === messages.length - 1}
-          verificationStatus={
-            mobVerificationStatus.active && index === messages.length - 1
-          }
-          clearMobileVerification={clearMobileVerification}
-          onTipsExpire={() => {}}
-          commonContentData={message.commonContentData}
-          onContentClick={onContentClick}
-          onRegenerate={() => {}}
-          audioData={message.audioData}
-          isResponded={
-            message.isResponded || message.toolEscalationData?.isResponded
-          }
-          files={message.files}
-          feedback={message?.feedback || USER_FEEDBACK.NONE}
-          toolEscalationData={message.toolEscalationData}
-          toolCallStatus={message.toolCallStatus}
-          onSendMessage={onSendMessage}
-          callTool={callTool}
-        />
+      <ChatMessage 
+        key={message.id}
+        message={message}
+        callTool={callTool}
+        onToggleFeedback={onToggleFeedback}
+        onSendMessage={onSendMessage}
+        isLastMessage={index === messages.length - 1}
+        progressMessage={progressMessage}
+        toolEscalationData={message.toolEscalationData}
+      />
       ))}
 
       {/* Typing indicator when waiting for response */}

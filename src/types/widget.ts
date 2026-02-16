@@ -1,4 +1,4 @@
-import { USER_FEEDBACK } from "@/configs/enums";
+import { USER_FEEDBACK } from "@eka-care/medassist-core";
 import { AudioData } from "@/services/audioService";
 import type { ToolCallData } from "@eka-care/medassist-core";
 import { PillItem } from "@ui/index";
@@ -7,6 +7,8 @@ import { PillItem } from "@ui/index";
 export type ExtendedToolEscalationData = ToolCallData & {
   isResponded: boolean;
 };
+
+export type TSuggestion = { label?: string; value?: string; response?: string };
 
 export const MessageSender = {
   USER: "user",
@@ -21,7 +23,6 @@ export interface Message {
   files?: File[];
   originalUserMessage?: string;
   isRegenerating?: boolean;
-  commonContentData?: import("./socket").CommonHandlerData; // kept for mobile verification
   toolEscalationData?: ExtendedToolEscalationData; // NEW: from synapse SDK tool calls
   isResponseFromTool?: boolean;
   audioData?: AudioData;

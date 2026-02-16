@@ -11,6 +11,7 @@ import { Card } from "@ui/index";
 import { ChatHeader } from "../molecules/chat-header";
 import { ConnectionStatus } from "../molecules/connection-status";
 import { ChatMessages } from "../molecules/chat-messages";
+import EmptyChatState from "../molecules/empty-chat-state";
 import { MessageInput } from "../molecules/message-input";
 import { MobileNumberInput } from "@/molecules/mobile-number-input";
 import { OTPInput } from "@/molecules/otp-input";
@@ -18,7 +19,7 @@ import handleMobileVerification from "@/utils/handleMobileVerification";
 import handleOtpVerification from "@/utils/handleOtpVerification";
 import handleUhidVerification from "@/utils/handleUhidVerification";
 import type { IMobileVerificationResponse, TUhidDetails } from "@/types/api";
-import { USER_FEEDBACK } from "@/configs/enums";
+import { USER_FEEDBACK } from "@eka-care/medassist-core";
 
 export enum MOBILE_VERIFICATION_STAGE {
   MOBILE_NUMBER = "mobile",
@@ -91,6 +92,7 @@ export function ChatWidget({
     progressMessage,
     setProgressMessage,
     setIsBotIconAnimating,
+    initialMessage,
   } = useMedAssistStore();
 
   // Use the new useChat hook (replaces useWebSocket)
@@ -105,19 +107,13 @@ export function ChatWidget({
     isValidFile,
     callTool,
     handleToggleFeedback,
+    handleInitialTaskClick,
   } = useChat({
     environment: "production",
     onInlineText: (text) => {
       setInlineText(text);
     },
   });
-
-  const [quickActions] = useState([
-    { id: "doctor", label: "Help me find a doctor" },
-    { id: "appointment", label: "I want to book appointment" },
-    { id: "health_check", label: "I want to book health check" },
-    { id: "emergency", label: "I have an emergency" },
-  ]);
 
   const scrollAreaRef = useRef<HTMLDivElement>(null);
 
@@ -163,8 +159,8 @@ export function ChatWidget({
         // Mobile number provided - auto-send OTP
         setMobVerificationStatus((prev) => ({
           ...prev,
-          active: true,
-          isSending: true,
+            active: true,
+            isSending: true,
           tool_use_id: toolData.tool_id || null,
           mobile_number: mobileNumber,
         }));
@@ -182,20 +178,20 @@ export function ChatWidget({
 
   const handleAutoMobileVerification = async (mobileNumber: string) => {
     setProgressMessage("Sending OTP to your mobile number...");
-    try {
-      const response = await handleMobileVerification(
+          try {
+            const response = await handleMobileVerification(
         mobileNumber,
-        sessionId,
+              sessionId,
         async () => true
-      );
-      if (response?.success && response?.data?.message) {
+            );
+            if (response?.success && response?.data?.message) {
         setMobVerificationStatus((prev) => ({
           ...prev,
           active: true,
-          isSending: false,
+              isSending: false,
           stage: MOBILE_VERIFICATION_STAGE.OTP,
         }));
-      } else {
+              } else {
         setMobVerificationStatus((prev) => ({
           ...prev,
           active: false,
@@ -262,12 +258,18 @@ export function ChatWidget({
     );
   }, [connectionStatus, isOnline, error, showRetryButton, startNewConnection]);
 
-  // Compute display messages: prepend welcome message if no messages
+  // Whether user is in active conversation (has messages)
+  const inConversation = incomingMessages.length > 0;
+
+  // Compute display messages: use initialMessage.text as welcome if available, else default
   const displayMessages = useMemo(() => {
+    const welcomeText =
+      initialMessage?.text ||
+      "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?";
+
     const welcomeMessage: Message = {
       id: "1",
-      content:
-        "Hi, I'm Apollo Assist, your personal support for all medical needs. How can I help you?",
+      content: welcomeText,
       isBot: true,
       role: MessageSender.ASSISTANT,
       isStored: true,
@@ -284,7 +286,13 @@ export function ChatWidget({
     }
 
     return incomingMessages;
-  }, [incomingMessages]);
+  }, [incomingMessages, initialMessage]);
+
+  // Handle task card click (delegates to useChat's handleInitialTaskClick)
+  const handleTaskClick = async (task: string) => {
+    if (!task) return;
+    await handleInitialTaskClick(task);
+  };
 
   // ---- Handlers ----
 
@@ -321,10 +329,10 @@ export function ChatWidget({
     try {
       // === MOBILE VERIFICATION FLOW (kept as-is) ===
       if (mobVerificationStatusRef.current.active) {
-        let response: {
-          success: boolean;
-          data: IMobileVerificationResponse | null;
-        } | null = null;
+      let response: {
+        success: boolean;
+        data: IMobileVerificationResponse | null;
+      } | null = null;
 
         if (
           mobVerificationStatusRef.current.stage ===
@@ -516,32 +524,6 @@ export function ChatWidget({
     }
   };
 
-  const handleQuickAction = async (actionId: string) => {
-    if (isStreaming) return;
-    if (!isOnline || connectionStatus !== CONNECTION_STATUS.CONNECTED) {
-      setError({ title: "Cannot perform action" });
-      return;
-    }
-    clearError();
-    setProgressMessage(null);
-
-    const action = quickActions.find((a) => a.id === actionId);
-    if (action) {
-      try {
-        await handleSendMessage({ content: action.label });
-      } catch (error) {
-        console.error("Failed to send quick action:", error);
-      }
-    }
-  };
-
-  const handleMenuAction = (action: string) => {
-    if (action === "clear") {
-      clearError();
-      setIsWaitingForResponse(false);
-    }
-  };
-
   const handleStartNewSession = async () => {
     try {
       setIsWaitingForResponse(false);
@@ -556,17 +538,17 @@ export function ChatWidget({
     await chatHandleRetry();
   };
 
-  const exitMobileVerification = async () => {
-    const exitMessage = `Exit ${
-      mobVerificationStatus?.stage || "Mobile"
-    } verification`;
-    // const toolId = mobVerificationStatusRef.current?.tool_use_id;
-    clearMobileVerification();
-    await sendMessage({
-      message: exitMessage,
-      toolCalled: true,
-    });
-  };
+  // const exitMobileVerification = async () => {
+  //   const exitMessage = `Exit ${
+  //     mobVerificationStatus?.stage || "Mobile"
+  //   } verification`;
+  //   // const toolId = mobVerificationStatusRef.current?.tool_use_id;
+  //   clearMobileVerification();
+  //   await sendMessage({
+  //     message: exitMessage,
+  //     toolCalled: true,
+  //   });
+  // };
 
   const clearMobileVerification = () => {
     setMobVerificationStatus({
@@ -583,9 +565,9 @@ export function ChatWidget({
   const handleMessageFeedback = async (
     feedback: USER_FEEDBACK,
     messageId: string,
-    feedbackReason?: string
+    reason?: string
   ) => {
-    await handleToggleFeedback(feedback, messageId, feedbackReason);
+    await handleToggleFeedback(feedback, messageId, reason);
   };
 
   // ---- UI ----
@@ -607,7 +589,6 @@ export function ChatWidget({
         title={title}
         onClose={onClose}
         onExpand={onExpand}
-        onMenuAction={handleMenuAction}
         isExpanded={isExpanded}
         isMobile={isMobile}
         onStartSession={handleStartNewSession}
@@ -644,9 +625,8 @@ export function ChatWidget({
             onTouchStart={(e) => isMobile && e.stopPropagation()}
             onTouchMove={(e) => isMobile && e.stopPropagation()}>
             <div
-              className={`min-h-full flex flex-col justify-end ${
-                isMobile ? "pb-4" : "pb-4"
-              }`}>
+              className={`min-h-full flex flex-col justify-end
+               ${isMobile ? "pb-4" : "pb-4"}`}>
               <div className="py-1 px-4 flex items-center justify-center">
                 <div className="text-xs text-[var(--color-muted-foreground)] text-center">
                   {(() => {
@@ -660,19 +640,27 @@ export function ChatWidget({
                   })()}
                 </div>
               </div>
-              <div className="space-y-1">
-                <ChatMessages
-                  messages={displayMessages}
-                  onSendMessage={sendMessage}
-                  callTool={callTool}
-                  onToggleFeedback={handleMessageFeedback}
-                  quickActions={quickActions}
-                  handleQuickAction={handleQuickAction}
-                  mobVerificationStatus={mobVerificationStatus}
-                  clearMobileVerification={exitMobileVerification}
-                  onContentClick={handleSendMessage}
-                  isOnline={isOnline}
-                />
+              <div className={inConversation ? "space-y-1" : "space-y-4"}>
+                {!inConversation && initialMessage?.text ? (
+                  <EmptyChatState
+                    initialPrompt={initialMessage.text}
+                    tasks={initialMessage.suggestions}
+                    onTaskClick={handleTaskClick}
+                    disabled={
+                      connectionStatus !== CONNECTION_STATUS.CONNECTED ||
+                      isStreaming ||
+                      isWaitingForResponse ||
+                      !isOnline
+                    }
+                  />
+                ) : (
+                  <ChatMessages
+                    messages={displayMessages}
+                    onSendMessage={sendMessage}
+                    callTool={callTool}
+                    onToggleFeedback={handleMessageFeedback}
+                  />
+                )}
               </div>
             </div>
           </div>
