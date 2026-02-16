@@ -7,7 +7,7 @@ const PRODUCTION_CONFIG = {
 const DEVELOPMENT_CONFIG = { // can be used for local development
     WEBSOCKET_URL: "wss://matrix-ws.dev.eka.care",
     BASE_API_URL: "https://matrix.dev.eka.care",
-    X_AGENT_ID: "NDBkNmM4OTEtNGEzMC00MDBlLWE4NjEtN2ZkYjliMDY2MDZhI2ItMTYxNDY3NzU2MDQ0MjAz",
+    X_AGENT_ID: "YTA1NWMzNGYtMmQ5ZC00YjU3LTgyNGEtOTMzZDkzYjY3YjQ2Izc3MDg4MTY2OTk2NzI0",
 };
 
 const STAGING_CONFIG = {

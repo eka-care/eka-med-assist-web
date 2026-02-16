@@ -1,145 +1,143 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { TDoctor, TDoctorDetails, TCallbacks } from "@/types/widget";
-import AppointmentCard from "./appointment-card";
-import useMedAssistStore from "@/stores/medAssistStore";
-import getDoctorDetails from "@/utils/getDoctorDetails";
+import { AppointmentCardNew } from "./appointment-card";
+import {
+  SYNAPSE_TOOL_CALLBACK_NAME,
+  type TDoctorAvailability,
+  type TDoctorDetailsMap,
+  type TDoctorToolResponse,
+  type ToolCallbacks,
+  type ToolCallResponse,
+} from "@eka-care/medassist-core";
 
 export type BookInfo = {
   date: string;
   time: string;
-  doctorData: { doctor: TDoctor; hospital_id: string; region_id: string };
-};
-type Props = {
-  doctorDetails: TDoctorDetails;
-  callbacks?: TCallbacks;
-  onBook?: (info: BookInfo) => void;
-  disabled?: boolean;
-  refreshSession: () => Promise<boolean>;
-  getAvailabilityDatesForAppointment: (doctorData: {
-    doctor_id: string;
+  doctorData: {
+    doctor: TDoctorToolResponse;
     hospital_id?: string;
     region_id?: string;
-  }) => Promise<{ success: boolean; data: any }>;
-  getAvailableSlotsForAppointment: (
-    appointment_date: string,
-    doctorData: {
-      doctor_id: string;
-      hospital_id?: string;
-      region_id?: string;
-    }
-  ) => Promise<{ success: boolean; data: any }>;
+  };
+};
+
+type Props = {
+  doctorAvailabilities: TDoctorAvailability[];
+  doctorDetails?: TDoctorDetailsMap;
+  callbacks?: ToolCallbacks;
+  onBook?: (info: BookInfo) => void;
+  disabled?: boolean;
+  callTool: <R extends ToolCallResponse = ToolCallResponse>(
+    toolName: string,
+    toolParams: Record<string, unknown>
+  ) => Promise<R>;
 };
 
 export function DoctorDetailsList({
+  doctorAvailabilities,
   doctorDetails,
   callbacks,
   onBook,
-  refreshSession,
   disabled = false,
-  getAvailabilityDatesForAppointment,
-  getAvailableSlotsForAppointment,
+  callTool,
 }: Props) {
-  const [doctors, setDoctors] = useState<TDoctor[]>([]);
+  const [loadedDoctorDetails, setLoadedDoctorDetails] =
+    useState<TDoctorDetailsMap>({});
   const [loading, setLoading] = useState(false);
-  const [loadedCount, setLoadedCount] = useState(0);
   const [error, setError] = useState<string | null>(null);
+  const [loadedCount, setLoadedCount] = useState(0);
 
-  const sessionId = useMedAssistStore((state) => state.sessionId);
+  const totalDoctors = doctorAvailabilities.length;
 
-  const doctorIds = doctorDetails.doctor_ids || [];
-  const totalDoctors = doctorIds.length;
-  const initialLoadCount = Math.min(3, totalDoctors);
+  const initialLoadCount = Math.min(3, doctorAvailabilities.length);
   const remainingCount = totalDoctors - initialLoadCount;
 
-  // Load initial doctors (max 3)
   useEffect(() => {
-    if (doctorIds.length === 0 || !sessionId) return;
-
     const loadInitialDoctors = async () => {
       setLoading(true);
       setError(null);
+      const initialDoctors = doctorAvailabilities.slice(0, initialLoadCount);
 
-      try {
-        // Load first 3 doctors in parallel
-        const initialIds = doctorIds.slice(0, initialLoadCount);
-        const doctorPromises = initialIds.map((doctorId) =>
-          getDoctorDetails(doctorId, sessionId, refreshSession)
-        );
-
-        const results = await Promise.allSettled(doctorPromises);
-        const successfulDoctors: TDoctor[] = [];
-
-        results.forEach((result, index) => {
-          if (result.status === "fulfilled") {
-            successfulDoctors.push(result.value);
-          } else {
-            console.error(
-              `Failed to load doctor ${initialIds[index]}:`,
-              result.reason
-            );
+      const doctorPromises = initialDoctors
+        .filter((doctor) => doctor.doctor_id)
+        .map(async (doctor) => {
+          try {
+            const details = await fetchDoctorDetails(doctor.doctor_id!);
+            return {
+              doctorId: doctor.doctor_id!,
+              doctorDetails: details || null,
+            };
+          } catch (error) {
+            return { doctorId: doctor.doctor_id!, doctorDetails: null };
           }
         });
 
-        setDoctors(successfulDoctors);
-        setLoadedCount(successfulDoctors.length);
-      } catch (error) {
-        console.error("Error loading initial doctors:", error);
-        setError("Failed to load doctor details. Please try again.");
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadInitialDoctors();
-  }, [doctorIds, sessionId, initialLoadCount]);
-
-  // Load remaining doctors when "Show more" is clicked
-  const loadRemainingDoctors = async () => {
-    if (loadedCount >= totalDoctors || !sessionId) return;
-
-    setLoading(true);
-    setError(null);
-
-    try {
-      const remainingIds = doctorIds.slice(loadedCount);
-      const doctorPromises = remainingIds.map((doctorId) =>
-        getDoctorDetails(doctorId, sessionId, refreshSession)
-      );
-
       const results = await Promise.allSettled(doctorPromises);
-      const newDoctors: TDoctor[] = [];
-
-      results.forEach((result, index) => {
+      const details: TDoctorDetailsMap = {};
+      results.forEach((result) => {
         if (result.status === "fulfilled") {
-          newDoctors.push(result.value);
-        } else {
-          console.error(
-            `Failed to load doctor ${remainingIds[index]}:`,
-            result.reason
-          );
+          const { doctorId, doctorDetails } = result.value;
+          if (doctorId && doctorDetails) {
+            details[doctorId] = doctorDetails;
+          }
         }
       });
 
-      setDoctors((prev) => [...prev, ...newDoctors]);
-      setLoadedCount((prev) => prev + newDoctors.length);
-    } catch (error) {
-      console.error("Error loading remaining doctors:", error);
-      setError("Failed to load more doctor details. Please try again.");
-    } finally {
+      setLoadedDoctorDetails(details);
+      setLoadedCount(Object.keys(details).length);
       setLoading(false);
+    };
+    loadInitialDoctors();
+  }, []);
+
+  const fetchDoctorDetails = async (doctorId: string) => {
+    if (doctorDetails) {
+      return doctorDetails[doctorId];
     }
+    if (callbacks && callbacks[SYNAPSE_TOOL_CALLBACK_NAME.DOCTOR_DETAILS]) {
+      const result = await callTool<TDoctorToolResponse>(
+        callbacks[SYNAPSE_TOOL_CALLBACK_NAME.DOCTOR_DETAILS].tool_name,
+        {
+          doctor_id: doctorId,
+        }
+      );
+      return result || null;
+    }
+    return null;
   };
 
-  const handleBook = (bookInfo: BookInfo) => {
-    if (onBook) {
-      onBook(bookInfo);
-    }
+  const loadRemainingDoctors = async () => {
+    if (loadedCount >= doctorAvailabilities.length) return;
+    setLoading(true);
+    setError(null);
+    const remainingDoctors = doctorAvailabilities.slice(loadedCount);
+    const doctorPromises = remainingDoctors
+      .filter((doctor) => doctor.doctor_id)
+      .map(async (doctor) => {
+        try {
+          const details = await fetchDoctorDetails(doctor.doctor_id!);
+          return { doctorId: doctor.doctor_id!, detail: details };
+        } catch (error) {
+          return { doctorId: doctor.doctor_id!, detail: null };
+        }
+      });
+    const results = await Promise.allSettled(doctorPromises);
+    const details: TDoctorDetailsMap = {};
+    results.forEach((result) => {
+      if (result.status === "fulfilled") {
+        const { doctorId, detail } = result.value;
+        if (doctorId && detail) {
+          details[doctorId] = detail;
+        }
+      }
+    });
+    setLoadedDoctorDetails((prev) => ({ ...prev, ...details }));
+    setLoadedCount((c) => c + Object.keys(details).length);
+    setLoading(false);
   };
 
-  if (loading && doctors.length === 0) {
+  if (loading && loadedCount === 0) {
     return (
       <div className="flex items-center justify-center py-8">
         <div className="text-center">
@@ -150,53 +148,7 @@ export function DoctorDetailsList({
     );
   }
 
-  if (error && doctors.length === 0) {
-    return (
-      <div className="flex items-center justify-center py-8">
-        <div className="text-center">
-          <p className="text-sm text-red-500 mb-2">{error}</p>
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() => {
-              setError(null);
-              // Retry loading
-              if (doctorIds.length > 0 && sessionId) {
-                const loadInitialDoctors = async () => {
-                  setLoading(true);
-                  try {
-                    const initialIds = doctorIds.slice(0, initialLoadCount);
-                    const doctorPromises = initialIds.map((doctorId) =>
-                      getDoctorDetails(doctorId, sessionId, refreshSession)
-                    );
-                    const results = await Promise.allSettled(doctorPromises);
-                    const successfulDoctors: TDoctor[] = [];
-                    results.forEach((result, _) => {
-                      if (result.status === "fulfilled") {
-                        successfulDoctors.push(result.value);
-                      }
-                    });
-                    setDoctors(successfulDoctors);
-                    setLoadedCount(successfulDoctors.length);
-                  } catch (error) {
-                    setError(
-                      "Failed to load doctor details. Please try again."
-                    );
-                  } finally {
-                    setLoading(false);
-                  }
-                };
-                loadInitialDoctors();
-              }
-            }}>
-            Retry
-          </Button>
-        </div>
-      </div>
-    );
-  }
-
-  if (doctors.length === 0) {
+  if (loadedCount === 0) {
     return (
       <div className="flex items-center justify-center py-2">
         <p className="text-sm text-gray-500">No doctor details available.</p>
@@ -208,22 +160,18 @@ export function DoctorDetailsList({
     <div className="space-y-4">
       {/* Doctor Cards */}
       <div className="space-y-4">
-        {doctors.map(
+        {doctorAvailabilities.map(
           (doctor, index) =>
-            doctor?.doctor_id && (
-              <AppointmentCard
+            doctor?.doctor_id &&
+            loadedDoctorDetails[doctor.doctor_id!] && (
+              <AppointmentCardNew
                 key={`${index}`}
                 doctor={doctor}
-                availability={doctorDetails.availability}
+                doctorDetails={loadedDoctorDetails[doctor.doctor_id!]}
+                callTool={callTool}
+                onBook={onBook}
                 callbacks={callbacks}
-                onBook={handleBook}
                 disabled={disabled}
-                getAvailabilityDatesForAppointment={
-                  getAvailabilityDatesForAppointment
-                }
-                getAvailableSlotsForAppointment={
-                  getAvailableSlotsForAppointment
-                }
               />
             )
         )}
@@ -250,7 +198,7 @@ export function DoctorDetailsList({
       )}
 
       {/* Error message for partial failures */}
-      {error && doctors.length > 0 && (
+      {error && loadedCount > 0 && (
         <div className="text-center">
           <p className="text-sm text-red-500 mb-2">{error}</p>
           <Button

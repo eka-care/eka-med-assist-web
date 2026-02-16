@@ -8,6 +8,8 @@ const storeInitialState = {
   sessionId: "",
   sessionToken: "",
   isStreaming: false,
+  isWaitingForResponse: false,
+  progressMessage: null,
   error: null,
   isTimeoutError: false,
   startNewConnection: false,
@@ -30,11 +32,30 @@ const useMedAssistStore = create<TMedAssistStore>()(
       sessionToken: "",
       setSessionToken: (sessionToken) => set({ sessionToken }),
 
+      agentId: "",
+      setAgentId: (agentId) => set({ agentId }),
+
+      userId: "",
+      setUserId: (userId) => set({ userId }),
+
+      context: null,
+      setContext: (context) => set({ context }),
+
+      initialMessage: null,
+      setInitialMessage: (initialMessage) => set({ initialMessage }),
+
       connectionStatus: CONNECTION_STATUS.CONNECTING,
       setConnectionStatus: (status) => set({ connectionStatus: status }),
 
       isStreaming: false,
       setIsStreaming: (streaming) => set({ isStreaming: streaming }),
+
+      isWaitingForResponse: false,
+      setIsWaitingForResponse: (isWaitingForResponse) =>
+        set({ isWaitingForResponse }),
+
+      progressMessage: null,
+      setProgressMessage: (progressMessage) => set({ progressMessage }),
 
       startNewConnection: false,
       setStartNewConnection: (startNewConnection) =>
@@ -190,9 +211,13 @@ const useMedAssistStore = create<TMedAssistStore>()(
       storage: createJSONStorage(() => localStorage), // use localStorage
       partialize: (state) => ({
         // Only persist these fields, exclude methods and sensitive data
+        agentId: state.agentId,
+        userId: state.userId,
+        context: state.context,
         chats: state.chats,
         sessionId: state.sessionId,
         sessionToken: state.sessionToken,
+        initialMessage: state.initialMessage,
         connectionStatus: state.connectionStatus,
       }),
       onRehydrateStorage: () => (state) => {
