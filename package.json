@@ -15,6 +15,7 @@
         "preview": "vite preview"
     },
     "dependencies": {
+        "@eka-care/medassist-core": "^1.0.22",
         "@radix-ui/react-slot": "^1.2.3",
         "class-variance-authority": "^0.7.1",
         "clsx": "^2.1.1",
@@ -31,6 +32,7 @@
     "devDependencies": {
         "@eslint/js": "^9.30.1",
         "@tailwindcss/vite": "^4.1.11",
+        "tailwindcss": "^4.1.11",
         "@types/node": "^24.2.1",
         "@types/react": "^19.1.8",
         "@types/react-dom": "^19.1.6",

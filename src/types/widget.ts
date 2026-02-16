@@ -1,78 +1,37 @@
-import { USER_FEEDBACK } from "@/configs/enums";
+import { USER_FEEDBACK } from "@eka-care/medassist-core";
 import { AudioData } from "@/services/audioService";
-import type { ThemeType } from "@ui/eka-ui/organisms/theme-provider";
+import type { ToolCallData } from "@eka-care/medassist-core";
 import { PillItem } from "@ui/index";
 
-export interface PillConfig {
-  id: string;
-  text: string;
-  action?: string;
-  icon?: string;
-  variant?: "primary" | "secondary" | "outline";
-}
+// Extended ToolEscalationData with additional required field
+export type ExtendedToolEscalationData = ToolCallData & {
+  isResponded: boolean;
+};
 
-export interface WidgetConfig {
-  // Theme Configuration
-  theme: ThemeType;
+export type TSuggestion = { label?: string; value?: string; response?: string };
 
-  // Brand Configuration
-  brandName: string;
-  brandLogo?: string;
-  brandColors?: {
-    primary?: string;
-    secondary?: string;
-    accent?: string;
-  };
-
-  // Chat Configuration
-  welcomeMessage: string;
-  assistantName: string;
-  assistantAvatar?: string;
-
-  // Initial Pills Configuration
-  initialPills: PillConfig[];
-
-  // Widget Configuration
-  widgetTitle: string;
-  widgetSubtitle?: string;
-  showTimestamp?: boolean;
-  showTypingIndicator?: boolean;
-
-  // Styling Configuration
-  borderRadius?: "sm" | "md" | "lg" | "xl";
-  shadow?: "sm" | "md" | "lg" | "xl";
-  maxWidth?: string;
-  maxHeight?: string;
-
-  // Function Configuration
-  onSendMessage?: (message: string) => void;
-  onPillClick?: (pill: PillConfig) => void;
-  onWidgetClose?: () => void;
-  onWidgetExpand?: () => void;
-}
-
-// export interface Message {
-//   id: string;
-//   text: string;
-//   sender: "user" | "bot";
-//   timestamp: Date;
-//   type?: "text" | "pill" | "image" | "file";
-//   metadata?: any;
-// }
+export const MessageSender = {
+  USER: "user",
+  ASSISTANT: "assistant",
+} as const;
 
 export interface Message {
   id: string;
   content: string;
-  isBot: boolean;
+  isBot?: boolean; // kept for backward compat in UI
+  role: (typeof MessageSender)[keyof typeof MessageSender];
   files?: File[];
-  originalUserMessage?: string; // Store the original user message for regeneration
-  isRegenerating?: boolean; // Track if this message is being regenerated
-  commonContentData?: import("./socket").CommonHandlerData; // Add common content data support
-  audioData?: AudioData; // Add audio data support
-  isResponded?: boolean; // Track if this bot message has been responded to
+  originalUserMessage?: string;
+  isRegenerating?: boolean;
+  toolEscalationData?: ExtendedToolEscalationData; // NEW: from synapse SDK tool calls
+  isResponseFromTool?: boolean;
+  audioData?: AudioData;
+  isResponded?: boolean;
   isStored: boolean;
   tool_use_params?: any;
   feedback?: USER_FEEDBACK;
+  timestamp?: string;
+  toolCallStatus?: string | null;
 }
 
 export type TDoctor = {

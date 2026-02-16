@@ -1,5 +1,6 @@
 import { ErrorMessageUI } from "@/types/socket";
 import { CONNECTION_STATUS, Message } from "@/types/widget";
+import type { TInitialMessage, TContext } from "@eka-care/medassist-core";
 
 export type TMedAssistStore = {
   sessionId: string;
@@ -8,11 +9,29 @@ export type TMedAssistStore = {
   sessionToken: string;
   setSessionToken: (sessionToken: string) => void;
 
+  agentId: string;
+  setAgentId: (agentId: string) => void;
+
+  userId: string;
+  setUserId: (userId: string) => void;
+
+  context: TContext | null;
+  setContext: (context: TContext) => void;
+
+  initialMessage: TInitialMessage | null;
+  setInitialMessage: (initialMessage: TInitialMessage) => void;
+
   connectionStatus: CONNECTION_STATUS;
   setConnectionStatus: (status: CONNECTION_STATUS) => void;
 
   isStreaming: boolean;
   setIsStreaming: (streaming: boolean) => void;
+
+  isWaitingForResponse: boolean;
+  setIsWaitingForResponse: (isWaitingForResponse: boolean) => void;
+
+  progressMessage: string | null;
+  setProgressMessage: (progressMessage: string | null) => void;
 
   startNewConnection: boolean;
   setStartNewConnection: (startNewConnection: boolean) => void;
@@ -48,11 +67,11 @@ export type TMedAssistStore = {
   clearSession: () => void;
 
   // Timeout management
-  streamingTimeoutId: NodeJS.Timeout | null;
-  setStreamingTimeoutId: (timeoutId: NodeJS.Timeout | null) => void;
+  streamingTimeoutId: ReturnType<typeof setTimeout> | null;
+  setStreamingTimeoutId: (timeoutId: ReturnType<typeof setTimeout> | null) => void;
   clearStreamingTimeout: () => void;
-  responseTimeoutId: NodeJS.Timeout | null;
-  setResponseTimeoutId: (timeoutId: NodeJS.Timeout | null) => void;
+  responseTimeoutId: ReturnType<typeof setTimeout> | null;
+  setResponseTimeoutId: (timeoutId: ReturnType<typeof setTimeout> | null) => void;
   clearResponseTimeout: () => void;
   lastStreamingActivity: number | null;
   setLastStreamingActivity: (timestamp: number | null) => void;

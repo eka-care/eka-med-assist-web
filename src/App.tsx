@@ -1,46 +1,42 @@
 import { useEffect, useState } from "react";
-import startSession from "./api/post-start-session";
 import { useNetworkStatus } from "./custom-hooks/useNetworkStatus";
 import { ChatWidget } from "./organisms/chat-widget";
 import useSessionStore from "./stores/medAssistStore";
-import { v4 as uuidv4 } from 'uuid';
+import { config } from "./configs/constants";
+import { v4 as uuidv4 } from "uuid";
+
 interface AppProps {
   config?: {
     firstUserMessage?: string;
     theme?: string;
     onMinimize?: () => void;
     onClose?: () => void;
-    mode?: 'widget' | 'full';
+    mode?: "widget" | "full";
   };
 }
 
-function App({ config }: AppProps = {}) {
+function App({ config: appConfig }: AppProps = {}) {
   const [isWidgetOpen, setIsWidgetOpen] = useState(false);
   const [isExpanded, setIsExpanded] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [isFullMode, setIsFullMode] = useState(false);
   const { isOnline } = useNetworkStatus();
-  const setSessionId = useSessionStore((state) => state.setSessionId);
-  const setSessionToken = useSessionStore((state) => state.setSessionToken);
-  const setError = useSessionStore((state) => state.setError);
-  const setStartNewConnection = useSessionStore(
-    (state) => state.setStartNewConnection
-  );
+
+  const setAgentId = useSessionStore((state) => state.setAgentId);
+  const setUserId = useSessionStore((state) => state.setUserId);
 
   useEffect(() => {
     const checkMobile = () => {
       const width = window?.innerWidth;
       const userAgent = navigator?.userAgent?.toLowerCase();
-      // More comprehensive mobile detection
       const isMobileDevice =
         width < 768 ||
         /android|webos|iphone|ipad|ipod|blackberry|iemobile|opera mini/i.test(
           userAgent
         );
 
-      setIsMobile(config?.mode === 'full' || isMobileDevice);
-      setIsFullMode(config?.mode === 'full');
+      setIsMobile(appConfig?.mode === "full" || isMobileDevice);
+      setIsFullMode(appConfig?.mode === "full");
     };
 
     checkMobile();
@@ -48,77 +44,34 @@ function App({ config }: AppProps = {}) {
     return () => window.removeEventListener("resize", checkMobile);
   }, []);
 
+  // Set agentId and userId on mount
   useEffect(() => {
+    // Set agent ID from config
+    setAgentId(config.X_AGENT_ID);
+
+    // Set or generate user ID
+    let userId = localStorage.getItem("user_id");
+    if (!userId) {
+      userId = uuidv4();
+      localStorage.setItem("user_id", userId);
+    }
+    setUserId(userId);
+
+    // Open widget
     setIsWidgetOpen(true);
   }, []);
 
-  const handleOpenWidget = async (newSession: boolean = false) => {
-    // Check if user is online before proceeding
-    if (!isOnline) {
-      console.warn("Cannot start session: user is offline");
-      return;
-    }
-
-    // Check if session already exists
-    const currentSessionId = useSessionStore.getState().sessionId;
-    const currentSessionToken = useSessionStore.getState().sessionToken;
-
-    if (currentSessionId && currentSessionToken && !newSession) {
-      setIsWidgetOpen(true);
-      return;
-    }
-
-    setIsLoading(true);
-
-    try {
-      console.log("Calling startSession API...");
-      let user_id = localStorage.getItem("user_id");
-      if(!user_id) {
-        user_id = uuidv4();
-        localStorage.setItem("user_id", user_id);
-      }
-      const { session_id, session_token } = await startSession(user_id);
-
-      if (!session_id || !session_token) {
-        throw new Error(
-          "Failed to start a new session - missing session_id or session_token"
-        );
-      }
-
-      setSessionId(session_id);
-      setSessionToken(session_token);
-      console.log("Session started successfully, widget opened with session:");
-    } catch (error) {
-      console.error("Failed to start a new session:", error);
-      setError({
-        title: error instanceof Error ? error.message : "Something went wrong",
-        description: "Please start a new session.",
-      });
-      setStartNewConnection(true);
-    } finally {
-      setIsLoading(false);
-      setIsWidgetOpen(true);
-    }
-  };
-
-  // console.log("isWidgetOpen", isWidgetOpen);
-
   const handleCloseWidget = () => {
-    // If we have an onClose callback from the widget loader, call it
-    // The loader will handle hiding the widget and showing the button
-
-    if (config?.onClose) {
-      config.onClose();
+    if (appConfig?.onClose) {
+      appConfig.onClose();
     } else {
-      // Fallback for standalone mode
       setIsWidgetOpen(false);
       setIsExpanded(false);
     }
   };
 
   const handleExpandWidget = () => {
-    const newExpandedState = !isExpanded;
-    setIsExpanded(newExpandedState);
+    setIsExpanded(!isExpanded);
   };
 
   return (
@@ -146,13 +99,11 @@ function App({ config }: AppProps = {}) {
           {isWidgetOpen && (
             <ChatWidget
               title="Apollo Assist"
-              firstUserMessage={config?.firstUserMessage || ""}
+              firstUserMessage={appConfig?.firstUserMessage || ""}
               onClose={handleCloseWidget}
               onExpand={handleExpandWidget}
               isExpanded={isExpanded}
               isMobile={isMobile}
-              onStartSession={handleOpenWidget}
-              isLoading={isLoading}
               isOnline={isOnline}
               isFullMode={isFullMode}
             />

@@ -1,13 +1,13 @@
 const PRODUCTION_CONFIG = {
     WEBSOCKET_URL: "wss://matrix-ws.eka.care",
     BASE_API_URL: "https://matrix.eka.care",
-    X_AGENT_ID: "MWZlZDRkYzktMTBmMS00OTFkLWEzNDMtZGM3MzIzZDM5N2VmIzcxNzU5MTc2ODQzNTgzOTA=",
+    X_AGENT_ID: "M2RmNDUzZDgtYTBlYy00NjYzLWFkODktODZlOWMxN2Q3YmI1IzcxNzY0MDYzNjY4OTg5Njg=",
 };
 
 const DEVELOPMENT_CONFIG = { // can be used for local development
     WEBSOCKET_URL: "wss://matrix-ws.dev.eka.care",
     BASE_API_URL: "https://matrix.dev.eka.care",
-    X_AGENT_ID: "NDBkNmM4OTEtNGEzMC00MDBlLWE4NjEtN2ZkYjliMDY2MDZhI2ItMTYxNDY3NzU2MDQ0MjAz",
+    X_AGENT_ID: "M2RmNDUzZDgtYTBlYy00NjYzLWFkODktODZlOWMxN2Q3YmI1IzcxNzY0MDYzNjY4OTg5Njg=",
 };
 
 const STAGING_CONFIG = {
