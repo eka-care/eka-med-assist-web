@@ -1,6 +1,6 @@
 {
-    "name": "eka-med-assist-web",
-    "private": true,
+    "name": "@eka-care/apollo-assist",
+    "private": false,
     "version": "0.1.29",
     "type": "module",
     "scripts": {
@@ -14,6 +14,26 @@
         "lint": "eslint .",
         "preview": "vite preview"
     },
+    "files": [
+        "dist/widget-loader.js",
+        "dist/widget.js",
+        "dist/assets/*",
+        "README.md"
+    ],
+    "keywords": [
+        "eka-care",
+        "apollo-assist",
+        "medical-assistant",
+        "chatbot",
+        "chat-widget"
+    ],
+    "author": "Geethanjali S",
+    "license": "MIT",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/eka-care/eka-med-assist-web.git"
+    },
+    "homepage": "https://github.com/eka-care/eka-med-assist-web/blob/main/README.md",
     "dependencies": {
         "@radix-ui/react-slot": "^1.2.3",
         "class-variance-authority": "^0.7.1",
@@ -44,6 +64,10 @@
         "typescript-eslint": "^8.35.1",
         "vite": "^7.0.4"
     },
+    "publishConfig": {
+        "access": "public"
+      },
+    "main": "dist/widget-loader.js",
     "resolutions": {
         "typescript": "^5.9.2"
     }

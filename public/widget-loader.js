@@ -1,12 +1,34 @@
 (function () {
-  "use strict";
+  const getCurrentScript = () => {
+    if (typeof document === "undefined") {
+      console.error("document is not defined");
+      return null;
+    }
+  
+    const { currentScript } = document;
+    if (currentScript instanceof HTMLScriptElement) {
+      return currentScript;
+    }
+  
+    const scripts = document.getElementsByTagName("script");
+    return scripts.length ? scripts[scripts.length - 1] : null;
+  };
+  const scriptEl = getCurrentScript();
+
+  // Derive base URL from this script's src (widget-embed URL). Works for @latest, @dev, @version, or localhost.
+  var assetBase = (function () {
+    if (scriptEl?.src) {
+      return scriptEl.src.replace(/\/[^/]*$/, "/");
+    }
+    return "https://unpkg.com/@eka-care/apollo-assist@latest/dist/";
+  })();
 
   // Widget configuration
   var defaultConfig = {
     theme: "client",
     position: "bottom-right",
-    scriptUrl: "https://cdn.ekacare.co/apollo/widget.js",
-    cssUrl: "https://cdn.ekacare.co/apollo/assets/widget.css",
+    scriptUrl: assetBase + "widget.js",
+    cssUrl: assetBase + "assets/widget.css",
     mode: "widget", // 'widget' or 'full'
     primaryColor: "#007C9E", // optional hex color (e.g., "#007C9E") to auto-generate primary color palette
   };

@@ -25,3 +25,6 @@ deploy-to-aws.sh
 *.sln
 *.sw?
 
+.github/workflows/dev-cd.yaml
+.github/workflows/prod-cd.yaml
+.github/workflows/prod-revert.yaml
