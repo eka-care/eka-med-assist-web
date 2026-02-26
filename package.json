@@ -7,7 +7,7 @@
         "dev": "vite",
         "build": "tsc -b && vite build",
         "build:stage": "yarn version --prerelease --preid=dev && vite build --mode stage",
-        "build:prod": "vite build --mode prod",
+        "build:prod": "yarn version --patch && vite build --mode prod",
         "build:prod:patch": "yarn version --patch &&  vite build --mode prod",
         "build:prod:minor": "yarn version --minor &&  vite build --mode prod",
         "build:prod:major": "yarn version --major &&  vite build --mode prod",
