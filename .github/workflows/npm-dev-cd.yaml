@@ -1,0 +1,52 @@
+name: Publish to npm (dev)
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to push version commit and tags
+    steps:
+      - name: Checkout code with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: true
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          registry-url: https://registry.npmjs.org
+
+      - name: Install Submodule Dependencies
+        run: |
+          cd packages/ui/base
+          yarn install --frozen-lockfile
+
+      - name: Configure Git
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Install dependencies
+        run: yarn install
+
+      - name: Build
+        run: yarn build:stage
+
+      - name: Push version bump and tag
+        run: |
+          git push origin --tags
+          if [[ "${{ github.ref }}" == refs/heads/* ]]; then
+            git push origin HEAD:${{ github.ref_name }}
+          fi
+
+      - name: Publish
+        run: npm publish --access public --tag dev
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}

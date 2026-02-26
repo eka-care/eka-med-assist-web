@@ -5,12 +5,8 @@ import path from "path";
 import { minify } from "terser";
 import { defineConfig } from "vite";
 
-// Custom plugin to minify widget-loader.js using Terser and inject version-aware URLs
-function processWidgetLoader(
-  isProduction = true,
-  mode = "dev",
-  version = "latest"
-) {
+// Custom plugin to minify widget-loader.js (URLs are derived at runtime from script src)
+function processWidgetLoader(isProduction = true) {
   return {
     name: "process-widget-loader",
     async writeBundle() {
@@ -19,25 +15,6 @@ function processWidgetLoader(
 
       if (fs.existsSync(loaderPath)) {
         let content = fs.readFileSync(loaderPath, "utf8");
-
-        // Inject version-aware URLs
-        const baseUrl = isProduction
-          ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
-          : mode === "stage"
-          ? `https://dev-cdn.ekacare.co/apollo/dev-${version}/`
-          : "/";
-
-        // Replace hardcoded URLs with dynamic ones
-        content = content.replace(
-          /scriptUrl: "[^"]*"/,
-          `scriptUrl: "${baseUrl}widget.js"`
-        );
-        content = content.replace(
-          /cssUrl: "[^"]*"/,
-          `cssUrl: "${baseUrl}assets/widget.css"`
-        );
-
-        console.log(`✓ Injected URLs in widget-loader.js: ${baseUrl}`);
 
         try {
           const result = await minify(content, {
@@ -80,21 +57,13 @@ function processWidgetLoader(
 export default defineConfig(({ mode }) => {
   const isProduction = mode === "prod";
   const isStage = mode === "stage";
-  const version = require("./package.json").version;
-
-  // CDN base URL for production builds
-  const base = isProduction
-    ? `https://cdn.ekacare.co/apollo/${mode}-${version}/`
-    : isStage
-    ? `https://dev-cdn.ekacare.co/apollo/dev-${version}/`
-    : "./";
 
   return {
-    base,
+    base: "./",
     plugins: [
       react(),
       tailwindcss(),
-      processWidgetLoader(isProduction, mode, version),
+      processWidgetLoader(isProduction),
     ],
     esbuild: {
       // Only drop console logs in production builds, keep them in development
