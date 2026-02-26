@@ -8,6 +8,8 @@ on:
 jobs:
   publish:
     runs-on: ubuntu-latest
+    permissions:
+      contents: write  # required to push version commit and tags
     steps:
       - name: Checkout code with submodules
         uses: actions/checkout@v4
