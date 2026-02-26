@@ -39,7 +39,7 @@ jobs:
       - name: Build
         run: yarn build:prod
 
-      -name: Push version bump and tag
+      - name: Push version bump and tag
         run: |
           git push origin --tags
           if [[ "${{ github.ref }}" == refs/heads/* ]]; then
