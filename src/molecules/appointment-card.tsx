@@ -26,6 +26,7 @@ type Props = {
   callbacks: TCallbacks | undefined;
   onBook?: (info: BookInfo) => void;
   disabled?: boolean;
+  handleRequestAppointment: () => void;
   getAvailabilityDatesForAppointment: (doctorData: {
     doctor_id: string;
     hospital_id?: string;
@@ -47,6 +48,7 @@ export function AppointmentCard({
   callbacks,
   onBook,
   disabled = false,
+  handleRequestAppointment,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
 }: Props) {
@@ -903,10 +905,17 @@ export function AppointmentCard({
         {open &&
           !currentAvailability?.[selectedHospital?.hospital_id ?? ""]
             ?.slots_details?.length && (
-            <div className="px-1 pb-2 pt-1">
-              <p className="text-sm text-slate-500">
-                {error ? error : "No availability provided."}
+            <div className="mt-3 rounded-lg border border-slate-200 bg-[var(--color-background-primary-subtle)] p-4">
+              <p className="mb-3 text-sm text-slate-600">
+                No slots available. Request an appointment and we’ll get back to you.
               </p>
+              <Button
+                type="button"
+                onClick={handleRequestAppointment}
+                className="w-full h-10 gap-2 bg-[var(--color-primary)] text-white hover:bg-[var(--color-primary)]/90"
+              >
+                Request Appointment
+              </Button>
             </div>
           )}
       </CardContent>
