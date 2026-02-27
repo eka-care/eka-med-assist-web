@@ -11,7 +11,8 @@ import {
 const handleMobileVerification = async (
   mobileNumber: string,
   sessionId: string,
-  refreshSession: () => Promise<boolean>
+  refreshSession: () => Promise<boolean>,
+  reason?: string
 ): Promise<{
   success: boolean;
   data: IMobileVerificationResponse;
@@ -21,6 +22,7 @@ const handleMobileVerification = async (
       toolParams: {
         mobile_number: mobileNumber.trim(),
         stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+        ...(reason && { lead_description: reason }),
       },
       wrapperOptions: {
         session_id: sessionId,

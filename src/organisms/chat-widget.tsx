@@ -40,8 +40,9 @@ export type TMobileVerificationStatus = {
   stage: MOBILE_VERIFICATION_STAGE;
   mobile_number: string | null;
   isSending: boolean;
-  tool_use_id: string | null;
-  uhids: TUhidDetails[];
+  tool_use_id?: string | null;
+  uhids?: TUhidDetails[];
+  reason?: string;
 };
 interface ChatWidgetProps {
   title?: string;
@@ -639,7 +640,8 @@ export function ChatWidget({
           response = await handleMobileVerification(
             mobileNumber,
             sessionId,
-            triggerSessionRefresh
+            triggerSessionRefresh,
+            mobVerificationStatusRef.current.reason
           );
 
           if (response?.success) {
@@ -671,10 +673,18 @@ export function ChatWidget({
             content,
             mobVerificationStatusRef.current.mobile_number,
             sessionId,
-            triggerSessionRefresh
+            triggerSessionRefresh,
+            mobVerificationStatusRef.current.reason
           );
-
-          if (
+           if(mobVerificationStatusRef.current.reason === "callback requested" && response?.success){
+            await sendHiddenChatMessage({
+              message:"Doctor is not available so User has requested for callback from hospital about the doctor availability. Meanwhie ask user if yu want's to see another doctor. User will get a callback soon.",
+              tool_use_params: {
+                mobile_number: mobVerificationStatusRef.current.mobile_number,
+              },
+            });
+            clearMobileVerification();
+            } else if (
             response?.data?.error?.code ===
             MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code
           ) {
@@ -892,6 +902,15 @@ export function ChatWidget({
     }
   };
 
+  const handleRequestAppointment = () => {
+      setMobVerificationStatus({
+        active: true,
+        stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+        isSending: false,
+        reason: "callback requested",
+        mobile_number: mobVerificationStatusRef.current.mobile_number || "",
+      });
+  }
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
     if (!isOnline) {
@@ -1404,6 +1423,7 @@ export function ChatWidget({
                       isStreaming &&
                       index === messages.length - 1
                     }
+                    handleRequestAppointment={handleRequestAppointment}
                     refreshSession={triggerSessionRefresh}
                     progressMessage={
                       message.isBot && index === messages.length - 1

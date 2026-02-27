@@ -9,7 +9,8 @@ const handleOtpVerification = async (
   otp: string,
   mobile_number: string,
   sessionId: string,
-  refreshSession: () => Promise<boolean>
+  refreshSession: () => Promise<boolean>,
+  reason?: string
 ) => {
   try {
     const response = await postCallbackWrapper<MobileVerificationRequest>({
@@ -17,6 +18,7 @@ const handleOtpVerification = async (
         mobile_number: mobile_number.trim(),
         otp: otp.trim(),
         stage: MOBILE_VERIFICATION_STAGE.OTP,
+        ...(reason && { lead_description: reason }),
       },
       wrapperOptions: {
         session_id: sessionId,
@@ -24,6 +26,14 @@ const handleOtpVerification = async (
         onSessionRefresh: refreshSession,
       },
     });
+    if(reason === "callback requested"){
+      return {
+        success: true,
+        data: {
+          message: "Appointment requested successfully. You will get a callback soon.",
+        },
+      };
+    }
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
       //based on the error code show error as bot response

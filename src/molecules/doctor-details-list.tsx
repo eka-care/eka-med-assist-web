@@ -18,6 +18,7 @@ type Props = {
   onBook?: (info: BookInfo) => void;
   disabled?: boolean;
   refreshSession: () => Promise<boolean>;
+  handleRequestAppointment: () => void;
   getAvailabilityDatesForAppointment: (doctorData: {
     doctor_id: string;
     hospital_id?: string;
@@ -39,6 +40,7 @@ export function DoctorDetailsList({
   onBook,
   refreshSession,
   disabled = false,
+  handleRequestAppointment,
   getAvailabilityDatesForAppointment,
   getAvailableSlotsForAppointment,
 }: Props) {
@@ -218,6 +220,7 @@ export function DoctorDetailsList({
                 callbacks={callbacks}
                 onBook={handleBook}
                 disabled={disabled}
+                handleRequestAppointment={handleRequestAppointment}
                 getAvailabilityDatesForAppointment={
                   getAvailabilityDatesForAppointment
                 }

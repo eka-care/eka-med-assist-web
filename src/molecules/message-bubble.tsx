@@ -87,6 +87,7 @@ interface MessageBubbleProps {
     feedbackReason?: string
   ) => void;
   refreshSession: () => Promise<boolean>;
+  handleRequestAppointment: () => void;
   verificationStatus: boolean;
   isLastMessage: boolean;
   clearMobileVerification: () => void;
@@ -142,6 +143,7 @@ export function MessageBubble({
   handleQuickAction,
   refreshSession,
   verificationStatus,
+  handleRequestAppointment,
   clearMobileVerification,
   isRegenerating = false,
   commonContentData,
@@ -438,6 +440,7 @@ export function MessageBubble({
                   doctorDetails={commonContentData.data.doctor_details || {}}
                   callbacks={commonContentData.data.callbacks}
                   refreshSession={refreshSession}
+                  handleRequestAppointment={handleRequestAppointment}
                   onBook={(info: {
                     date: string;
                     time: string;
