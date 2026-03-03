@@ -57,9 +57,10 @@ function processWidgetLoader(isProduction = true) {
 export default defineConfig(({ mode }) => {
   const isProduction = mode === "prod";
   const isStage = mode === "stage";
+  const base = isProduction ? `https://unpkg.com/@eka-care/apollo-assist@latest/dist/` : "./"; //unpkg base url for production builds
 
   return {
-    base: "./",
+    base,
     plugins: [
       react(),
       tailwindcss(),
