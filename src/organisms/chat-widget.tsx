@@ -374,7 +374,7 @@ export function ChatWidget({
             const response = await handleMobileVerification(
               commonContentData?.data?.mobile_number,
               sessionId,
-              triggerSessionRefresh
+              triggerSessionRefresh,
             );
 
             if (response?.success && response?.data?.message) {
@@ -423,7 +423,7 @@ export function ChatWidget({
                 updateMessageInSession(
                   sessionId,
                   updatedMessages[updatedMessages.length - 1].id,
-                  updatedMessages[updatedMessages.length - 1]
+                  updatedMessages[updatedMessages.length - 1],
                 );
               } else {
                 const newMessage: Message = {
@@ -451,7 +451,7 @@ export function ChatWidget({
     },
     (inlineMessage) => {
       setInlineText(inlineMessage);
-    }
+    },
   );
 
   const [quickActions] = useState([
@@ -492,8 +492,8 @@ export function ChatWidget({
         const updatedMessage = { ...lastMessage, isStored: true };
         setMessages((prev) =>
           prev.map((msg, index) =>
-            index === prev.length - 1 ? updatedMessage : msg
-          )
+            index === prev.length - 1 ? updatedMessage : msg,
+          ),
         );
         addMessageToSession(sessionId, updatedMessage);
       }
@@ -641,7 +641,7 @@ export function ChatWidget({
             mobileNumber,
             sessionId,
             triggerSessionRefresh,
-            mobVerificationStatusRef.current.reason
+            mobVerificationStatusRef.current.reason,
           );
 
           if (response?.success) {
@@ -674,17 +674,21 @@ export function ChatWidget({
             mobVerificationStatusRef.current.mobile_number,
             sessionId,
             triggerSessionRefresh,
-            mobVerificationStatusRef.current.reason
+            mobVerificationStatusRef.current.reason,
           );
-           if(mobVerificationStatusRef.current.reason === "callback requested" && response?.success){
+          if (
+            mobVerificationStatusRef.current.reason === "callback requested" &&
+            response?.success
+          ) {
             await sendHiddenChatMessage({
-              message:"Doctor is not available so User has requested for callback from hospital about the doctor availability. Meanwhie ask user if yu want's to see another doctor. User will get a callback soon.",
+              message:
+                "Doctor is not available so User has requested for callback from hospital about the doctor availability. Meanwhie ask user if yu want's to see another doctor. User will get a callback soon.",
               tool_use_params: {
                 mobile_number: mobVerificationStatusRef.current.mobile_number,
               },
             });
             clearMobileVerification();
-            } else if (
+          } else if (
             response?.data?.error?.code ===
             MOBILE_VERIFICATION_ERROR_MESSAGES.INVALID_OTP.code
           ) {
@@ -707,6 +711,7 @@ export function ChatWidget({
                 mobile_number: mobVerificationStatusRef.current.mobile_number,
               },
             });
+            clearMobileVerification();
           } else if (response?.success && response?.data?.uhids?.length) {
             setMobVerificationStatus((prev) => ({
               ...prev,
@@ -716,9 +721,10 @@ export function ChatWidget({
               stage: MOBILE_VERIFICATION_STAGE.UHID,
             }));
           } else {
-            const hiddenMessage = !response?.data?.uhids?.length
-              ? "Otp verification successful,but Uhids not found"
-              : "Otp verification failed";
+            const hiddenMessage =
+              response?.success && !response?.data?.uhids?.length
+                ? "Otp verification successful,but Uhids not found"
+                : `Otp verification failed ${response?.data?.error?.msg}`;
             //send a hidden message chat messsage to BE
             await sendHiddenChatMessage({
               message: hiddenMessage,
@@ -737,7 +743,7 @@ export function ChatWidget({
           response = await handleUhidVerification(
             content,
             sessionId,
-            triggerSessionRefresh
+            triggerSessionRefresh,
           );
           //update the last message as responded
           setMessages((prev) => {
@@ -750,7 +756,7 @@ export function ChatWidget({
             updateMessageInSession(
               sessionId,
               updatedMessages[updatedMessages.length - 1].id,
-              updatedMessages[updatedMessages.length - 1]
+              updatedMessages[updatedMessages.length - 1],
             );
             return updatedMessages;
           });
@@ -775,7 +781,7 @@ export function ChatWidget({
                 : response?.data?.error?.msg || "Verification failed";
 
             const uhid_details = mobVerificationStatusRef.current?.uhids?.find(
-              (uhid) => uhid?.uhid === content
+              (uhid) => uhid?.uhid === content,
             );
             await sendChatMessage({
               message: message,
@@ -873,7 +879,7 @@ export function ChatWidget({
             updateMessageInSession(
               sessionId,
               updatedMessages[i].id,
-              updatedMessages[i]
+              updatedMessages[i],
             );
             break;
           }
@@ -903,14 +909,14 @@ export function ChatWidget({
   };
 
   const handleRequestAppointment = () => {
-      setMobVerificationStatus({
-        active: true,
-        stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
-        isSending: false,
-        reason: "callback requested",
-        mobile_number: mobVerificationStatusRef.current.mobile_number || "",
-      });
-  }
+    setMobVerificationStatus({
+      active: true,
+      stage: MOBILE_VERIFICATION_STAGE.MOBILE_NUMBER,
+      isSending: false,
+      reason: "callback requested",
+      mobile_number: mobVerificationStatusRef.current.mobile_number || "",
+    });
+  };
   // CHANGED: Now handles AudioData instead of Blob
   const handleFinalAudioStream = async (audioData: AudioData) => {
     if (!isOnline) {
@@ -941,7 +947,7 @@ export function ChatWidget({
           updateMessageInSession(
             sessionId,
             updatedMessages[i].id,
-            updatedMessages[i]
+            updatedMessages[i],
           );
           break;
         }
@@ -997,7 +1003,7 @@ export function ChatWidget({
           updateMessageInSession(
             sessionId,
             updatedMessages[i].id,
-            updatedMessages[i]
+            updatedMessages[i],
           );
           break;
         }
@@ -1271,7 +1277,7 @@ export function ChatWidget({
     return await getAvailabiltyDates(
       doctorData,
       sessionId,
-      triggerSessionRefresh
+      triggerSessionRefresh,
     );
   };
 
@@ -1281,20 +1287,20 @@ export function ChatWidget({
       doctor_id: string;
       hospital_id?: string;
       region_id?: string;
-    }
+    },
   ) => {
     return await getAvailabilitySlots(
       appointment_date,
       doctorData,
       sessionId,
-      triggerSessionRefresh
+      triggerSessionRefresh,
     );
   };
 
   const handleMessageFeedback = async (
     messageId: string,
     feedback: USER_FEEDBACK,
-    feedbackReason?: string
+    feedbackReason?: string,
   ) => {
     const messageIndex = messages.findIndex((msg) => msg.id === messageId);
     if (messageIndex === -1) {
@@ -1306,7 +1312,7 @@ export function ChatWidget({
         sessionId,
         messageId,
         feedback,
-        feedbackReason
+        feedbackReason,
       );
     } catch (error) {
       console.error("Failed to patch feedback:", error);
@@ -1320,7 +1326,7 @@ export function ChatWidget({
         updateMessageInSession(
           sessionId,
           messageId,
-          updatedMessages[messageIndex]
+          updatedMessages[messageIndex],
         );
         return updatedMessages;
       });
@@ -1330,13 +1336,13 @@ export function ChatWidget({
   const containerStyles = isMobile
     ? "fixed inset-0 z-[2147483647] bg-[var(--color-card)] border-border rounded-none flex flex-col h-[100dvh] w-screen py-0 gap-1 overflow-hidden"
     : isExpanded
-    ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"
-    : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
+      ? "fixed inset-4 z-[2147483647] bg-[var(--color-card)] border-border rounded-lg shadow-2xl flex flex-col max-h-[calc(100vh-2rem)] py-0 gap-1"
+      : `w-full max-w-sm bg-[var(--color-card)] border-border shadow-lg rounded-lg flex flex-col py-0 gap-1${className} `;
   const chatHeight = isMobile
     ? "flex-1 overflow-y-auto overscroll-behavior-y-contain"
     : isExpanded
-    ? "flex-1 min-h-0"
-    : "h-[500px]";
+      ? "flex-1 min-h-0"
+      : "h-[500px]";
   return (
     <Card className={containerStyles}>
       <ChatHeader
@@ -1569,7 +1575,13 @@ export function ChatWidget({
               <MobileNumberInput
                 onSendMobile={handleSendMessage}
                 isLoading={mobVerificationStatus.isSending}
-                disabled={mobVerificationStatus.isSending || isWaitingForResponse || !!progressMessage?.length || connectionStatus !== CONNECTION_STATUS.CONNECTED || !isOnline}
+                disabled={
+                  mobVerificationStatus.isSending ||
+                  isWaitingForResponse ||
+                  !!progressMessage?.length ||
+                  connectionStatus !== CONNECTION_STATUS.CONNECTED ||
+                  !isOnline
+                }
               />
             ) : mobVerificationStatus.stage === MOBILE_VERIFICATION_STAGE.OTP &&
               mobVerificationStatus.mobile_number ? (
