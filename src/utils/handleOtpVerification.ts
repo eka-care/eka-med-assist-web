@@ -3,15 +3,21 @@ import { TOOL_NAME } from "@/configs/enums";
 import { MOBILE_VERIFICATION_STAGE } from "@/organisms/chat-widget";
 import { MOBILE_VERIFICATION_ERROR_MESSAGES } from "@/types/widget";
 import getErrorMessageBasedOnCode from "./getErrorMessage";
-import { MobileVerificationRequest } from "@/types/api";
+import {
+  IMobileVerificationResponse,
+  MobileVerificationRequest,
+} from "@/types/api";
 
 const handleOtpVerification = async (
   otp: string,
   mobile_number: string,
   sessionId: string,
   refreshSession: () => Promise<boolean>,
-  reason?: string
-) => {
+  reason?: string,
+): Promise<{
+  success: boolean;
+  data: IMobileVerificationResponse | null;
+}> => {
   try {
     const response = await postCallbackWrapper<MobileVerificationRequest>({
       toolParams: {
@@ -26,11 +32,12 @@ const handleOtpVerification = async (
         onSessionRefresh: refreshSession,
       },
     });
-    if(reason === "callback requested"){
+    if (reason === "callback requested") {
       return {
         success: true,
         data: {
-          message: "Appointment requested successfully. You will get a callback soon.",
+          message:
+            "Appointment requested successfully. You will get a callback soon.",
         },
       };
     }
