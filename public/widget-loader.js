@@ -238,6 +238,12 @@
         }
       }
 
+      @media (max-width: 360px), (max-width: 767px) and (max-height: 720px) {
+        .eka-widget-button {
+          bottom: 90px !important;
+        }
+      }
+
       @media (max-width: 768px) {
         .eka-widget-button {
           right: 16px;
