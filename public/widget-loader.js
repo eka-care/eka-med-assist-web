@@ -118,7 +118,7 @@
         height: 60px;
         border-radius: 30px;
         position: fixed;
-        bottom: 20px;
+        bottom: 90px;
         right: 20px;
         background: #FDE047;
         box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
@@ -222,17 +222,24 @@
         .eka-stage-3-overlay {
           bottom: 82px;
         }
+
+        .eka-widget-button {
+          bottom: 82px !important;
+        }
       }
 
       @media (max-width: 767px) {
         .eka-stage-3-overlay {
           bottom: 246px;
         }
+
+        .eka-widget-button {
+          bottom: 180px !important;
+        }
       }
 
       @media (max-width: 768px) {
         .eka-widget-button {
-          bottom: 16px;
           right: 16px;
         }
 
@@ -243,22 +250,29 @@
 
         .eka-widget-button.stage-2 {
           width: auto;
-          height: 55px;
-          border-radius: 27.5px;
-          // padding: 2px 15px;
+          height: 44px;
+          border-radius: 22px;
+          bottom: 12px;
+          right: 12px;
+          padding: 6px 6px 6px 14px;
+        }
+
+        .eka-stage-2-content {
+          gap: 8px;
+          padding: 4px 16px 4px 4px;
         }
 
         .eka-stage-2-icon {
-          width: 35px;
-          height: 35px;
+          width: 30px;
+          height: 30px;
         }
 
         .eka-stage-2-title {
-          font-size: 13px;
+          font-size: 12px;
         }
 
         .eka-stage-2-subtitle {
-          font-size: 11px;
+          font-size: 10px;
         }
 
         .eka-widget-icon-button {
@@ -361,7 +375,7 @@
       `;
       var iconEl = button.querySelector(".eka-stage-2-icon");
       if (iconEl) {
-        loadApolloIcon(iconEl, isMobile ? 28 : 36);
+        loadApolloIcon(iconEl, isMobile ? 22 : 36);
       }
     }
   }
