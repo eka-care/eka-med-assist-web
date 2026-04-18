@@ -4,13 +4,15 @@
       console.error("document is not defined");
       return null;
     }
-  
+
     const { currentScript } = document;
     if (currentScript instanceof HTMLScriptElement) {
       return currentScript;
     }
-  
-    const scripts = document.querySelectorAll(`script[src*="widget-loader.js"]`);
+
+    const scripts = document.querySelectorAll(
+      `script[src*="widget-loader.js"]`,
+    );
     return scripts.length ? scripts[scripts.length - 1] : null;
   };
   const scriptEl = getCurrentScript();
@@ -25,6 +27,8 @@
 
   // Widget configuration
   var defaultConfig = {
+    agentId:
+      "MWIyOWYyNjctNjc2My00Y2QwLThjNWQtMDY1N2NiODM4MGMyIzcxNzU5MTc2ODQzNTgzOTA=", // required for nudge targeting; should be set to unique identifier for your bot/agent
     theme: "client",
     position: "bottom-right",
     scriptUrl: assetBase + "widget.js",
@@ -44,7 +48,169 @@
     stage2Timer: null,
     firstUserMessage: null,
     isClosed: false,
+    nudgeText: null, // active nudge string to display in stage-2
+    nudgeDelay: 0, // seconds to wait before showing stage-2
+    nudgeReady: false, // true once nudge API resolves (or fails)
   };
+
+  // ─── Nudge helpers ────────────────────────────────────────────────────────
+
+  var NUDGE_STORE_KEY = "eka-nudge-store"; // localStorage key
+
+  function getNudgeStore() {
+    try {
+      return JSON.parse(localStorage.getItem(NUDGE_STORE_KEY) || "{}");
+    } catch (e) {
+      return {};
+    }
+  }
+
+  function saveNudgeStore(store) {
+    try {
+      localStorage.setItem(NUDGE_STORE_KEY, JSON.stringify(store));
+    } catch (e) {}
+  }
+
+  function normalizePath(path) {
+    return path.replace(/\/$/, "") || "/";
+  }
+
+  // Step 1: exact match; Step 2: first-segment prefix match
+  function findCachedNudge(agentId, currentUrl) {
+    var store = getNudgeStore();
+    var agentNudges = store[agentId];
+    if (!agentNudges) return null;
+
+    var url;
+    try {
+      url = new URL(currentUrl);
+    } catch (e) {
+      return null;
+    }
+
+    // Use url.host (hostname + port) to match how the API returns domain
+    var domain = url.host;
+    var path = normalizePath(url.pathname);
+
+    var domainNudges = agentNudges[domain];
+    if (!domainNudges) return null;
+
+    // Step 1: exact path match
+    if (domainNudges[path] !== undefined) {
+      return { domain: domain, path: path, data: domainNudges[path] };
+    }
+
+    // Step 2: prefix match on first segment
+    var segments = url.pathname.split("/").filter(Boolean);
+    if (segments.length > 0) {
+      var searchPath = "/" + segments[0];
+      var storedPaths = Object.keys(domainNudges);
+      for (var i = 0; i < storedPaths.length; i++) {
+        if (storedPaths[i].indexOf(searchPath) === 0) {
+          return {
+            domain: domain,
+            path: storedPaths[i],
+            data: domainNudges[storedPaths[i]],
+          };
+        }
+      }
+    }
+
+    // Step 3: "/" wildcard — matches any path on this domain
+    if (domainNudges["/"] !== undefined) {
+      return { domain: domain, path: "/", data: domainNudges["/"] };
+    }
+    return null;
+  }
+
+  function storeNudge(agentId, domain, path, data) {
+    var store = getNudgeStore();
+    if (!store[agentId]) store[agentId] = {};
+    if (!store[agentId][domain]) store[agentId][domain] = {};
+    store[agentId][domain][path] = data;
+    saveNudgeStore(store);
+  }
+
+  function clearNudgeEntry(agentId, domain, path) {
+    var store = getNudgeStore();
+    if (store[agentId] && store[agentId][domain]) {
+      delete store[agentId][domain][path];
+      saveNudgeStore(store);
+    }
+  }
+
+  function pickRandom(arr) {
+    return arr[Math.floor(Math.random() * arr.length)];
+  }
+
+  function getMetaTags() {
+    return Array.from(document.head.querySelectorAll("meta")).map(function (m) {
+      return {
+        name: m.getAttribute("name") || "",
+        property: m.getAttribute("property") || "",
+        content: m.getAttribute("content") || "",
+      };
+    });
+  }
+
+  // Fetch nudge from API, store it, and resolve with { text, delay }
+  function fetchNudge(agentId) {
+    return fetch(
+      "https://kamilah-uncensuring-cubistically.ngrok-free.dev/reloaded/med-assist/user-nudge ",
+      {
+        // return fetch("https://matrix.eka.care/reloaded/med-assist/user-nudge", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "x-agent-id": agentId,
+        },
+        body: JSON.stringify({
+          meta_tags: getMetaTags(),
+          url: window?.location?.href || "",
+        }),
+      },
+    )
+      .then(function (res) {
+        if (!res.ok) throw new Error("nudge api " + res.status);
+        return res.json();
+      })
+      .then(function (data) {
+        var nudges = data?.nudges;
+        if (!nudges || nudges.length === 0) {
+          throw new Error("empty nudges");
+        }
+        var domain = data?.url_pattern?.domain || "";
+        var path = normalizePath(data?.url_pattern?.path || "");
+        storeNudge(agentId, domain, path, {
+          nudges: nudges,
+          delay: data.delay,
+          expiry: data.expiry,
+        });
+        return { text: pickRandom(nudges), delay: data.delay };
+      });
+  }
+
+  // Main entry: resolve nudge text+delay from cache or API
+  function resolveNudge(agentId) {
+    var now = Date.now() / 1000;
+    var match = findCachedNudge(agentId, window.location.href);
+
+    if (match) {
+      if (match.data.expiry && now > match.data.expiry) {
+        clearNudgeEntry(agentId, match.domain, match.path);
+        // fall through to API
+      } else {
+        return Promise.resolve({
+          text: pickRandom(match.data.nudges),
+          delay: match.data.delay,
+        });
+      }
+    }
+
+    return fetchNudge(agentId);
+  }
+
+  // ─── End nudge helpers ───────────────────────────────────────────────────
 
   // Cookie utilities for medassist-preferences
   function getCookie(name) {
@@ -356,7 +522,7 @@
     // Clear existing content
     button.className = "eka-widget-button";
     button.innerHTML = "";
-    
+
     if (widgetState.stage === 1) {
       // Stage 1: Icon only
       button.className = "eka-widget-button stage-1";
@@ -369,12 +535,12 @@
     } else if (widgetState.stage === 2) {
       // Stage 2: Oval with text
       button.className = "eka-widget-button stage-2";
+      var nudgeTitle = widgetState.nudgeText || "Hi, Need some help?";
       button.innerHTML = `
         <div class="eka-stage-2-content" data-action="open">
          <button class="eka-chat-close" data-action="close">×</button>
           <div class="eka-stage-2-text">
-            <p class="eka-stage-2-title">Hi, Need some help?</p>
-            <p class="eka-stage-2-subtitle">I'm happy to assist.</p>
+            <p class="eka-stage-2-title">${nudgeTitle}</p>
           </div>
           <div class="eka-stage-2-icon"></div>
         </div>
@@ -404,7 +570,14 @@
       return;
     }
 
-    // After 3 seconds of inactivity, go to stage 2
+    // Don't schedule stage-2 until nudge API has resolved (or failed)
+    if (!widgetState.nudgeReady) {
+      return;
+    }
+
+    // After nudgeDelay (or 5s default) of inactivity, go to stage 2
+    var inactivityDelay =
+      widgetState.nudgeDelay > 0 ? widgetState.nudgeDelay * 1000 : 5000;
     widgetState.inactivityTimer = setTimeout(function () {
       if (
         !widgetState.isVisible &&
@@ -425,7 +598,7 @@
         //   }
         // }, 10000);
       }
-    }, 5000);
+    }, inactivityDelay);
   }
 
   // Set widget stage
@@ -463,7 +636,7 @@
           setCookie("medassist-preferences", "close");
         } else if (action === "open") {
           toggleWidget(config);
-        } 
+        }
       } else {
         // Main button click
         toggleWidget(config);
@@ -522,7 +695,7 @@
       mode = url.searchParams.get("mode");
     }
     // Use mode from query string if available, otherwise use config.mode
-   return mode || defaultConfig.mode;
+    return mode || defaultConfig.mode;
   }
   // Mount the React widget
   function mountWidget(config) {
@@ -642,6 +815,22 @@
         window.EkaMedAssist._initialized = true;
         window.EkaMedAssist._button = button;
       }
+
+      // Fetch nudge in background; store text+delay for when stage-2 fires
+      resolveNudge(config.agentId || defaultConfig.agentId || "")
+        .then(function (result) {
+          widgetState.nudgeText = result.text;
+          widgetState.nudgeDelay = result.delay || 0;
+        })
+        .catch(function () {
+          // API failed — use fallback text, nudgeDelay stays 0 (5s default will apply)
+          widgetState.nudgeText = null;
+        })
+        .finally(function () {
+          // Now it's safe to start the inactivity timer
+          widgetState.nudgeReady = true;
+          resetInactivityTimer();
+        });
     }
   }
 
