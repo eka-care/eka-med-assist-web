@@ -28,7 +28,7 @@
   // Widget configuration
   var defaultConfig = {
     agentId:
-      "MWIyOWYyNjctNjc2My00Y2QwLThjNWQtMDY1N2NiODM4MGMyIzcxNzU5MTc2ODQzNTgzOTA=", // required for nudge targeting; should be set to unique identifier for your bot/agent
+      "MWZlZDRkYzktMTBmMS00OTFkLWEzNDMtZGM3MzIzZDM5N2VmIzcxNzU5MTc2ODQzNTgzOTA=", // required for nudge targeting; should be set to unique identifier for your bot/agent
     theme: "client",
     position: "bottom-right",
     scriptUrl: assetBase + "widget.js",
@@ -155,21 +155,20 @@
 
   // Fetch nudge from API, store it, and resolve with { text, delay }
   function fetchNudge(agentId) {
-    return fetch(
-      "https://kamilah-uncensuring-cubistically.ngrok-free.dev/reloaded/med-assist/user-nudge ",
-      {
-        // return fetch("https://matrix.eka.care/reloaded/med-assist/user-nudge", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-agent-id": agentId,
-        },
-        body: JSON.stringify({
-          meta_tags: getMetaTags(),
-          url: window?.location?.href || "",
-        }),
+    // return fetch(
+    // "https://kamilah-uncensuring-cubistically.ngrok-free.dev/reloaded/med-assist/user-nudge ",
+    // {
+    return fetch("https://matrix.eka.care/reloaded/med-assist/user-nudge", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "x-agent-id": agentId,
       },
-    )
+      body: JSON.stringify({
+        meta_tags: getMetaTags(),
+        url: window?.location?.href || "",
+      }),
+    })
       .then(function (res) {
         if (!res.ok) throw new Error("nudge api " + res.status);
         return res.json();
