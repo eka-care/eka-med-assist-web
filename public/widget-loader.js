@@ -25,6 +25,9 @@
     return "https://unpkg.com/@eka-care/apollo-assist@latest/dist/";
   })();
 
+  // Feature flag — set to true when ready to enable contextual nudge API calls
+  var CALL_NUDGE = false;
+
   // Widget configuration
   var defaultConfig = {
     agentId:
@@ -191,6 +194,8 @@
 
   // Main entry: resolve nudge text+delay from cache or API
   function resolveNudge(agentId) {
+    if (!CALL_NUDGE) return Promise.reject(new Error("nudge disabled"));
+
     var now = Date.now() / 1000;
     var match = findCachedNudge(agentId, window.location.href);
 
