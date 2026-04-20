@@ -17,6 +17,7 @@ import { FilePreviewList } from "./file-preview";
 
 // Constants
 const MAX_FILE_SIZE = 2 * 1024 * 1024; // 2MB in bytes
+const SHOW_MIC = false;
 
 enum RECODING_PHASE {
   IDLE = "idle",
@@ -69,13 +70,13 @@ export function MessageInput({
   const [isListening, setIsListening] = useState(false);
   const [isAudioStreaming, setIsAudioStreaming] = useState(false);
   const [recordingPhase, setRecordingPhase] = useState<RECODING_PHASE>(
-    RECODING_PHASE.IDLE
+    RECODING_PHASE.IDLE,
   );
   const [recordingTime, setRecordingTime] = useState(0);
   const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
   const [audioError, setAudioError] = useState<string | null>(null);
   const [currentAudioData, setCurrentAudioData] = useState<AudioData | null>(
-    null
+    null,
   );
   const [isSending, setIsSending] = useState(false); // New state for send button loading
   const [textareaHeight, setTextareaHeight] = useState(40); // Track textarea height
@@ -204,7 +205,7 @@ export function MessageInput({
               setReinitializationAttempted(false); // Reset flag on success
             } else {
               console.log(
-                "AudioService reinitialization failed, will not retry"
+                "AudioService reinitialization failed, will not retry",
               );
             }
           })
@@ -329,7 +330,7 @@ export function MessageInput({
       "input enabled/disabled bcus ",
       disabled,
       isStreaming,
-      isSending
+      isSending,
     );
     // Otherwise, check other conditions
     return disabled || isStreaming || isSending;
@@ -369,14 +370,14 @@ export function MessageInput({
         !reinitializationAttempted
       ) {
         console.log(
-          "AudioService not initialized in startRecording, attempting reinitialization..."
+          "AudioService not initialized in startRecording, attempting reinitialization...",
         );
         setReinitializationAttempted(true); // Mark that we've attempted reinitialization
         try {
           const success = await reinitialize();
           if (success) {
             console.log(
-              "AudioService reinitialized in startRecording, trying again..."
+              "AudioService reinitialized in startRecording, trying again...",
             );
             // Retry recording after reinitialization
             await startRecording();
@@ -386,7 +387,7 @@ export function MessageInput({
         } catch (reinitError) {
           console.error(
             "Failed to reinitialize AudioService in startRecording:",
-            reinitError
+            reinitError,
           );
           throw new Error("Audio service unavailable");
         }
@@ -432,7 +433,7 @@ export function MessageInput({
       const audioData = await new Promise<AudioData>((resolve, reject) => {
         const t = setTimeout(
           () => reject(new Error("Timed out waiting for audio")),
-          5000
+          5000,
         );
         const poll = () => {
           if (currentAudioData) {
@@ -483,15 +484,15 @@ export function MessageInput({
           // Check total size of all files (they will be zipped if multiple)
           const totalFileSize = uploadedFiles.reduce(
             (acc, file) => acc + file.size,
-            0
+            0,
           );
 
           if (totalFileSize > MAX_FILE_SIZE) {
             setError({
               title: `Total file size (${formatFileSize(
-                totalFileSize
+                totalFileSize,
               )}) exceeds the ${formatFileSize(
-                MAX_FILE_SIZE
+                MAX_FILE_SIZE,
               )} limit. Please select smaller files.`,
             });
             setUploadedFiles([]);
@@ -544,14 +545,14 @@ export function MessageInput({
           !reinitializationAttempted
         ) {
           console.log(
-            "AudioService not initialized, attempting reinitialization..."
+            "AudioService not initialized, attempting reinitialization...",
           );
           setReinitializationAttempted(true); // Mark that we've attempted reinitialization
           try {
             const success = await reinitialize();
             if (success) {
               console.log(
-                "AudioService reinitialized, trying to start recording again..."
+                "AudioService reinitialized, trying to start recording again...",
               );
               setIsListening(true);
               await startRecording();
@@ -588,39 +589,47 @@ export function MessageInput({
       const isValidFileType = (file: File): boolean => {
         const mimeType = file.type.toLowerCase();
         const fileName = file.name.toLowerCase();
-        const fileExtension = fileName.split('.').pop() || '';
+        const fileExtension = fileName.split(".").pop() || "";
 
         // Allowed MIME types
         const allowedMimeTypes = [
           // PDF
-          'application/pdf',
+          "application/pdf",
           // Images
-          'image/jpeg',
-          'image/jpg',
-          'image/png',
-          'image/heic',
-          'image/heif',
+          "image/jpeg",
+          "image/jpg",
+          "image/png",
+          "image/heic",
+          "image/heif",
           // Documents
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
-          'image/tiff',
+          "application/vnd.openxmlformats-officedocument.wordprocessingml.document", // DOCX
+          "image/tiff",
           // Text files
-          'text/plain',
-          'text/markdown',
+          "text/plain",
+          "text/markdown",
         ];
 
         // Primary check: Validate using MIME type
-        if (mimeType && allowedMimeTypes.some(allowedType => mimeType.includes(allowedType))) {
+        if (
+          mimeType &&
+          allowedMimeTypes.some((allowedType) => mimeType.includes(allowedType))
+        ) {
           return true;
         }
 
         // Fallback: If MIME type is empty or not recognized, check file extension
         // This handles cases where browsers don't set MIME types correctly
-        if (!mimeType || mimeType === '') {
+        if (!mimeType || mimeType === "") {
           const allowedExtensions = [
-            'pdf',
-            'jpg', 'jpeg', 'png', 'heic',
-            'docx', 'tiff',
-            'txt', 'md'
+            "pdf",
+            "jpg",
+            "jpeg",
+            "png",
+            "heic",
+            "docx",
+            "tiff",
+            "txt",
+            "md",
           ];
           return allowedExtensions.includes(fileExtension);
         }
@@ -634,7 +643,8 @@ export function MessageInput({
         if (!isValidFileType(file)) {
           setError({
             title: `File type not supported: ${file.name}`,
-            description: "Only PDF, images (JPG, JPEG, PNG, HEIC), documents (DOCX, TIFF), and text files (TXT, MD) are allowed.",
+            description:
+              "Only PDF, images (JPG, JPEG, PNG, HEIC), documents (DOCX, TIFF), and text files (TXT, MD) are allowed.",
           });
           return false;
         }
@@ -771,14 +781,14 @@ export function MessageInput({
                 mobVerificationPlaceholder
                   ? mobVerificationPlaceholder
                   : isStreaming || disabled
-                  ? "Please wait for response..."
-                  : isSending
-                  ? recordingPhase === RECODING_PHASE.PROCESSING
-                    ? "Processing your voice..."
-                    : recordingPhase === RECODING_PHASE.TRANSCRIBING
-                    ? "Transcribing recording.."
-                    : "Sending message..."
-                  : placeholder
+                    ? "Please wait for response..."
+                    : isSending
+                      ? recordingPhase === RECODING_PHASE.PROCESSING
+                        ? "Processing your voice..."
+                        : recordingPhase === RECODING_PHASE.TRANSCRIBING
+                          ? "Transcribing recording.."
+                          : "Sending message..."
+                      : placeholder
               }
               disabled={isInputDisabled}
               className="border-0 shadow-none px-0 py-2 focus-visible:ring-0 focus-visible:outline-none focus-visible:border-0 focus-visible:ring-transparent focus-visible:ring-offset-0 text-sm resize-none break-word overflow-hidden"
@@ -811,12 +821,12 @@ export function MessageInput({
           </div>
         ) : (
           <>
-            {hasContent ? (
+            {hasContent || !SHOW_MIC ? (
               <Button
                 size="sm"
                 className="h-8 w-8 py-2 bg-[var(--color-primary)] hover:bg-[var(--color-primary)]/90 flex-shrink-0 rounded-full"
                 onClick={handleSend}
-                disabled={isInputDisabled || isSending}>
+                disabled={isInputDisabled || isSending || !hasContent}>
                 {isSending ? (
                   <Loader2 className="h-4 w-4 animate-spin text-[var(--color-primary-foreground)]" />
                 ) : (
