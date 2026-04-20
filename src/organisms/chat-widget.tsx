@@ -458,6 +458,10 @@ export function ChatWidget({
     { id: "doctor", label: "Help me find a doctor" },
     { id: "appointment", label: "I want to book appointment" },
     { id: "health_check", label: "I want to book health check" },
+    {
+      id: "international-patient_services",
+      label: "International patient services",
+    },
     { id: "emergency", label: "I have an emergency" },
   ]);
 
