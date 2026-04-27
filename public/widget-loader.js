@@ -43,6 +43,7 @@
   // Widget state
   var widgetState = {
     isLoaded: false,
+    isLoading: false, // true while React bundle script is in-flight
     isVisible: false,
     instance: null,
     config: null,
@@ -669,6 +670,12 @@
       return;
     }
 
+    if (widgetState.isLoading) {
+      return;
+    }
+
+    widgetState.isLoading = true;
+
     if (config.cssUrl) {
       var link = document.createElement("link");
       link.rel = "stylesheet";
@@ -680,9 +687,11 @@
     script.src = config.scriptUrl;
     script.onload = function () {
       widgetState.isLoaded = true;
+      widgetState.isLoading = false;
       callback();
     };
     script.onerror = function () {
+      widgetState.isLoading = false;
       console.error("Failed to load bundle");
     };
     document.head.appendChild(script);
