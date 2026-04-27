@@ -597,15 +597,6 @@ export function MessageInput({
           // Images
           'image/jpeg',
           'image/jpg',
-          'image/png',
-          'image/heic',
-          'image/heif',
-          // Documents
-          'application/vnd.openxmlformats-officedocument.wordprocessingml.document', // DOCX
-          'image/tiff',
-          // Text files
-          'text/plain',
-          'text/markdown',
         ];
 
         // Primary check: Validate using MIME type
@@ -618,9 +609,7 @@ export function MessageInput({
         if (!mimeType || mimeType === '') {
           const allowedExtensions = [
             'pdf',
-            'jpg', 'jpeg', 'png', 'heic',
-            'docx', 'tiff',
-            'txt', 'md'
+            'jpg', 'jpeg'
           ];
           return allowedExtensions.includes(fileExtension);
         }
@@ -634,7 +623,7 @@ export function MessageInput({
         if (!isValidFileType(file)) {
           setError({
             title: `File type not supported: ${file.name}`,
-            description: "Only PDF, images (JPG, JPEG, PNG, HEIC), documents (DOCX, TIFF), and text files (TXT, MD) are allowed.",
+            description: "Only PDF, images (JPG, JPEG) are allowed.",
           });
           return false;
         }
@@ -709,7 +698,7 @@ export function MessageInput({
           ref={fileInputRef}
           type="file"
           multiple
-          accept=".pdf,.jpg,.jpeg,.png,.heic,.docx,.tiff,.txt,.md,application/pdf,image/jpeg,image/png,image/heic,image/heif,image/tiff,application/vnd.openxmlformats-officedocument.wordprocessingml.document,text/plain,text/markdown"
+          accept=".pdf,.jpg,.jpeg,application/pdf,image/jpeg"
           onChange={handleFileChange}
           className="hidden"
           data-max-size={MAX_FILE_SIZE.toString()}
