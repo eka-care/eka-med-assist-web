@@ -92,7 +92,7 @@ export class WebSocketService {
         this.connectionState === ConnectionState.CONNECTING
       ) {
         console.log(
-          "Connection already in progress, skipping from connect function"
+          "Connection already in progress, skipping from connect function",
         );
         return;
       }
@@ -107,7 +107,7 @@ export class WebSocketService {
         this.updateConnectionState(ConnectionState.ERROR);
         this.triggerEvent(
           WEBSOCKET_CUSTOM_EVENTS.MAX_CONNECTION_ATTEMPTS_EXCEEDED,
-          new Error("connection attempts exceeded")
+          new Error("connection attempts exceeded"),
         );
         return;
       }
@@ -126,7 +126,7 @@ export class WebSocketService {
         "Connecting to WebSocket:",
         wsUrl,
         "with session ID:",
-        this.config.sessionId
+        this.config.sessionId,
       );
 
       this.ws = new WebSocket(wsUrl);
@@ -140,7 +140,7 @@ export class WebSocketService {
           console.log(
             "Connection timeout",
             this.reconnectAttempts,
-            this.maxReconnectAttempts
+            this.maxReconnectAttempts,
           );
           this.isReconnecting = false;
           this.updateConnectionState(ConnectionState.ERROR);
@@ -148,7 +148,7 @@ export class WebSocketService {
           if (this.reconnectAttempts >= this.maxReconnectAttempts) {
             this.triggerEvent(
               WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
-              new Error("Connection timeout after two retries")
+              new Error("Connection timeout after two retries"),
             );
             return;
           }
@@ -156,7 +156,7 @@ export class WebSocketService {
 
           this.triggerEvent(
             WEBSOCKET_CUSTOM_EVENTS.CONNECTION_TIMEOUT_ERROR,
-            new Error("Connection timeout")
+            new Error("Connection timeout"),
           );
         }
       }, this.config.options?.connectionTimeout || 5000);
@@ -171,7 +171,7 @@ export class WebSocketService {
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_CUSTOM_EVENTS.CONNECTION_ERROR,
-        error instanceof Error ? error : new Error("Connection failed")
+        error instanceof Error ? error : new Error("Connection failed"),
       );
       throw error;
     }
@@ -191,16 +191,16 @@ export class WebSocketService {
         this.updateConnectionState(ConnectionState.ERROR);
         this.triggerEvent(
           WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED,
-          false
+          false,
         );
         this.triggerEvent(
           WEBSOCKET_CUSTOM_EVENTS.SESSION_INACTIVE,
-          new Error(ERROR_MESSAGES.SESSION_INACTIVE.title)
+          new Error(ERROR_MESSAGES.SESSION_INACTIVE.title),
         );
         // Trigger event to start a new session
         this.triggerEvent(
           WEBSOCKET_CUSTOM_EVENTS.START_NEW_SESSION,
-          new Error("Session is invalid, starting new session")
+          new Error("Session is invalid, starting new session"),
         );
         this.cleanup();
         return;
@@ -247,7 +247,7 @@ export class WebSocketService {
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_SERVER_EVENTS.ERROR,
-        new Error("WebSocket error occurred")
+        new Error("WebSocket error occurred"),
       );
     };
   }
@@ -259,7 +259,7 @@ export class WebSocketService {
     switch (message.ev) {
       case WEBSOCKET_SERVER_EVENTS.CONNECTION_ESTABLISHED:
         this.handleConnectionEstablished(
-          message as ConnectionEstablishedMessage
+          message as ConnectionEstablishedMessage,
         );
         break;
 
@@ -362,7 +362,7 @@ export class WebSocketService {
       };
       this.triggerEvent(
         WEBSOCKET_SERVER_EVENTS.END_OF_STREAM,
-        this.currentStreamMessage
+        this.currentStreamMessage,
       );
       // Clear the streaming message
       this.currentStreamMessage = null;
@@ -404,7 +404,7 @@ export class WebSocketService {
     if (event.code === 1008) {
       this.triggerEvent(
         WEBSOCKET_CUSTOM_EVENTS.SESSION_EXPIRED,
-        new Error(ERROR_MESSAGES.SESSION_EXPIRED.title)
+        new Error(ERROR_MESSAGES.SESSION_EXPIRED.title),
       );
       return;
     }
@@ -420,7 +420,7 @@ export class WebSocketService {
   private attemptReconnect(): void {
     if (this.isReconnecting) {
       console.log(
-        "Reconnection already in progress, skipping from attemptReconnect function"
+        "Reconnection already in progress, skipping from attemptReconnect function",
       );
       return;
     }
@@ -428,14 +428,14 @@ export class WebSocketService {
     console.log(
       `Attempting to reconnect (${this.connectionAttempts + 1}/${
         this.maxConnectionAttempts
-      })`
+      })`,
     );
 
     setTimeout(() => {
       this.connect().catch((error) => {
         console.error(
           "Reconnection failed from attemptReconnect function:",
-          error
+          error,
         );
       });
     }, this.reconnectDelay);
@@ -536,18 +536,7 @@ export class WebSocketService {
    * Set files for upload when presigned URL is received
    */
   public setFilesForUpload(files: File[], message?: string): void {
-    const validFormats = [
-      "application/pdf",
-      "image/jpeg",
-      "image/png",
-      "image/jpg",
-      "image/tiff",
-      "text/plain",
-      "text/markdown",
-      "image/heif",
-      "image/heic",
-      "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    ];
+    const validFormats = ["application/pdf", "image/jpeg", "image/jpg"];
     const validFiles =
       files.filter((file) => validFormats.includes(file.type)) || [];
     this.pendingFileData.files = validFiles;
@@ -581,7 +570,7 @@ export class WebSocketService {
 
   public async reconnect(
     resetAttempts: boolean,
-    reason?: string
+    reason?: string,
   ): Promise<void> {
     if (!resetAttempts && this.isReconnecting) {
       console.log("Reconnection already in progress, skipping");
@@ -596,13 +585,13 @@ export class WebSocketService {
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
-        new Error("Maximum reconnection attempts exceeded")
+        new Error("Maximum reconnection attempts exceeded"),
       );
       return;
     }
     this.reconnectAttempts++;
     console.log(
-      `Initiating reconnection${reason ? ` due to: ${reason}` : ""}...`
+      `Initiating reconnection${reason ? ` due to: ${reason}` : ""}...`,
     );
 
     this.updateConnectionState(ConnectionState.RECONNECTING);
@@ -638,7 +627,7 @@ export class WebSocketService {
       this.updateConnectionState(ConnectionState.ERROR);
       this.triggerEvent(
         WEBSOCKET_CUSTOM_EVENTS.MAX_RECONNECTION_ATTEMPTS_EXCEEDED,
-        new Error("Maximum reconnection attempts exceeded")
+        new Error("Maximum reconnection attempts exceeded"),
       );
     } else {
       // Schedule next reconnection attempt
@@ -673,7 +662,7 @@ export class WebSocketService {
    * Upload files to presigned URLs
    */
   public async uploadFilesToPresignedUrl(
-    presignedUrls: string[]
+    presignedUrls: string[],
   ): Promise<void> {
     console.log("hi from uploadFilesToPresignedUrl");
     let successCount = 0;
@@ -686,7 +675,7 @@ export class WebSocketService {
         throw new Error("No valid presigned URLs provided");
       }
       console.log(
-        `Uploading ${this.pendingFileData?.files?.length} files to ${presignedUrls.length} presigned URL(s)`
+        `Uploading ${this.pendingFileData?.files?.length} files to ${presignedUrls.length} presigned URL(s)`,
       );
 
       let fileToUpload: File;
@@ -707,7 +696,7 @@ export class WebSocketService {
             fileToUpload.size /
             1024 /
             1024
-          ).toFixed(2)} MB)`
+          ).toFixed(2)} MB)`,
         );
       } else {
         // Single file, upload as is
@@ -718,7 +707,7 @@ export class WebSocketService {
             fileToUpload.size /
             1024 /
             1024
-          ).toFixed(2)} MB)`
+          ).toFixed(2)} MB)`,
         );
       }
 
@@ -740,18 +729,18 @@ export class WebSocketService {
           throw new Error(
             `Failed to upload ${fileToUpload.name} to URL ${i + 1}: ${
               response.status
-            } ${response.statusText}`
+            } ${response.statusText}`,
           );
         }
         successCount++;
         console.log(
           `Successfully uploaded to URL ${i + 1}/${validUrls.length}`,
-          response
+          response,
         );
       }
 
       console.log(
-        "All file uploads completed successfully, calling sendFileUploadComplete"
+        "All file uploads completed successfully, calling sendFileUploadComplete",
       );
 
       // Call sendFileUploadComplete only once with the first presigned URL
@@ -904,7 +893,7 @@ export class WebSocketService {
    * Send message to WebSocket
    */
   private sendMessage(
-    message: ClientMessage | { ev: string; ts: number }
+    message: ClientMessage | { ev: string; ts: number },
   ): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify(message));
